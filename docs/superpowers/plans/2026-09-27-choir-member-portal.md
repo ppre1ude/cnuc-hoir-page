@@ -41,7 +41,7 @@
 
 공통 API 오류는 `{ "code": "문자열", "message": "한국어 문장" }`입니다. 날짜·시간은 API에서 UTC ISO 8601로 송수신하고 화면에서 `Asia/Seoul`로 표시합니다. 페이지 목록은 `items`, `page`, `size`, `total`을 반환합니다. 요청 유효성 오류는 400, 미인증은 401, 권한 없음은 403, 상태 충돌은 409를 사용합니다. 클라이언트는 오류 `code`를 사용해 안내 문구를 결정합니다.
 
-세션 쿠키는 `HttpOnly`, `Secure`, `SameSite=Lax`로 설정합니다. 브라우저는 Next.js의 외부 rewrite로 같은 출처 `/api/v1`에 요청합니다. Spring Security의 CSRF 보호를 유지하고 `GET /api/v1/auth/csrf`에서 받은 토큰을 변경 요청의 `X-CSRF-TOKEN` 헤더에 넣습니다. 세션은 JDBC에 저장하고, 매 요청에서 DB의 계정 상태와 `auth_version`을 확인해 접근 해제를 즉시 반영합니다. 민감한 응답은 `Cache-Control: no-store`입니다.
+세션 쿠키는 `HttpOnly`, `Secure`, `SameSite=Lax`로 설정합니다. 브라우저는 같은 출처의 `/api/v1`에 요청하고 Nginx가 API로 전달합니다. Nginx는 전달 IP 헤더를 실제 연결 주소로 덮어씁니다. Spring Security의 CSRF 보호를 유지하고 `GET /api/v1/auth/csrf`에서 받은 토큰을 변경 요청의 `X-CSRF-TOKEN` 헤더에 넣습니다. 세션은 JDBC에 저장하고, 매 요청에서 DB의 계정 상태와 `auth_version`을 확인해 접근 해제를 즉시 반영합니다. 민감한 응답은 `Cache-Control: no-store`입니다.
 
 ### 작업 1: 실행 가능한 기반과 회원 데이터
 
@@ -67,7 +67,7 @@ WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'member'
 
 - [ ] 3. `cd api; .\gradlew.bat test --tests '*DatabaseMigrationTest'`를 실행해 마이그레이션이 없어 실패하는지 확인합니다.
 - [ ] 4. `V1__member_and_auth.sql`에 `member`, `auth_token`, Spring Session JDBC 테이블과 인덱스를 생성합니다. `member.email`은 소문자 정규화 후 유일하게 저장하고, `auth_token`은 `member_id`, `purpose`, `token_hash`, `expires_at`, `used_at`을 가집니다. JPA의 자동 DDL은 `validate`로 설정합니다. 서버 시간은 `Clock` 빈으로 주입합니다. 공개 첫 화면은 확인된 합창단 운영 사실을 임의로 쓰지 않고 소개 문구·로그인·가입 경로만 둡니다.
-- [ ] 5. 같은 테스트와 `cd web; npm run build; npm run lint`를 통과시킵니다. `web/next.config.ts`의 rewrite는 `/api/v1/:path*`를 서버 전용 `API_INTERNAL_URL`로 전달합니다. 이 값은 로컬 `.env.local`과 배포 환경에 각각 설정하고 누락되면 명시적으로 실패하게 합니다.
+- [ ] 5. 같은 테스트와 `cd web; npm run build; npm run lint`를 통과시킵니다. 실제 실행에서는 `web/next.config.ts`에 API rewrite를 두지 않고 Nginx가 `/api/v1/`은 API로, 나머지는 웹으로 전달합니다. 웹 개발 서버만 단독으로 실행하면 API 경로가 연결되지 않으므로 통합 확인에는 Compose 프록시를 사용합니다.
 - [ ] 6. 새 파일만 선택해 `feat: 회원 포털 실행 기반과 회원 스키마 추가`로 커밋합니다.
 
 ### 작업 2: 가입 신청과 이메일 확인
@@ -243,7 +243,7 @@ assertThat(get("/api/v1/public/events", anonymous).status()).isEqualTo(404);
 
 ## 기술 근거
 
-- [Next.js 설치 및 실행 요구 사항](https://nextjs.org/docs/app/getting-started/installation), [외부 URL rewrite](https://nextjs.org/docs/app/api-reference/config/next-config-js/rewrites)
+- [Next.js 설치 및 실행 요구 사항](https://nextjs.org/docs/app/getting-started/installation), [Nginx HTTP 프록시와 요청 헤더 설정](https://nginx.org/en/docs/http/ngx_http_proxy_module.html)
 - [Spring Boot 4.1.1 요구 사항](https://docs.spring.io/spring-boot/system-requirements.html), [웹 MVC 스타터](https://docs.spring.io/spring-boot/reference/web/index.html), [Spring Session JDBC](https://docs.spring.io/spring-boot/reference/web/spring-session.html)
 - [Spring Security 암호 저장](https://docs.spring.io/spring-security/reference/features/authentication/password-storage.html), [CSRF 보호](https://docs.spring.io/spring-security/reference/servlet/exploits/csrf.html)
 - [OWASP 세션 관리](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html), [이메일 주소 확인](https://cheatsheetseries.owasp.org/cheatsheets/Email_Validation_and_Verification_Cheat_Sheet.html)

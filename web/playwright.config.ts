@@ -1,26 +1,38 @@
-import { randomBytes } from "node:crypto";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "@playwright/test";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const projectName = process.env.CHOIR_E2E_PROJECT_NAME ?? `choir-portal-e2e-${randomBytes(4).toString("hex")}`;
-const databasePassword = process.env.E2E_DB_PASSWORD ?? randomBytes(24).toString("hex");
-const environment = {
-  ...process.env,
-  CHOIR_E2E_PROJECT_NAME: projectName,
-  COMPOSE_PROJECT_NAME: projectName,
-  MYSQL_PASSWORD: databasePassword,
-  MYSQL_ROOT_PASSWORD: randomBytes(24).toString("hex"),
-  SMTP_HOST: "mailpit",
-  SMTP_USER: "e2e",
-  SMTP_PASSWORD: randomBytes(24).toString("hex"),
-  MAIL_FROM: "choir-e2e@example.test",
-  VERIFY_BASE_URL: "https://localhost/verify-email",
-  PORTAL_HTTP_PORT: "8081",
-  E2E_DB_PASSWORD: databasePassword,
+const manifestPath = process.env.CHOIR_E2E_RUN_MANIFEST;
+if (!manifestPath) {
+  throw new Error("E2E는 npm run test:e2e 전용 런처로 실행해야 합니다.");
+}
+const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
+  projectName: string;
+  runToken: string;
+  launcherPid: number;
+  databasePasswordDigest: string;
+  rootPasswordDigest: string;
+  smtpPasswordDigest: string;
 };
-Object.assign(process.env, environment);
+const digest = (value: string | undefined) => createHash("sha256").update(value ?? "").digest("hex");
+if (!/^choir-portal-e2e-[a-f0-9]{32}$/.test(manifest.projectName)
+    || manifest.projectName !== process.env.CHOIR_E2E_PROJECT_NAME
+    || manifest.projectName !== process.env.COMPOSE_PROJECT_NAME
+    || manifest.runToken !== process.env.CHOIR_E2E_RUN_TOKEN
+    || !Number.isSafeInteger(manifest.launcherPid) || manifest.launcherPid <= 0
+    || digest(process.env.E2E_DB_PASSWORD) !== manifest.databasePasswordDigest
+    || process.env.MYSQL_PASSWORD !== process.env.E2E_DB_PASSWORD
+    || digest(process.env.MYSQL_ROOT_PASSWORD) !== manifest.rootPasswordDigest
+    || digest(process.env.SMTP_PASSWORD) !== manifest.smtpPasswordDigest) {
+  throw new Error("격리 E2E 실행 식별자 또는 비밀번호가 일치하지 않습니다.");
+}
+const environment: Record<string, string> = {};
+for (const [key, value] of Object.entries(process.env)) {
+  if (value !== undefined) environment[key] = value;
+}
 
 export default defineConfig({
   testDir: "./e2e",
@@ -33,7 +45,6 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   globalSetup: "./e2e/setup.ts",
-  globalTeardown: "./e2e/teardown.ts",
   webServer: {
     command: "docker compose -f compose.portal.yaml -f deployment/compose.e2e.yaml up --build",
     cwd: projectRoot,

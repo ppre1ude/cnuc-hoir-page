@@ -44,4 +44,5 @@ DB 백업에는 회원, 인증 토큰 해시·세션, 메일 발송 대기열, �
 
 ## 로컬 검증
 
-API 통합 테스트는 Testcontainers MySQL을 사용합니다. 웹 단위 테스트·린트·빌드는 각각 `npm test -- --run`, `npm run lint`, `npm run build`로 실행합니다. `web/`에서 `npm run test:e2e`를 실행하면 별도 Compose 프로젝트·DB 볼륨과 Mailpit을 만들고 실제 브라우저로 가입부터 정정까지 검사한 뒤 컨테이너와 볼륨을 정리합니다. E2E용 메일 설정은 `deployment/application-e2e.yaml`에만 있고 운영 API 기본 설정에는 적용되지 않습니다. E2E는 로컬의 8081, 3308, 8026 포트를 사용하므로 다른 서비스와 충돌하지 않는지 먼저 확인합니다.
+API 통합 테스트는 Testcontainers MySQL을 사용합니다. 웹 단위 테스트·린트·빌드는 각각 `npm test -- --run`, `npm run lint`, `npm run build`로 실행합니다. `web/`에서 `npm run test:e2e`를 실행하면 전용 런처가 매번 새 Compose 프로젝트명과 DB 비밀번호를 만들고, 별도 DB 볼륨과 Mailpit에서 실제 브라우저로 가입부터 정정까지 검사한 뒤 자기 프로젝트 자원만 확인해 정리합니다. Playwright를 직접 실행하면 격리 식별자가 없어 시작하지 않습니다. E2E용 메일 설정은 `deployment/application-e2e.yaml`에만 있고 운영 API 기본 설정에는 적용되지 않습니다. E2E는 로컬의 8081, 3308, 8026 포트를 사용하므로 다른 서비스와 충돌하지 않는지 먼저 확인합니다.
+웹 개발 서버만 단독으로 실행하면 `/api/v1`이 연결되지 않습니다. API를 포함한 흐름은 같은 출처의 Compose Nginx 프록시를 통해 확인합니다.

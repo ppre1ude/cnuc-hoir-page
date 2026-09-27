@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrWhiteSpace($env:E2E_DB_PASSWORD)) {
   throw '격리 테스트 DB 비밀번호가 없습니다.'
 }
-if ($env:COMPOSE_PROJECT_NAME -notmatch '^choir-portal-e2e-[a-f0-9]{8}$') {
+if ($env:COMPOSE_PROJECT_NAME -notmatch '^choir-portal-e2e-[a-f0-9]{32}$') {
   throw '격리 테스트 Compose 프로젝트가 아닙니다.'
 }
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
