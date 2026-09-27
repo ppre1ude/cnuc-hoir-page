@@ -38,3 +38,11 @@ dependencies {
 tasks.withType<Test> {
 	useJUnitPlatform()
 }
+
+tasks.register<JavaExec>("bootstrapAdmin") {
+	group = "운영"
+	description = "DB 비밀번호를 콘솔 또는 CHOIR_BOOTSTRAP_DB_PASSWORD로 받아 최초 운영진을 지정합니다."
+	classpath = sourceSets.main.get().runtimeClasspath
+	mainClass = "kr.ac.jnu.choir.member.AdminBootstrapCommand"
+	standardInput = System.`in`
+}

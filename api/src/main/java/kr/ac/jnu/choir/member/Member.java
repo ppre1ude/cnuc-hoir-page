@@ -122,4 +122,24 @@ public class Member {
         authVersion++;
         updatedAt = clock.instant();
     }
+
+    public void approve(MemberType type, Clock clock) {
+        status = AccountStatus.APPROVED;
+        memberType = type;
+        authVersion++;
+        updatedAt = clock.instant();
+    }
+
+    public void reject(Clock clock) {
+        status = AccountStatus.REJECTED;
+        authVersion++;
+        updatedAt = clock.instant();
+    }
+
+    public void revoke(Clock clock) {
+        status = AccountStatus.REVOKED;
+        admin = false;
+        authVersion++;
+        updatedAt = clock.instant();
+    }
 }
