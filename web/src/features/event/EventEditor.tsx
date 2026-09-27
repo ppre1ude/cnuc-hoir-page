@@ -25,6 +25,7 @@ export function EventEditor() {
   const router = useRouter();
   const [month, setMonth] = useState(() => seoulDateKey(new Date()).slice(0, 7));
   const currentMonth = useRef(month);
+  const listRequestVersion = useRef(0);
   const [events, setEvents] = useState<ChoirEvent[] | null>(null);
   const [loadedMonth, setLoadedMonth] = useState("");
   const [retry, setRetry] = useState(0);
@@ -43,17 +44,21 @@ export function EventEditor() {
 
   useEffect(() => {
     let alive = true;
+    const requestVersion = ++listRequestVersion.current;
     const { from, to } = monthBounds(month);
     getSession().then(async (member) => {
+      if (!alive || listRequestVersion.current !== requestVersion) return;
       if (member.status !== "APPROVED" || !member.admin) {
         if (alive) router.replace(member.status === "APPROVED" ? "/dashboard" : "/application-status");
         return;
       }
       if (alive) setAuthorized(true);
       const result = await getEvents(from, to);
-      if (alive) { setEvents(result); setLoadedMonth(month); setListError(""); }
+      if (alive && listRequestVersion.current === requestVersion && currentMonth.current === month) {
+        setEvents(result); setLoadedMonth(month); setListError("");
+      }
     }).catch((caught) => {
-      if (!alive) return;
+      if (!alive || listRequestVersion.current !== requestVersion || currentMonth.current !== month) return;
       if (caught instanceof ApiRequestError && caught.status === 401) router.replace("/login");
       else setListError("행사 목록을 불러오지 못했습니다.");
     });
@@ -87,14 +92,15 @@ export function EventEditor() {
     } catch {
       setError("행사를 저장하지 못했습니다."); setBusy(false); return;
     }
+    const refreshMonth = currentMonth.current;
+    const refreshVersion = ++listRequestVersion.current;
     try {
-      if (currentMonth.current !== month) return;
-      const { from, to } = monthBounds(month);
+      const { from, to } = monthBounds(refreshMonth);
       const refreshed = await getEvents(from, to);
-      if (currentMonth.current !== month) return;
-      setEvents(refreshed); setLoadedMonth(month); setListError("");
+      if (currentMonth.current !== refreshMonth || listRequestVersion.current !== refreshVersion) return;
+      setEvents(refreshed); setLoadedMonth(refreshMonth); setListError("");
     } catch {
-      if (currentMonth.current === month) {
+      if (currentMonth.current === refreshMonth && listRequestVersion.current === refreshVersion) {
         setEvents(null); setListError("행사는 저장됐지만 목록을 새로고침하지 못했습니다.");
       }
     } finally { setBusy(false); }
