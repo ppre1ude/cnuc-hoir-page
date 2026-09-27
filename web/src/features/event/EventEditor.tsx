@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ApiRequestError } from "../../lib/api";
@@ -24,6 +24,7 @@ function utcInput(value: string) {
 export function EventEditor() {
   const router = useRouter();
   const [month, setMonth] = useState(() => seoulDateKey(new Date()).slice(0, 7));
+  const currentMonth = useRef(month);
   const [events, setEvents] = useState<ChoirEvent[] | null>(null);
   const [loadedMonth, setLoadedMonth] = useState("");
   const [retry, setRetry] = useState(0);
@@ -87,10 +88,15 @@ export function EventEditor() {
       setError("행사를 저장하지 못했습니다."); setBusy(false); return;
     }
     try {
+      if (currentMonth.current !== month) return;
       const { from, to } = monthBounds(month);
-      setEvents(await getEvents(from, to)); setLoadedMonth(month); setListError("");
+      const refreshed = await getEvents(from, to);
+      if (currentMonth.current !== month) return;
+      setEvents(refreshed); setLoadedMonth(month); setListError("");
     } catch {
-      setEvents(null); setListError("행사는 저장됐지만 목록을 새로고침하지 못했습니다.");
+      if (currentMonth.current === month) {
+        setEvents(null); setListError("행사는 저장됐지만 목록을 새로고침하지 못했습니다.");
+      }
     } finally { setBusy(false); }
   }
 
@@ -101,7 +107,7 @@ export function EventEditor() {
     {authorized && <div className={styles.grid}>
       <section className={styles.card}>
         <div className={styles.listHeader}><h2>{month.replace("-", "년 ")}월 행사</h2>
-          <label>조회 월 <input type="month" value={month} onChange={(change) => { setMonth(change.target.value); setLoadedMonth(""); }} /></label>
+          <label>조회 월 <input type="month" value={month} onChange={(change) => { currentMonth.current = change.target.value; setMonth(change.target.value); setLoadedMonth(""); }} /></label>
         </div>
         {!visible && !listError && <p role="status">행사를 불러오는 중입니다.</p>}
         {visible?.length === 0 && <p>이번 달 등록된 행사가 없습니다.</p>}

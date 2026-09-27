@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EventCalendar } from "./EventCalendar";
 
@@ -52,7 +52,7 @@ describe("일정 중심 회원 화면", () => {
     expect(calendar.compareDocumentPosition(detail) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(detail.compareDocumentPosition(notices) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(notices.compareDocumentPosition(attendance) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByText("공연 안내")).toBeInTheDocument();
+    expect(await screen.findByText("공연 안내")).toBeInTheDocument();
   });
 
   it("승인 대기 계정은 회원 자료를 요청하지 않고 신청 상태로 이동한다", async () => {
@@ -61,5 +61,17 @@ describe("일정 중심 회원 화면", () => {
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/application-status"));
     expect(getEvents).not.toHaveBeenCalled();
     expect(getNotices).not.toHaveBeenCalled();
+  });
+
+  it("공지 조회가 실패해도 행사를 탐색하고 공지만 다시 불러온다", async () => {
+    getNotices.mockRejectedValueOnce(new Error("공지 장애"));
+    render(<EventCalendar />);
+    fireEvent.click(await screen.findByRole("button", { name: /29일/ }));
+    expect(await screen.findByRole("heading", { name: "정기 연습" })).toBeInTheDocument();
+    const noticeRegion = screen.getByRole("region", { name: "최근 공지" });
+    expect(within(noticeRegion).getByRole("alert")).toHaveTextContent("공지를 불러오지 못했습니다.");
+    fireEvent.click(within(noticeRegion).getByRole("button", { name: "다시 시도" }));
+    expect(await within(noticeRegion).findByText("공연 안내")).toBeInTheDocument();
+    expect(getEvents).toHaveBeenCalledTimes(1);
   });
 });

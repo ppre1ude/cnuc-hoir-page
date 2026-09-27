@@ -34,6 +34,9 @@ export function EventCalendar() {
   const [session, setSession] = useState<MemberSession | null>(null);
   const [events, setEvents] = useState<ChoirEvent[]>([]);
   const [notices, setNotices] = useState<Notice[]>([]);
+  const [noticesLoaded, setNoticesLoaded] = useState(false);
+  const [noticeError, setNoticeError] = useState("");
+  const [noticeRetry, setNoticeRetry] = useState(0);
   const [loadedMonth, setLoadedMonth] = useState("");
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
@@ -44,20 +47,38 @@ export function EventCalendar() {
     getSession().then(async (member) => {
       if (!alive) return;
       if (member.status !== "APPROVED") { router.replace("/application-status"); return; }
-      const [monthEvents, recent] = await Promise.all([getEvents(from, to), getNotices(0)]);
-      if (!alive) return;
       setSession(member);
+      const monthEvents = await getEvents(from, to);
+      if (!alive) return;
       setEvents(monthEvents);
-      setNotices(recent.items.slice(0, 3));
       setLoadedMonth(month);
       setError("");
     }).catch((caught) => {
       if (!alive) return;
       if (caught instanceof ApiRequestError && caught.status === 401) router.replace("/login");
-      else setError("일정과 공지를 불러오지 못했습니다.");
+      else setError("일정을 불러오지 못했습니다.");
     });
     return () => { alive = false; };
   }, [month, retry, router]);
+
+  useEffect(() => {
+    if (session?.status !== "APPROVED") return;
+    let alive = true;
+    getNotices(0).then((recent) => {
+      if (!alive) return;
+      setNotices(recent.items.slice(0, 3));
+      setNoticesLoaded(true);
+      setNoticeError("");
+    }).catch((caught) => {
+      if (!alive) return;
+      if (caught instanceof ApiRequestError && caught.status === 401) router.replace("/login");
+      else {
+        setNotices([]);
+        setNoticeError("공지를 불러오지 못했습니다.");
+      }
+    });
+    return () => { alive = false; };
+  }, [session?.status, noticeRetry, router]);
 
   function changeMonth(offset: number) {
     const next = moveMonth(month, offset);
@@ -128,8 +149,10 @@ export function EventCalendar() {
       </section>
       <section aria-label="최근 공지" className={`${styles.card} ${styles.notices}`}>
         <div className={styles.sectionHeader}><div><p className={styles.eyebrow}>최근 공지</p><h2>알려드립니다</h2></div><Link href="/notices">전체 보기</Link></div>
-        {notices.length === 0 && <p>게시된 공지가 없습니다.</p>}
-        {notices.map((notice) => <p key={notice.id} className={styles.noticeItem}>{notice.title}</p>)}
+        {noticeError && <p role="alert">{noticeError} <button type="button" onClick={() => { setNoticeError(""); setNoticesLoaded(false); setNoticeRetry(noticeRetry + 1); }}>다시 시도</button></p>}
+        {!noticeError && !noticesLoaded && <p role="status">공지를 불러오는 중입니다.</p>}
+        {!noticeError && noticesLoaded && notices.length === 0 && <p>게시된 공지가 없습니다.</p>}
+        {!noticeError && notices.map((notice) => <p key={notice.id} className={styles.noticeItem}>{notice.title}</p>)}
       </section>
       <section aria-label="내 출석 요약" className={`${styles.card} ${styles.attendance}`}>
         <p className={styles.eyebrow}>내 출석 요약</p><h2>출석 기록</h2>
