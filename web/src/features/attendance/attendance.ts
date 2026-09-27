@@ -1,0 +1,41 @@
+import { apiRequest } from "../../lib/api";
+
+export type AttendanceStatus = "CHECKED_IN" | "MISSED" | "NOT_OPEN" | "NOT_ELIGIBLE";
+export type AttendanceState = { eventId: number; eventTitle: string; status: AttendanceStatus; checkInOpen: boolean };
+export type IssuedSession = { sessionId: number; expiresAt: string; qrUrl: string; code: string };
+export type SessionStatus = { sessionId: number | null; expiresAt: string | null; open: boolean };
+export type AdminAttendance = { memberId: number; name: string; email: string; status: AttendanceStatus };
+
+export const attendanceLabel: Record<AttendanceStatus, string> = {
+  CHECKED_IN: "출석 완료", MISSED: "미출석", NOT_OPEN: "출석 창 대기", NOT_ELIGIBLE: "출석 대상 아님",
+};
+
+export function getMyAttendance(): Promise<AttendanceState[]> { return apiRequest("/attendance/me"); }
+export function getEventAttendance(eventId: number): Promise<AttendanceState> {
+  return apiRequest(`/events/${eventId}/attendance/me`);
+}
+export function submitCheckIn(eventId: number, credential: string): Promise<void> {
+  return apiRequest(`/events/${eventId}/check-ins`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ credential }),
+  });
+}
+export function openCheckIn(eventId: number): Promise<IssuedSession> {
+  return apiRequest(`/admin/events/${eventId}/check-in-session`, { method: "POST" });
+}
+export function rotateCheckIn(eventId: number, sessionId: number): Promise<IssuedSession> {
+  return apiRequest(`/admin/events/${eventId}/check-in-session/${sessionId}/rotate`, { method: "POST" });
+}
+export function closeCheckIn(eventId: number): Promise<void> {
+  return apiRequest(`/admin/events/${eventId}/check-in-session/close`, { method: "POST" });
+}
+export function getCheckInSession(eventId: number): Promise<SessionStatus> {
+  return apiRequest(`/admin/events/${eventId}/check-in-session`);
+}
+export function getAdminAttendance(eventId: number): Promise<AdminAttendance[]> {
+  return apiRequest(`/admin/events/${eventId}/attendance`);
+}
+export function correctAttendance(eventId: number, memberId: number, status: "CHECKED_IN" | "MISSED", reason: string): Promise<void> {
+  return apiRequest(`/admin/events/${eventId}/attendance/${memberId}`, {
+    method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status, reason }),
+  });
+}

@@ -1,0 +1,56 @@
+.page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 48px 24px;
+}
+
+.content {
+  width: min(100%, 720px);
+}
+
+.eyebrow {
+  margin: 0 0 24px;
+  color: #55716c;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.content h1 {
+  margin: 0;
+  font-size: clamp(36px, 7vw, 64px);
+  letter-spacing: -0.05em;
+}
+
+.description {
+  margin: 24px 0 36px;
+  color: #5c6770;
+  font-size: 18px;
+  line-height: 1.7;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.actions a {
+  min-width: 136px;
+  padding: 14px 24px;
+  border-radius: 8px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+}
+
+.primary {
+  background: #194c43;
+  color: white;
+}
+
+.secondary {
+  border: 1px solid #b5c2bc;
+  background: white;
+}

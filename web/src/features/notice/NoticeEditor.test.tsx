@@ -1,0 +1,78 @@
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { NoticeEditor } from "./NoticeEditor";
+
+const getSession = vi.fn();
+const getAdminNotices = vi.fn();
+const createNotice = vi.fn();
+const updateNotice = vi.fn();
+const router = vi.hoisted(() => ({ replace: vi.fn() }));
+vi.mock("../auth/session", () => ({ getSession: () => getSession() }));
+vi.mock("./notices", () => ({
+  getAdminNotices: (page: number) => getAdminNotices(page),
+  createNotice: (input: unknown) => createNotice(input),
+  updateNotice: (id: number, input: unknown) => updateNotice(id, input),
+}));
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
+
+describe("공지 편집기", () => {
+  afterEach(cleanup);
+  beforeEach(() => {
+    getSession.mockReset();
+    getAdminNotices.mockReset();
+    createNotice.mockReset();
+    updateNotice.mockReset();
+    getSession.mockResolvedValue({ status: "APPROVED", admin: true });
+    createNotice.mockResolvedValue({ id: 2 });
+  });
+
+  it("저장 성공 뒤 목록 조회 실패를 저장 실패로 표시하지 않고 재시도한다", async () => {
+    getAdminNotices.mockResolvedValueOnce({ items: [], page: 0, size: 20, total: 0 })
+      .mockRejectedValueOnce(new Error("목록 오류"))
+      .mockResolvedValueOnce({ items: [{ id: 2, title: "새 공지", body: "본문", published: false }], page: 0, size: 20, total: 1 });
+    render(<NoticeEditor />);
+    await screen.findByText("작성된 공지가 없습니다.");
+    fireEvent.change(screen.getByLabelText("제목"), { target: { value: "새 공지" } });
+    fireEvent.change(screen.getByLabelText("본문"), { target: { value: "본문" } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("공지는 저장됐지만 목록을 새로고침하지 못했습니다.");
+    expect(screen.queryByText("공지를 저장하지 못했습니다.")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("제목")).toHaveValue("");
+    expect(createNotice).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
+    expect(await screen.findByText("새 공지 (초안)")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+    expect(createNotice).toHaveBeenCalledTimes(1);
+  });
+
+  it("수정 성공 뒤 목록 조회 실패도 수정 실패로 표시하지 않는다", async () => {
+    updateNotice.mockResolvedValue({ id: 1 });
+    getAdminNotices.mockResolvedValueOnce({
+      items: [{ id: 1, title: "기존 공지", body: "이전 본문", published: false }], page: 0, size: 20, total: 1,
+    }).mockRejectedValueOnce(new Error("목록 오류"));
+    render(<NoticeEditor />);
+    fireEvent.click(await screen.findByRole("button", { name: "기존 공지 (초안)" }));
+    fireEvent.change(screen.getByLabelText("본문"), { target: { value: "수정 본문" } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("공지는 저장됐지만 목록을 새로고침하지 못했습니다.");
+    expect(updateNotice).toHaveBeenCalledWith(1, { title: "기존 공지", body: "수정 본문", published: false });
+    expect(updateNotice).toHaveBeenCalledTimes(1);
+    expect(screen.getByLabelText("본문")).toHaveValue("");
+  });
+
+  it("페이지 조회 실패 시 이전 페이지를 숨기고 재시도 성공 뒤 오류를 지운다", async () => {
+    getAdminNotices.mockImplementation((page: number) => page === 0
+      ? Promise.resolve({ items: [{ id: 1, title: "첫 공지", body: "본문", published: true }], page, size: 1, total: 2 })
+      : getAdminNotices.mock.calls.filter(([requested]) => requested === 1).length === 1
+        ? Promise.reject(new Error("목록 오류"))
+        : Promise.resolve({ items: [{ id: 2, title: "다음 공지", body: "본문", published: false }], page, size: 1, total: 2 }));
+    render(<NoticeEditor />);
+    await screen.findByText("첫 공지 (게시)");
+    fireEvent.click(screen.getByRole("button", { name: "다음" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("공지 목록을 불러오지 못했습니다.");
+    expect(screen.queryByText("첫 공지 (게시)")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
+    expect(await screen.findByText("다음 공지 (초안)")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+});

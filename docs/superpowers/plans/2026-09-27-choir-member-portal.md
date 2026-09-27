@@ -17,6 +17,8 @@
 - 활동 단원과 OB를 구분합니다. OB는 OB 참여 행사에서만 출석할 수 있습니다.
 - 출석 창의 유효 시간은 10분입니다. QR과 입력 코드는 같은 출석 창에 속하며 재발급 시 이전 값이 즉시 무효가 됩니다.
 - 회원·행사당 유효 출석 기록은 최대 한 건입니다. 지각·공결 판정은 첫 범위에 넣지 않습니다.
+- 출석 창마다 당시 승인된 대상자를 스냅샷으로 보존합니다. 창이 끝난 뒤 해당 대상의 미출석을 표시하고, 창 이후 승인된 회원을 과거 미출석자로 소급하지 않습니다. 재개설 시 새 창의 대상 스냅샷을 따로 남깁니다.
+- V7 이전 출석 창의 당시 대상 명단은 복원할 수 없으므로 저장된 출석 기록만 유지하고 미출석을 자동 소급하지 않습니다.
 - 관리자 작업 중 승인·반려·접근 해제·출석 정정은 수행자와 시각을 남깁니다.
 - 공개 화면과 API는 회원 공지, 비공개 행사, 개인 출석 정보를 반환하지 않습니다. 첫 구현에 공개 행사 API는 없습니다.
 - 비밀값은 환경 변수 또는 비밀 저장소에서 읽습니다. 테스트용 메일 송신기는 테스트 설정에서만 사용합니다.
@@ -39,7 +41,7 @@
 
 공통 API 오류는 `{ "code": "문자열", "message": "한국어 문장" }`입니다. 날짜·시간은 API에서 UTC ISO 8601로 송수신하고 화면에서 `Asia/Seoul`로 표시합니다. 페이지 목록은 `items`, `page`, `size`, `total`을 반환합니다. 요청 유효성 오류는 400, 미인증은 401, 권한 없음은 403, 상태 충돌은 409를 사용합니다. 클라이언트는 오류 `code`를 사용해 안내 문구를 결정합니다.
 
-세션 쿠키는 `HttpOnly`, `Secure`, `SameSite=Lax`로 설정합니다. 브라우저는 Next.js의 외부 rewrite로 같은 출처 `/api/v1`에 요청합니다. Spring Security의 CSRF 보호를 유지하고 `GET /api/v1/auth/csrf`에서 받은 토큰을 변경 요청의 `X-CSRF-TOKEN` 헤더에 넣습니다. 세션은 JDBC에 저장하고, 매 요청에서 DB의 계정 상태와 `auth_version`을 확인해 접근 해제를 즉시 반영합니다. 민감한 응답은 `Cache-Control: no-store`입니다.
+세션 쿠키는 `HttpOnly`, `Secure`, `SameSite=Lax`로 설정합니다. 브라우저는 같은 출처의 `/api/v1`에 요청하고 Nginx가 API로 전달합니다. Nginx는 전달 IP 헤더를 실제 연결 주소로 덮어씁니다. Spring Security의 CSRF 보호를 유지하고 `GET /api/v1/auth/csrf`에서 받은 토큰을 변경 요청의 `X-CSRF-TOKEN` 헤더에 넣습니다. 세션은 JDBC에 저장하고, 매 요청에서 DB의 계정 상태와 `auth_version`을 확인해 접근 해제를 즉시 반영합니다. 민감한 응답은 `Cache-Control: no-store`입니다.
 
 ### 작업 1: 실행 가능한 기반과 회원 데이터
 
@@ -65,7 +67,7 @@ WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'member'
 
 - [ ] 3. `cd api; .\gradlew.bat test --tests '*DatabaseMigrationTest'`를 실행해 마이그레이션이 없어 실패하는지 확인합니다.
 - [ ] 4. `V1__member_and_auth.sql`에 `member`, `auth_token`, Spring Session JDBC 테이블과 인덱스를 생성합니다. `member.email`은 소문자 정규화 후 유일하게 저장하고, `auth_token`은 `member_id`, `purpose`, `token_hash`, `expires_at`, `used_at`을 가집니다. JPA의 자동 DDL은 `validate`로 설정합니다. 서버 시간은 `Clock` 빈으로 주입합니다. 공개 첫 화면은 확인된 합창단 운영 사실을 임의로 쓰지 않고 소개 문구·로그인·가입 경로만 둡니다.
-- [ ] 5. 같은 테스트와 `cd web; npm run build; npm run lint`를 통과시킵니다. `web/next.config.ts`의 rewrite는 `/api/v1/:path*`를 서버 전용 `API_INTERNAL_URL`로 전달합니다. 이 값은 로컬 `.env.local`과 배포 환경에 각각 설정하고 누락되면 명시적으로 실패하게 합니다.
+- [ ] 5. 같은 테스트와 `cd web; npm run build; npm run lint`를 통과시킵니다. 실제 실행에서는 `web/next.config.ts`에 API rewrite를 두지 않고 Nginx가 `/api/v1/`은 API로, 나머지는 웹으로 전달합니다. 웹 개발 서버만 단독으로 실행하면 API 경로가 연결되지 않으므로 통합 확인에는 Compose 프록시를 사용합니다.
 - [ ] 6. 새 파일만 선택해 `feat: 회원 포털 실행 기반과 회원 스키마 추가`로 커밋합니다.
 
 ### 작업 2: 가입 신청과 이메일 확인
@@ -206,8 +208,8 @@ assertThat(attendanceRepository.countByEventIdAndMemberId(eventId, memberId)).is
 ```
 
 - [ ] 2. `cd api; .\gradlew.bat test --tests '*CheckInFlowTest' --tests '*ConcurrentCheckInTest'` 실패를 확인합니다.
-- [ ] 3. `attendance`에 `(event_id,member_id)` 고유 제약을 걸고 상태·확인 시각을 저장합니다. `check_in_session`은 행사당 열린 창 하나만 허용하고 만료 시각, 닫힘 시각, QR 토큰 해시, 입력 코드 해시를 저장합니다. QR은 32바이트 난수, 입력 코드는 보안 난수로 생성한 8자리 영숫자이며 서버에는 해시만 저장합니다. 인증된 회원에 대해 행사·대상·창 상태를 트랜잭션에서 검증하고 DB 고유 제약 충돌도 중복 응답으로 변환합니다. 출석 시도는 계정·IP별 분당 10회로 제한합니다.
-- [ ] 4. QR URL은 `/events/{id}/check-in#token=<값>`으로 만들고, 브라우저가 해시를 읽자마자 주소에서 제거한 뒤 본문으로 제출합니다. 코드 재발급 시 기존 QR·코드 해시를 교체합니다. 출석 창이 닫힌 후 대상 회원에게 기록이 없으면 `MISSED`를 계산해 반환하고, 정정 시에는 이전·새 상태와 이유를 `admin_action_log`에 남깁니다.
+- [ ] 3. `attendance`에 `(event_id,member_id)` 고유 제약을 걸고 상태·확인 시각을 저장합니다. `check_in_session`은 행사당 열린 창 하나만 허용하고 만료 시각, 닫힘 시각, QR 토큰 해시, 입력 코드 해시를 저장합니다. QR은 32바이트 난수, 입력 코드는 보안 난수로 생성한 8자리 영숫자이며 서버에는 해시만 저장합니다. 인증된 회원에 대해 행사·대상·창 상태를 트랜잭션에서 검증하고 DB 고유 제약 충돌도 중복 응답으로 변환합니다. 출석 시도는 계정당 분당 10회, IP당 분당 100회로 제한합니다.
+- [ ] 4. QR URL은 `/events/{id}/check-in#token=<값>`으로 만들고, 브라우저가 해시를 읽자마자 주소에서 제거한 뒤 본문으로 제출합니다. 코드 재발급 시 기존 QR·코드 해시를 교체합니다. V7에서 출석 창·회원별 고유 대상 스냅샷을 추가하고, 창 개설 당시 승인·대상 회원을 기록합니다. 창 이후 승인된 회원이 실제 출석하면 그 창의 스냅샷에도 추가합니다. 종료·만료 후 회원별 최신 대상 창에 기록이 없으면 현재 자격 변경과 관계없이 `MISSED`로 계산하고, 스냅샷이 없는 회원은 과거 미출석으로 소급하지 않습니다. 재개설은 새 창의 대상을 다시 기록합니다. 정정 시에는 이전·새 상태와 이유를 `admin_action_log`에 남깁니다.
 - [ ] 5. `CheckInPanel.test.tsx`에서 만료·중복·대상 아님·승인 대기 안내, 본인 상태 갱신을 검사합니다. 행사 상세·대시보드·내 출석 목록에 상태를 연결하고 운영진 QR·코드 표시와 정정 화면을 구현합니다. QR 생성은 브라우저에서 로컬 렌더링하고 외부 QR 서비스로 토큰을 보내지 않습니다.
 - [ ] 6. API·웹 테스트와 빌드·린트를 통과시키고 `feat: 현장 출석과 정정 기능 추가`로 커밋합니다.
 
@@ -230,7 +232,7 @@ assertThat(get("/api/v1/public/events", anonymous).status()).isEqualTo(404);
 
 - [ ] 2. `member-journey.spec.ts`에 가입 → 이메일 확인 → 운영진 승인 → 로그인 → 달력 행사 선택 → QR/코드 출석 → 본인 기록 확인 → 운영진 정정 → 회원 화면 변경 확인을 작성합니다. `public-boundary.spec.ts`에는 공개 화면에서 비공개 행사·공지·개인 출석 자료의 부재를 작성합니다. 실패를 확인한 뒤 화면·API 연결 결함만 수정합니다.
 - [ ] 3. `docs/operations.md`에 환경 변수 목록, MySQL 마이그레이션, 메일 설정, 첫 운영진 지정 절차, 세션·비밀번호 정책, 백업/복구, 운영진 승인 전 명단 대조, 출석 코드 유출 시 재발급 절차를 문장으로 작성합니다. `.env.example`에는 값 대신 변수명과 설명만 둡니다.
-- [ ] 4. `cd api; .\gradlew.bat test`, `cd web; npm test -- --run; npm run lint; npm run build; npx playwright test`를 실행합니다. 모바일 폭 390px에서 가로 넘침과 달력→행사→공지→출석 순서, 브라우저 콘솔 오류를 확인합니다. 실패가 있으면 해당 원인만 고치고 같은 검증을 다시 실행합니다.
+- [ ] 4. `cd api; .\gradlew.bat test`, `cd web; npm test -- --run; npm run lint; npm run build; npm run test:e2e`를 실행합니다. 모바일 폭 390px에서 가로 넘침과 달력→행사→공지→출석 순서, 브라우저 콘솔 오류를 확인합니다. 실패가 있으면 해당 원인만 고치고 같은 검증을 다시 실행합니다.
 - [ ] 5. 비밀값·테스트 계정·디버그 로그가 추적 파일에 없는지 확인하고, 통합 검증 파일과 필요한 수정만 `test: 회원 포털 핵심 흐름과 접근 경계 검증`으로 커밋합니다.
 
 ## 실행 전 확인과 완료 조건
@@ -241,7 +243,7 @@ assertThat(get("/api/v1/public/events", anonymous).status()).isEqualTo(404);
 
 ## 기술 근거
 
-- [Next.js 설치 및 실행 요구 사항](https://nextjs.org/docs/app/getting-started/installation), [외부 URL rewrite](https://nextjs.org/docs/app/api-reference/config/next-config-js/rewrites)
+- [Next.js 설치 및 실행 요구 사항](https://nextjs.org/docs/app/getting-started/installation), [Nginx HTTP 프록시와 요청 헤더 설정](https://nginx.org/en/docs/http/ngx_http_proxy_module.html)
 - [Spring Boot 4.1.1 요구 사항](https://docs.spring.io/spring-boot/system-requirements.html), [웹 MVC 스타터](https://docs.spring.io/spring-boot/reference/web/index.html), [Spring Session JDBC](https://docs.spring.io/spring-boot/reference/web/spring-session.html)
 - [Spring Security 암호 저장](https://docs.spring.io/spring-security/reference/features/authentication/password-storage.html), [CSRF 보호](https://docs.spring.io/spring-security/reference/servlet/exploits/csrf.html)
 - [OWASP 세션 관리](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html), [이메일 주소 확인](https://cheatsheetseries.owasp.org/cheatsheets/Email_Validation_and_Verification_Cheat_Sheet.html)
