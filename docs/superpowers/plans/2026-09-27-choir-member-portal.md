@@ -232,7 +232,7 @@ assertThat(get("/api/v1/public/events", anonymous).status()).isEqualTo(404);
 
 - [ ] 2. `member-journey.spec.ts`에 가입 → 이메일 확인 → 운영진 승인 → 로그인 → 달력 행사 선택 → QR/코드 출석 → 본인 기록 확인 → 운영진 정정 → 회원 화면 변경 확인을 작성합니다. `public-boundary.spec.ts`에는 공개 화면에서 비공개 행사·공지·개인 출석 자료의 부재를 작성합니다. 실패를 확인한 뒤 화면·API 연결 결함만 수정합니다.
 - [ ] 3. `docs/operations.md`에 환경 변수 목록, MySQL 마이그레이션, 메일 설정, 첫 운영진 지정 절차, 세션·비밀번호 정책, 백업/복구, 운영진 승인 전 명단 대조, 출석 코드 유출 시 재발급 절차를 문장으로 작성합니다. `.env.example`에는 값 대신 변수명과 설명만 둡니다.
-- [ ] 4. `cd api; .\gradlew.bat test`, `cd web; npm test -- --run; npm run lint; npm run build; npx playwright test`를 실행합니다. 모바일 폭 390px에서 가로 넘침과 달력→행사→공지→출석 순서, 브라우저 콘솔 오류를 확인합니다. 실패가 있으면 해당 원인만 고치고 같은 검증을 다시 실행합니다.
+- [ ] 4. `cd api; .\gradlew.bat test`, `cd web; npm test -- --run; npm run lint; npm run build; npm run test:e2e`를 실행합니다. 모바일 폭 390px에서 가로 넘침과 달력→행사→공지→출석 순서, 브라우저 콘솔 오류를 확인합니다. 실패가 있으면 해당 원인만 고치고 같은 검증을 다시 실행합니다.
 - [ ] 5. 비밀값·테스트 계정·디버그 로그가 추적 파일에 없는지 확인하고, 통합 검증 파일과 필요한 수정만 `test: 회원 포털 핵심 흐름과 접근 경계 검증`으로 커밋합니다.
 
 ## 실행 전 확인과 완료 조건
