@@ -1,0 +1,28 @@
+services:
+  mysql:
+    ports:
+      - "127.0.0.1:3308:3306"
+    networks:
+      - api_private
+      - edge
+
+  mailpit:
+    image: axllent/mailpit:latest
+    environment:
+      MP_MAX_MESSAGES: 100
+    ports:
+      - "127.0.0.1:8026:8025"
+    networks:
+      - mail_egress
+
+  api:
+    environment:
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      SPRING_CONFIG_ADDITIONAL_LOCATION: file:/etc/choir/application-e2e.yaml
+      MAIL_RETRY_POLL_MS: "1000"
+    volumes:
+      - ./deployment/application-e2e.yaml:/etc/choir/application-e2e.yaml:ro
+    depends_on:
+      mailpit:
+        condition: service_started
