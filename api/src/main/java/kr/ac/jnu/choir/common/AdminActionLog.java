@@ -2,8 +2,6 @@ package kr.ac.jnu.choir.common;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -25,10 +23,12 @@ public class AdminActionLog {
     private Member target;
     @Column(nullable = false, length = 32)
     private String action;
-    @Enumerated(EnumType.STRING) @Column(name = "previous_status", nullable = false, length = 32)
-    private AccountStatus previousStatus;
-    @Enumerated(EnumType.STRING) @Column(name = "new_status", nullable = false, length = 32)
-    private AccountStatus newStatus;
+    @Column(name = "previous_status", nullable = false, length = 32)
+    private String previousStatus;
+    @Column(name = "new_status", nullable = false, length = 32)
+    private String newStatus;
+    @Column(name = "event_id")
+    private Long eventId;
     @Column(length = 500)
     private String reason;
     @Column(name = "acted_at", nullable = false)
@@ -41,8 +41,8 @@ public class AdminActionLog {
         this.actor = actor;
         this.target = target;
         this.action = action;
-        this.previousStatus = previousStatus;
-        this.newStatus = newStatus;
+        this.previousStatus = previousStatus.name();
+        this.newStatus = newStatus.name();
         this.reason = reason;
         this.actedAt = actedAt;
     }

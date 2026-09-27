@@ -1,0 +1,218 @@
+package kr.ac.jnu.choir.attendance;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.UUID;
+import kr.ac.jnu.choir.auth.MailSender;
+import kr.ac.jnu.choir.member.Member;
+import kr.ac.jnu.choir.member.MemberRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.web.FilterChainProxy;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.mysql.MySQLContainer;
+
+@SpringBootTest
+@Testcontainers
+@Import(CheckInFlowTest.TestConfig.class)
+class CheckInFlowTest {
+    @TestConfiguration static class TestConfig {
+        @Bean @Primary Clock attendanceTestClock() {
+            return Clock.fixed(Instant.parse("2026-09-27T10:00:00Z"), ZoneOffset.UTC);
+        }
+        @Bean @Primary MailSender attendanceMailSender() {
+            return new MailSender() {
+                public void sendVerification(String address, String link) {}
+                public void sendPasswordReset(String address, String link) {}
+            };
+        }
+    }
+    @Container static final MySQLContainer database = new MySQLContainer("mysql:8.4");
+    @DynamicPropertySource static void properties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", database::getJdbcUrl);
+        registry.add("spring.datasource.username", database::getUsername);
+        registry.add("spring.datasource.password", database::getPassword);
+        registry.add("choir.mail.enabled", () -> "false");
+    }
+    @Autowired WebApplicationContext context;
+    @Autowired FilterChainProxy security;
+    @Autowired MemberRepository members;
+    @Autowired JdbcTemplate jdbc;
+    MockMvc mvc;
+
+    @BeforeEach void setup() {
+        mvc = MockMvcBuilders.webAppContextSetup(context).addFilters(security).build();
+    }
+
+    private Member member(String type, boolean admin) {
+        Member member = members.save(new Member(UUID.randomUUID() + "@example.org", "단원", "{noop}password", Clock.systemUTC()));
+        jdbc.update("UPDATE member SET status = 'APPROVED', member_type = ?, admin = ?, email_verified_at = CURRENT_TIMESTAMP(6) WHERE id = ?",
+                type, admin, member.getId());
+        return members.findById(member.getId()).orElseThrow();
+    }
+    private MockHttpSession session(Member member) {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("memberId", member.getId());
+        session.setAttribute("authVersion", member.getAuthVersion());
+        return session;
+    }
+    private String csrf(MockHttpSession session) throws Exception {
+        return mvc.perform(get("/api/v1/auth/csrf").session(session)).andReturn().getResponse()
+                .getContentAsString().split("\"token\":\"", 2)[1].split("\"", 2)[0];
+    }
+    private long event(boolean obEligible) {
+        jdbc.update("INSERT INTO event (title,description,start_at,end_at,ob_eligible,public_visible,created_at,updated_at) "
+                + "VALUES ('연습','설명','2026-09-27 09:00:00','2026-09-27 12:00:00',?,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))", obEligible);
+        return jdbc.queryForObject("SELECT MAX(id) FROM event", Long.class);
+    }
+    private String open(long eventId, MockHttpSession admin) throws Exception {
+        var response = mvc.perform(post("/api/v1/admin/events/" + eventId + "/check-in-session")
+                .session(admin).header("X-CSRF-TOKEN", csrf(admin))).andReturn().getResponse();
+        assertThat(response.getStatus()).isEqualTo(201);
+        return response.getContentAsString();
+    }
+    private String field(String json, String key) {
+        return json.split("\"" + key + "\":\"", 2)[1].split("\"", 2)[0];
+    }
+    private int check(long eventId, MockHttpSession member, String credential) throws Exception {
+        long memberId = (Long) member.getAttribute("memberId");
+        String address = "10." + ((memberId >> 16) & 255) + "." + ((memberId >> 8) & 255)
+                + "." + (memberId & 255);
+        return checkFromIp(eventId, member, credential, address);
+    }
+    private int checkFromIp(long eventId, MockHttpSession member, String credential, String address) throws Exception {
+        return mvc.perform(post("/api/v1/events/" + eventId + "/check-ins")
+                .with(request -> { request.setRemoteAddr(address); return request; })
+                .session(member).header("X-CSRF-TOKEN", csrf(member)).contentType("application/json")
+                .content("{\"credential\":\"" + credential + "\"}"))
+                .andReturn().getResponse().getStatus();
+    }
+
+    @Test void activeMemberChecksInOnceAndMissedAfterClose() throws Exception {
+        Member admin = member("ACTIVE", true);
+        Member active = member("ACTIVE", false);
+        Member missing = member("ACTIVE", false);
+        long id = event(false);
+        String issued = open(id, session(admin));
+        String code = field(issued, "code");
+        assertThat(code).hasSize(8);
+        assertThat(field(issued, "qrUrl")).startsWith("/events/" + id + "/check-in#token=");
+        assertThat(jdbc.queryForObject("SELECT code_hash FROM check_in_session WHERE event_id = ?", String.class, id))
+                .doesNotContain(code).hasSize(64);
+        assertThat(check(id, session(active), code)).isEqualTo(204);
+        assertThat(check(id, session(active), code)).isEqualTo(409);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM attendance WHERE event_id = ? AND member_id = ?", Long.class,
+                id, active.getId())).isEqualTo(1);
+        MockHttpSession adminSession = session(admin);
+        assertThat(mvc.perform(post("/api/v1/admin/events/" + id + "/check-in-session/close")
+                .session(adminSession).header("X-CSRF-TOKEN", csrf(adminSession))).andReturn().getResponse().getStatus()).isEqualTo(204);
+        assertThat(check(id, session(active), code)).isEqualTo(409);
+        String own = mvc.perform(get("/api/v1/events/" + id + "/attendance/me").session(session(missing)))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(own).contains("MISSED");
+    }
+
+    @Test void obEligibilityRotationAndCorrectionAreEnforced() throws Exception {
+        Member admin = member("ACTIVE", true);
+        Member ob = member("OB", false);
+        long activeOnly = event(false);
+        String oldCode = field(open(activeOnly, session(admin)), "code");
+        assertThat(check(activeOnly, session(ob), oldCode)).isEqualTo(403);
+        long allowed = event(true);
+        String first = open(allowed, session(admin));
+        long sessionId = Long.parseLong(first.split("\"sessionId\":", 2)[1].split("[,}]", 2)[0]);
+        MockHttpSession adminSession = session(admin);
+        var rotated = mvc.perform(post("/api/v1/admin/events/" + allowed + "/check-in-session/" + sessionId + "/rotate")
+                .session(adminSession).header("X-CSRF-TOKEN", csrf(adminSession))).andReturn().getResponse();
+        assertThat(rotated.getStatus()).isEqualTo(200);
+        assertThat(check(allowed, session(ob), field(first, "code"))).isEqualTo(409);
+        assertThat(check(allowed, session(ob), field(rotated.getContentAsString(), "code"))).isEqualTo(204);
+        var corrected = mvc.perform(put("/api/v1/admin/events/" + allowed + "/attendance/" + ob.getId())
+                .session(adminSession).header("X-CSRF-TOKEN", csrf(adminSession)).contentType("application/json")
+                .content("{\"status\":\"MISSED\",\"reason\":\"현장 기록 정정\"}"))
+                .andReturn().getResponse();
+        assertThat(corrected.getStatus()).isEqualTo(204);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM admin_action_log WHERE action = 'ATTENDANCE_CORRECT' "
+                + "AND event_id = ? AND target_member_id = ? AND previous_status = 'CHECKED_IN' "
+                + "AND new_status = 'MISSED' AND reason = '현장 기록 정정'", Long.class, allowed, ob.getId())).isEqualTo(1);
+    }
+
+    @Test void expiredSessionCanBeReopenedButOldCredentialsStayInvalid() throws Exception {
+        Member admin = member("ACTIVE", true);
+        Member active = member("ACTIVE", false);
+        long id = event(false);
+        String firstCode = field(open(id, session(admin)), "code");
+        jdbc.update("UPDATE check_in_session SET expires_at = '2026-09-27 09:59:59' WHERE event_id = ?", id);
+        assertThat(check(id, session(active), firstCode)).isEqualTo(409);
+        String secondCode = field(open(id, session(admin)), "code");
+        assertThat(secondCode).isNotEqualTo(firstCode);
+        assertThat(check(id, session(active), firstCode)).isEqualTo(409);
+        assertThat(check(id, session(active), secondCode)).isEqualTo(204);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM check_in_session WHERE event_id = ? AND closed_at IS NULL",
+                Long.class, id)).isEqualTo(1);
+    }
+
+    @Test void accountAndIpAttemptsAreLimitedPerMinute() throws Exception {
+        Member admin = member("ACTIVE", true);
+        Member active = member("ACTIVE", false);
+        long id = event(false);
+        open(id, session(admin));
+        for (int attempt = 0; attempt < 10; attempt++) {
+            assertThat(check(id, session(active), "WRONG123")).isEqualTo(409);
+        }
+        assertThat(check(id, session(active), "WRONG123")).isEqualTo(429);
+    }
+
+    @Test void differentMembersShareTheSameIpLimit() throws Exception {
+        Member admin = member("ACTIVE", true);
+        Member first = member("ACTIVE", false);
+        Member second = member("ACTIVE", false);
+        long id = event(false);
+        open(id, session(admin));
+        for (int attempt = 0; attempt < 5; attempt++) {
+            assertThat(checkFromIp(id, session(first), "WRONG123", "192.0.2.85")).isEqualTo(409);
+            assertThat(checkFromIp(id, session(second), "WRONG123", "192.0.2.85")).isEqualTo(409);
+        }
+        assertThat(checkFromIp(id, session(second), "WRONG123", "192.0.2.85")).isEqualTo(429);
+    }
+
+    @Test void qrTokenWorksAndRotationInvalidatesThePreviousToken() throws Exception {
+        Member admin = member("ACTIVE", true);
+        Member oldTokenMember = member("ACTIVE", false);
+        Member newTokenMember = member("ACTIVE", false);
+        long id = event(false);
+        String first = open(id, session(admin));
+        String oldToken = field(first, "qrUrl").split("#token=", 2)[1];
+        assertThat(check(id, session(oldTokenMember), oldToken)).isEqualTo(204);
+        long sessionId = Long.parseLong(first.split("\"sessionId\":", 2)[1].split("[,}]", 2)[0]);
+        MockHttpSession adminSession = session(admin);
+        var rotated = mvc.perform(post("/api/v1/admin/events/" + id + "/check-in-session/" + sessionId + "/rotate")
+                .session(adminSession).header("X-CSRF-TOKEN", csrf(adminSession))).andReturn().getResponse();
+        assertThat(rotated.getStatus()).isEqualTo(200);
+        assertThat(check(id, session(newTokenMember), oldToken)).isEqualTo(409);
+        String newToken = field(rotated.getContentAsString(), "qrUrl").split("#token=", 2)[1];
+        assertThat(check(id, session(newTokenMember), newToken)).isEqualTo(204);
+        assertThat(jdbc.queryForObject("SELECT qr_token_hash FROM check_in_session WHERE id = ?", String.class, sessionId))
+                .doesNotContain(newToken).hasSize(64);
+    }
+}

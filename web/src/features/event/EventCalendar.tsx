@@ -8,6 +8,7 @@ import { getSession, type MemberSession } from "../auth/session";
 import { getNotices, type Notice } from "../notice/notices";
 import { type ChoirEvent, getEvents, monthBounds, seoulDateKey } from "./events";
 import { EventDetail } from "./EventDetail";
+import { attendanceLabel, getMyAttendance, type AttendanceState } from "../attendance/attendance";
 import styles from "./EventCalendar.module.css";
 
 function moveMonth(month: string, offset: number) {
@@ -34,6 +35,8 @@ export function EventCalendar() {
   const [session, setSession] = useState<MemberSession | null>(null);
   const [events, setEvents] = useState<ChoirEvent[]>([]);
   const [notices, setNotices] = useState<Notice[]>([]);
+  const [attendance, setAttendance] = useState<AttendanceState[]>([]);
+  const [attendanceError, setAttendanceError] = useState("");
   const [noticesLoaded, setNoticesLoaded] = useState(false);
   const [noticeError, setNoticeError] = useState("");
   const [noticeRetry, setNoticeRetry] = useState(0);
@@ -80,6 +83,14 @@ export function EventCalendar() {
     return () => { alive = false; };
   }, [session?.status, noticeRetry, router]);
 
+  useEffect(() => {
+    if (session?.status !== "APPROVED") return;
+    let alive = true;
+    getMyAttendance().then((value) => { if (alive) { setAttendance(value); setAttendanceError(""); } })
+      .catch(() => { if (alive) setAttendanceError("출석 기록을 불러오지 못했습니다."); });
+    return () => { alive = false; };
+  }, [session?.status]);
+
   function changeMonth(offset: number) {
     const next = moveMonth(month, offset);
     setMonth(next);
@@ -106,6 +117,7 @@ export function EventCalendar() {
       <p>날짜를 선택하면 행사와 참여 대상을 확인할 수 있습니다.</p>
       <nav aria-label="회원 메뉴" className={styles.links}>
         <Link href="/notices">공지 전체 보기</Link>
+        <Link href="/attendance">내 출석 기록</Link>
         {session?.admin && <Link href="/admin/events">행사 관리</Link>}
       </nav>
     </header>
@@ -156,7 +168,12 @@ export function EventCalendar() {
       </section>
       <section aria-label="내 출석 요약" className={`${styles.card} ${styles.attendance}`}>
         <p className={styles.eyebrow}>내 출석 요약</p><h2>출석 기록</h2>
-        <p>출석 상태는 행사별 출석 기능이 연결되면 이곳에 표시됩니다.</p>
+        {attendanceError && <p role="alert">{attendanceError}</p>}
+        {!attendanceError && attendance.length === 0 && <p>표시할 행사가 없습니다.</p>}
+        {!attendanceError && attendance.slice(0, 3).map((item) => <p key={item.eventId}>
+          <Link href={`/events/${item.eventId}`}>{item.eventTitle}</Link> · {attendanceLabel[item.status]}
+        </p>)}
+        <Link href="/attendance">내 출석 전체 보기</Link>
       </section>
     </div>
   </div>;

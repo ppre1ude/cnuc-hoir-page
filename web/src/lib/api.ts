@@ -38,7 +38,9 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
     const error = (await response.json().catch(() => ({ code: "REQUEST_FAILED", message: "요청을 처리할 수 없습니다." }))) as ApiError;
     if (typeof window !== "undefined" && !path.startsWith("/auth/")) {
       if (response.status === 401) window.location.replace(new URL("/login", window.location.origin));
-      if (response.status === 403) window.location.replace(new URL("/application-status", window.location.origin));
+      if (response.status === 403 && error.code === "APPROVAL_REQUIRED") {
+        window.location.replace(new URL("/application-status", window.location.origin));
+      }
     }
     throw new ApiRequestError(response.status, error.code, error.message);
   }

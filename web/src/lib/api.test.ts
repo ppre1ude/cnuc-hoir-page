@@ -14,3 +14,13 @@ test.each(["/auth/applications", "/auth/resend-verification", "/auth/password-re
     expect(fetchMock).toHaveBeenCalledTimes(2);
   },
 );
+
+test("출석 대상 아님 403은 승인 대기 화면으로 이동하지 않습니다", async () => {
+  const replace = vi.fn();
+  vi.stubGlobal("window", { location: { origin: "https://choir.example", replace } });
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+    ok: false, status: 403, json: async () => ({ code: "NOT_ELIGIBLE", message: "출석 대상 아님" }),
+  }));
+  await expect(apiRequest("/events/3/attendance/me")).rejects.toMatchObject({ code: "NOT_ELIGIBLE" });
+  expect(replace).not.toHaveBeenCalled();
+});

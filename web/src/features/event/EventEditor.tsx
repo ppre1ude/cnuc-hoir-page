@@ -123,6 +123,7 @@ export function EventEditor() {
       </section>
       <section className={styles.card}>
         <h2>{selected ? "행사 수정" : "행사 등록"}</h2>
+        {selected && <p><Link href={`/admin/events/${selected.id}/attendance`}>이 행사 출석 관리</Link></p>}
         {error && <p role="alert">{error}</p>}
         {saved && <p role="status">행사를 저장했습니다.</p>}
         <form onSubmit={save} className={styles.form}>

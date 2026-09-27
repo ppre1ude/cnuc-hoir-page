@@ -16,5 +16,6 @@ export function EventDetail({ event, memberType, link = false }: Props) {
         : "활동 단원 출석 대상 행사입니다."}
     </p>
     {link && <Link href={`/events/${event.id}`}>행사 자세히 보기</Link>}
+    <p><Link href={`/events/${event.id}/check-in`}>현장 출석하기</Link></p>
   </article>;
 }
