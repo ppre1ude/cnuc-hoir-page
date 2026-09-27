@@ -14,23 +14,25 @@ export function CheckInPanel({ eventId }: { eventId: number }) {
   const [statusRefreshFailed, setStatusRefreshFailed] = useState(false);
   const pendingQrToken = useRef<string | null>(null);
   const statusRequestVersion = useRef(0);
+  const qrSubmissionInFlight = useRef(false);
+  const completedRef = useRef(false);
 
   useEffect(() => {
     let alive = true;
-    const scanned = new URLSearchParams(window.location.hash.slice(1)).get("token");
-    if (scanned) {
-      pendingQrToken.current = scanned;
-      window.history.replaceState(null, "", window.location.pathname + window.location.search);
-    }
-    const token = pendingQrToken.current;
-    if (token) {
+    function processPending() {
+      if (!pendingQrToken.current || qrSubmissionInFlight.current || completedRef.current) return;
       Promise.resolve().then(async () => {
-        if (!alive) return;
+        if (!alive || qrSubmissionInFlight.current || completedRef.current) return;
+        const token = pendingQrToken.current;
+        if (!token) return;
         pendingQrToken.current = null;
+        qrSubmissionInFlight.current = true;
         setBusy(true);
         try {
           await submitCheckIn(eventId, token);
           if (!alive) return;
+          completedRef.current = true;
+          pendingQrToken.current = null;
           setCompleted(true);
         } catch (error) {
           if (alive) setMessage(errorMessage(error));
@@ -38,25 +40,42 @@ export function CheckInPanel({ eventId }: { eventId: number }) {
             const latest = await getEventAttendance(eventId);
             if (alive) setStatus(latest);
           } catch { /* 원래 출석 오류를 유지합니다. */ }
-          if (alive) setBusy(false);
           return;
+        } finally {
+          if (alive) setBusy(false);
+          qrSubmissionInFlight.current = false;
+          if (alive && pendingQrToken.current && !completedRef.current) processPending();
         }
-        try {
-          const latest = await getEventAttendance(eventId);
-          if (alive) { setStatus(latest); setMessage("출석이 완료되었습니다."); }
-        } catch {
-          if (alive) {
-            setStatusRefreshFailed(true);
-            setMessage("출석은 완료됐지만 상태를 확인하지 못했습니다.");
+        if (alive) {
+          try {
+            const latest = await getEventAttendance(eventId);
+            if (alive) { setStatus(latest); setMessage("출석이 완료되었습니다."); }
+          } catch {
+            if (alive) {
+              setStatusRefreshFailed(true);
+              setMessage("출석은 완료됐지만 상태를 확인하지 못했습니다.");
+            }
           }
-        } finally { if (alive) setBusy(false); }
+        }
       });
-    } else {
+    }
+    function consumeHash() {
+      const scanned = new URLSearchParams(window.location.hash.slice(1)).get("token");
+      if (scanned) {
+        pendingQrToken.current = scanned;
+        statusRequestVersion.current++;
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      }
+      processPending();
+      return Boolean(scanned || pendingQrToken.current);
+    }
+    window.addEventListener("hashchange", consumeHash);
+    if (!consumeHash()) {
       const version = ++statusRequestVersion.current;
       getEventAttendance(eventId).then((value) => { if (alive && version === statusRequestVersion.current) setStatus(value); })
         .catch(() => { if (alive && version === statusRequestVersion.current) setMessage("출석 상태를 불러오지 못했습니다."); });
     }
-    return () => { alive = false; };
+    return () => { alive = false; window.removeEventListener("hashchange", consumeHash); };
   }, [eventId]);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -67,6 +86,7 @@ export function CheckInPanel({ eventId }: { eventId: number }) {
     setMessage("");
     try {
       await submitCheckIn(eventId, code.trim().toUpperCase());
+      completedRef.current = true;
       setCompleted(true);
       setCode("");
     } catch (error) {

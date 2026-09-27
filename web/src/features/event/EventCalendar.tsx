@@ -8,7 +8,7 @@ import { getSession, type MemberSession } from "../auth/session";
 import { getNotices, type Notice } from "../notice/notices";
 import { type ChoirEvent, getEvents, monthBounds, seoulDateKey } from "./events";
 import { EventDetail } from "./EventDetail";
-import { attendanceLabel, getMyAttendance, type AttendanceState } from "../attendance/attendance";
+import { attendanceLabel, getEventAttendance, getMyAttendance, type AttendanceState } from "../attendance/attendance";
 import styles from "./EventCalendar.module.css";
 
 function moveMonth(month: string, offset: number) {
@@ -36,6 +36,7 @@ export function EventCalendar() {
   const [events, setEvents] = useState<ChoirEvent[]>([]);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [attendance, setAttendance] = useState<AttendanceState[]>([]);
+  const [selectedAttendance, setSelectedAttendance] = useState<AttendanceState | null>(null);
   const [attendanceError, setAttendanceError] = useState("");
   const [noticesLoaded, setNoticesLoaded] = useState(false);
   const [noticeError, setNoticeError] = useState("");
@@ -107,6 +108,17 @@ export function EventCalendar() {
     return first <= selectedDate && selectedDate <= last;
   });
   const selected = dayEvents.find((event) => event.id === selectedEventId) ?? dayEvents[0];
+  const selectedId = selected?.id;
+  useEffect(() => {
+    if (session?.status !== "APPROVED" || selectedId == null) return;
+    let alive = true;
+    const refresh = () => getEventAttendance(selectedId)
+      .then((value) => { if (alive) setSelectedAttendance(value); })
+      .catch(() => { if (alive) setSelectedAttendance(null); });
+    void refresh();
+    const timer = window.setInterval(refresh, 15000);
+    return () => { alive = false; window.clearInterval(timer); };
+  }, [selectedId, session?.status]);
   const slots = Array.from({ length: mondayOffset(month) }, (_, index) => `blank-${index}`);
   const days = Array.from({ length: daysInMonth(month) }, (_, index) => index + 1);
 
@@ -156,7 +168,8 @@ export function EventCalendar() {
         </div>
       </section>
       <section aria-label="선택한 행사" className={`${styles.card} ${styles.detail}`}>
-        {selected ? <EventDetail event={selected} memberType={session?.memberType ?? null} link />
+        {selected ? <EventDetail event={selected} memberType={session?.memberType ?? null}
+          checkInOpen={selectedAttendance?.eventId === selected.id && selectedAttendance.checkInOpen} link />
           : <><p className={styles.eyebrow}>선택한 행사</p><h2>날짜를 선택해 주세요</h2><p>선택한 날짜의 행사가 이곳에 표시됩니다.</p></>}
       </section>
       <section aria-label="최근 공지" className={`${styles.card} ${styles.notices}`}>

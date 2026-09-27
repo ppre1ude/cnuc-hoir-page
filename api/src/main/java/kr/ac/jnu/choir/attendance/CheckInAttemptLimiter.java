@@ -24,12 +24,12 @@ public class CheckInAttemptLimiter {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public boolean reserve(long memberId, String ip) {
-        boolean accountAllowed = increment("ACCOUNT", Long.toString(memberId));
-        boolean ipAllowed = increment("IP", ip);
+        boolean accountAllowed = increment("ACCOUNT", Long.toString(memberId), 10);
+        boolean ipAllowed = increment("IP", ip, 100);
         return accountAllowed && ipAllowed;
     }
 
-    private boolean increment(String kind, String identity) {
+    private boolean increment(String kind, String identity, int limit) {
         String key = sha256(identity);
         Timestamp now = Timestamp.from(clock.instant());
         Timestamp expired = Timestamp.from(clock.instant().minus(Duration.ofMinutes(1)));
@@ -39,7 +39,7 @@ public class CheckInAttemptLimiter {
                 kind, key, now, expired, expired);
         Integer count = jdbc.queryForObject("SELECT attempt_count FROM check_in_attempt WHERE kind = ? AND identity_hash = ?",
                 Integer.class, kind, key);
-        return count != null && count <= 10;
+        return count != null && count <= limit;
     }
 
     private static String sha256(String value) {

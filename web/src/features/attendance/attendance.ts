@@ -1,7 +1,7 @@
 import { apiRequest } from "../../lib/api";
 
 export type AttendanceStatus = "CHECKED_IN" | "MISSED" | "NOT_OPEN" | "NOT_ELIGIBLE";
-export type AttendanceState = { eventId: number; eventTitle: string; status: AttendanceStatus };
+export type AttendanceState = { eventId: number; eventTitle: string; status: AttendanceStatus; checkInOpen: boolean };
 export type IssuedSession = { sessionId: number; expiresAt: string; qrUrl: string; code: string };
 export type SessionStatus = { sessionId: number | null; expiresAt: string | null; open: boolean };
 export type AdminAttendance = { memberId: number; name: string; email: string; status: AttendanceStatus };

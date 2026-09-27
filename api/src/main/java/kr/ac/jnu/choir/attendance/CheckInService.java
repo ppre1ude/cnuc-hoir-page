@@ -114,13 +114,15 @@ public class CheckInService {
     @Transactional(readOnly = true)
     public List<AdminAttendance> adminList(long eventId) {
         EventRow event = findEvent(eventId);
-        return jdbc.query("SELECT id,name,email,status,member_type FROM member WHERE status = 'APPROVED' "
-                + "AND (member_type = 'ACTIVE' OR (? AND member_type = 'OB')) ORDER BY name,id",
+        return jdbc.query("SELECT id,name,email,status,member_type FROM member WHERE "
+                + "(status = 'APPROVED' AND (member_type = 'ACTIVE' OR (? AND member_type = 'OB'))) "
+                + "OR EXISTS (SELECT 1 FROM attendance a WHERE a.event_id = ? AND a.member_id = member.id) "
+                + "ORDER BY name,id",
                 (rs, row) -> {
                     MemberRow target = new MemberRow(rs.getLong(1), rs.getString(2), rs.getString(3),
                             rs.getString(4), rs.getString(5));
                     return new AdminAttendance(target.id(), target.name(), target.email(), state(event, target).status());
-                }, event.obEligible());
+                }, event.obEligible(), eventId);
     }
 
     @Transactional(readOnly = true)
@@ -136,7 +138,7 @@ public class CheckInService {
     public void correct(long eventId, long memberId, Member actor, String newStatus, String reason) {
         EventRow event = lockEvent(eventId);
         MemberRow target = lockMember(memberId);
-        if (!eligible(event, target)) throw forbidden();
+        if (attendance(eventId, memberId) == null && !eligible(event, target)) throw forbidden();
         AttendanceState previous = state(event, target);
         if (newStatus.equals(previous.status())) {
             throw conflict("ATTENDANCE_UNCHANGED", "출석 상태가 이미 같습니다.");
@@ -155,15 +157,15 @@ public class CheckInService {
     }
 
     private AttendanceState state(EventRow event, MemberRow target) {
-        if (!eligible(event, target)) return new AttendanceState(event.id(), event.title(), "NOT_ELIGIBLE");
         String stored = attendance(event.id(), target.id());
-        if (stored != null) return new AttendanceState(event.id(), event.title(), stored);
+        if (stored != null) return new AttendanceState(event.id(), event.title(), stored, false);
+        if (!eligible(event, target)) return new AttendanceState(event.id(), event.title(), "NOT_ELIGIBLE", false);
         List<SessionRow> sessions = jdbc.query("SELECT id,expires_at,closed_at,qr_token_hash,code_hash FROM check_in_session "
                 + "WHERE event_id = ? ORDER BY id DESC LIMIT 1", (rs, row) -> sessionRow(rs), event.id());
-        if (sessions.isEmpty()) return new AttendanceState(event.id(), event.title(), "NOT_OPEN");
+        if (sessions.isEmpty()) return new AttendanceState(event.id(), event.title(), "NOT_OPEN", false);
         SessionRow session = sessions.getFirst();
-        return new AttendanceState(event.id(), event.title(), session.closedAt() != null
-                || !clock.instant().isBefore(session.expiresAt()) ? "MISSED" : "NOT_OPEN");
+        boolean open = session.closedAt() == null && clock.instant().isBefore(session.expiresAt());
+        return new AttendanceState(event.id(), event.title(), open ? "NOT_OPEN" : "MISSED", open);
     }
 
     private String attendance(long eventId, long memberId) {
@@ -246,6 +248,6 @@ public class CheckInService {
     private record SessionRow(long id, Instant expiresAt, Instant closedAt, String qrHash, String codeHash) {}
     public record IssuedSession(Long sessionId, Instant expiresAt, String qrUrl, String code) {}
     public record SessionStatus(Long sessionId, Instant expiresAt, boolean open) {}
-    public record AttendanceState(Long eventId, String eventTitle, String status) {}
+    public record AttendanceState(Long eventId, String eventTitle, String status, boolean checkInOpen) {}
     public record AdminAttendance(Long memberId, String name, String email, String status) {}
 }

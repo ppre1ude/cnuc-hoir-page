@@ -5,6 +5,8 @@ import { EventCalendar } from "./EventCalendar";
 const getSession = vi.fn();
 const getEvents = vi.fn();
 const getNotices = vi.fn();
+const getEventAttendance = vi.fn();
+const getMyAttendance = vi.fn();
 const router = vi.hoisted(() => ({ replace: vi.fn() }));
 vi.mock("../auth/session", () => ({ getSession: () => getSession() }));
 vi.mock("./events", async (importOriginal) => ({
@@ -12,6 +14,11 @@ vi.mock("./events", async (importOriginal) => ({
   getEvents: (...args: unknown[]) => getEvents(...args),
 }));
 vi.mock("../notice/notices", () => ({ getNotices: (...args: unknown[]) => getNotices(...args) }));
+vi.mock("../attendance/attendance", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../attendance/attendance")>(),
+  getEventAttendance: (...args: unknown[]) => getEventAttendance(...args),
+  getMyAttendance: (...args: unknown[]) => getMyAttendance(...args),
+}));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
 describe("일정 중심 회원 화면", () => {
@@ -21,6 +28,8 @@ describe("일정 중심 회원 화면", () => {
     getSession.mockReset();
     getEvents.mockReset();
     getNotices.mockReset();
+    getEventAttendance.mockReset();
+    getMyAttendance.mockReset();
     router.replace.mockReset();
     getSession.mockResolvedValue({ status: "APPROVED", memberType: "OB", name: "단원" });
     getEvents.mockResolvedValue([
@@ -28,6 +37,10 @@ describe("일정 중심 회원 화면", () => {
       { id: 2, title: "가을 공연", description: "공연장", startAt: "2026-09-30T10:00:00Z", endAt: "2026-09-30T12:00:00Z", obEligible: true, publicVisible: false },
     ]);
     getNotices.mockResolvedValue({ items: [{ id: 9, title: "공연 안내", publishedAt: "2026-09-20T00:00:00Z" }], page: 0, size: 20, total: 1 });
+    getMyAttendance.mockResolvedValue([]);
+    getEventAttendance.mockImplementation(async (id: number) => ({
+      eventId: id, eventTitle: "행사", status: "NOT_OPEN", checkInOpen: id === 2,
+    }));
   });
   afterEach(() => { cleanup(); vi.useRealTimers(); });
 
@@ -53,6 +66,16 @@ describe("일정 중심 회원 화면", () => {
     expect(detail.compareDocumentPosition(notices) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(notices.compareDocumentPosition(attendance) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(await screen.findByText("공연 안내")).toBeInTheDocument();
+  });
+
+  it("출석 창이 열린 대상 행사에서만 참여 경로를 보여준다", async () => {
+    render(<EventCalendar />);
+    fireEvent.click(await screen.findByRole("button", { name: /29일/ }));
+    expect(await screen.findByRole("heading", { name: "정기 연습" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "현장 출석하기" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /30일/ }));
+    expect(await screen.findByRole("heading", { name: "가을 공연" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "현장 출석하기" })).toHaveAttribute("href", "/events/2/check-in");
   });
 
   it("승인 대기 계정은 회원 자료를 요청하지 않고 신청 상태로 이동한다", async () => {

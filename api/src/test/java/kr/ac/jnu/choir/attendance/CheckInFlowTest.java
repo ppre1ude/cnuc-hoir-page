@@ -115,6 +115,9 @@ class CheckInFlowTest {
         long id = event(false);
         String issued = open(id, session(admin));
         String code = field(issued, "code");
+        String availability = mvc.perform(get("/api/v1/events/" + id + "/attendance/me").session(session(active)))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(availability).contains("\"checkInOpen\":true").doesNotContain(code);
         assertThat(code).hasSize(8);
         assertThat(field(issued, "qrUrl")).startsWith("/events/" + id + "/check-in#token=");
         assertThat(jdbc.queryForObject("SELECT code_hash FROM check_in_session WHERE event_id = ?", String.class, id))
@@ -130,6 +133,7 @@ class CheckInFlowTest {
         String own = mvc.perform(get("/api/v1/events/" + id + "/attendance/me").session(session(missing)))
                 .andReturn().getResponse().getContentAsString();
         assertThat(own).contains("MISSED");
+        assertThat(own).contains("\"checkInOpen\":false");
     }
 
     @Test void obEligibilityRotationAndCorrectionAreEnforced() throws Exception {
@@ -185,15 +189,16 @@ class CheckInFlowTest {
 
     @Test void differentMembersShareTheSameIpLimit() throws Exception {
         Member admin = member("ACTIVE", true);
-        Member first = member("ACTIVE", false);
-        Member second = member("ACTIVE", false);
         long id = event(false);
         open(id, session(admin));
-        for (int attempt = 0; attempt < 5; attempt++) {
-            assertThat(checkFromIp(id, session(first), "WRONG123", "192.0.2.85")).isEqualTo(409);
-            assertThat(checkFromIp(id, session(second), "WRONG123", "192.0.2.85")).isEqualTo(409);
+        for (int memberIndex = 0; memberIndex < 10; memberIndex++) {
+            Member candidate = member("ACTIVE", false);
+            for (int attempt = 0; attempt < 10; attempt++) {
+                assertThat(checkFromIp(id, session(candidate), "WRONG123", "192.0.2.85")).isEqualTo(409);
+            }
         }
-        assertThat(checkFromIp(id, session(second), "WRONG123", "192.0.2.85")).isEqualTo(429);
+        Member eleventh = member("ACTIVE", false);
+        assertThat(checkFromIp(id, session(eleventh), "WRONG123", "192.0.2.85")).isEqualTo(429);
     }
 
     @Test void qrTokenWorksAndRotationInvalidatesThePreviousToken() throws Exception {
@@ -214,5 +219,63 @@ class CheckInFlowTest {
         assertThat(check(id, session(newTokenMember), newToken)).isEqualTo(204);
         assertThat(jdbc.queryForObject("SELECT qr_token_hash FROM check_in_session WHERE id = ?", String.class, sessionId))
                 .doesNotContain(newToken).hasSize(64);
+    }
+
+    @Test void revokedMemberExistingAttendanceRemainsManageableButCannotCreateAnother() throws Exception {
+        Member admin = member("ACTIVE", true);
+        Member recorded = member("ACTIVE", false);
+        Member unrecorded = member("ACTIVE", false);
+        long id = event(false);
+        String code = field(open(id, session(admin)), "code");
+        assertThat(check(id, session(recorded), code)).isEqualTo(204);
+        jdbc.update("UPDATE member SET status = 'REVOKED', auth_version = auth_version + 1 WHERE id IN (?, ?)",
+                recorded.getId(), unrecorded.getId());
+        String rows = mvc.perform(get("/api/v1/admin/events/" + id + "/attendance").session(session(admin)))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(rows).contains("\"memberId\":" + recorded.getId(), "\"status\":\"CHECKED_IN\"")
+                .doesNotContain("\"memberId\":" + unrecorded.getId());
+        MockHttpSession adminSession = session(admin);
+        assertThat(mvc.perform(put("/api/v1/admin/events/" + id + "/attendance/" + recorded.getId())
+                .session(adminSession).header("X-CSRF-TOKEN", csrf(adminSession)).contentType("application/json")
+                .content("{\"status\":\"MISSED\",\"reason\":\"기존 기록 정정\"}"))
+                .andReturn().getResponse().getStatus()).isEqualTo(204);
+        assertThat(mvc.perform(put("/api/v1/admin/events/" + id + "/attendance/" + unrecorded.getId())
+                .session(adminSession).header("X-CSRF-TOKEN", csrf(adminSession)).contentType("application/json")
+                .content("{\"status\":\"CHECKED_IN\",\"reason\":\"잘못된 신규 기록\"}"))
+                .andReturn().getResponse().getStatus()).isEqualTo(403);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM admin_action_log WHERE event_id = ? "
+                + "AND target_member_id = ? AND previous_status = 'CHECKED_IN' AND new_status = 'MISSED' "
+                + "AND reason = '기존 기록 정정'", Long.class, id, recorded.getId())).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM attendance WHERE event_id = ? AND member_id = ?",
+                Long.class, id, unrecorded.getId())).isZero();
+    }
+
+    @Test void changedObEligibilityCannotHideOrBlockExistingRecord() throws Exception {
+        Member admin = member("ACTIVE", true);
+        Member recorded = member("OB", false);
+        Member unrecorded = member("OB", false);
+        long id = event(true);
+        String code = field(open(id, session(admin)), "code");
+        assertThat(check(id, session(recorded), code)).isEqualTo(204);
+        jdbc.update("UPDATE event SET ob_eligible = FALSE WHERE id = ?", id);
+        String own = mvc.perform(get("/api/v1/events/" + id + "/attendance/me").session(session(recorded)))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(own).contains("CHECKED_IN");
+        String rows = mvc.perform(get("/api/v1/admin/events/" + id + "/attendance").session(session(admin)))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(rows).contains("\"memberId\":" + recorded.getId(), "\"status\":\"CHECKED_IN\"")
+                .doesNotContain("\"memberId\":" + unrecorded.getId());
+        MockHttpSession adminSession = session(admin);
+        assertThat(mvc.perform(put("/api/v1/admin/events/" + id + "/attendance/" + recorded.getId())
+                .session(adminSession).header("X-CSRF-TOKEN", csrf(adminSession)).contentType("application/json")
+                .content("{\"status\":\"MISSED\",\"reason\":\"대상 변경 후 정정\"}"))
+                .andReturn().getResponse().getStatus()).isEqualTo(204);
+        assertThat(mvc.perform(put("/api/v1/admin/events/" + id + "/attendance/" + unrecorded.getId())
+                .session(adminSession).header("X-CSRF-TOKEN", csrf(adminSession)).contentType("application/json")
+                .content("{\"status\":\"MISSED\",\"reason\":\"대상 아님\"}"))
+                .andReturn().getResponse().getStatus()).isEqualTo(403);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM admin_action_log WHERE event_id = ? "
+                + "AND target_member_id = ? AND previous_status = 'CHECKED_IN' AND new_status = 'MISSED' "
+                + "AND reason = '대상 변경 후 정정'", Long.class, id, recorded.getId())).isEqualTo(1);
     }
 }
