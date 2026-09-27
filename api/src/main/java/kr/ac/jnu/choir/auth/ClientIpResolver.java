@@ -15,7 +15,8 @@ import org.springframework.stereotype.Component;
 public class ClientIpResolver {
     private final List<IpAddressMatcher> trustedProxies;
 
-    public ClientIpResolver(@Value("${choir.security.trusted-proxy-cidrs:}") String configured) {
+    public ClientIpResolver(@Value("${choir.security.trusted-proxy-cidrs:}") String configured,
+            @Value("${choir.security.require-trusted-proxy:false}") boolean required) {
         List<IpAddressMatcher> parsed = new ArrayList<>();
         for (String item : configured.split(",")) {
             String cidr = item.strip();
@@ -27,6 +28,9 @@ public class ClientIpResolver {
             parsed.add(new IpAddressMatcher(cidr));
         }
         trustedProxies = List.copyOf(parsed);
+        if (required && trustedProxies.isEmpty()) {
+            throw new IllegalArgumentException("신뢰 프록시 주소를 명시해야 합니다.");
+        }
     }
 
     public String resolve(HttpServletRequest request) {

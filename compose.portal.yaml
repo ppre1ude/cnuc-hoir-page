@@ -1,0 +1,74 @@
+name: choir-portal
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: choir
+      MYSQL_USER: choir
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD 환경 변수가 필요합니다}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD 환경 변수가 필요합니다}
+    volumes:
+      - portal_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - api_private
+
+  api:
+    build: ./api
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/choir
+      DB_USER: choir
+      DB_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD 환경 변수가 필요합니다}
+      SMTP_HOST: ${SMTP_HOST:?SMTP_HOST 환경 변수가 필요합니다}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:?SMTP_USER 환경 변수가 필요합니다}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:?SMTP_PASSWORD 환경 변수가 필요합니다}
+      MAIL_FROM: ${MAIL_FROM:?MAIL_FROM 환경 변수가 필요합니다}
+      VERIFY_BASE_URL: ${VERIFY_BASE_URL:?VERIFY_BASE_URL 환경 변수가 필요합니다}
+      TRUSTED_PROXY_CIDRS: 172.30.240.10/32
+      REQUIRE_TRUSTED_PROXY: "true"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - api_private
+      - mail_egress
+
+  web:
+    build: ./web
+    networks:
+      - web_private
+
+  proxy:
+    image: nginx:stable-alpine
+    volumes:
+      - ./deployment/nginx/portal.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+      - web
+    ports:
+      - "127.0.0.1:${PORTAL_HTTP_PORT:-8080}:80"
+    networks:
+      api_private:
+        ipv4_address: 172.30.240.10
+      web_private:
+      edge:
+
+volumes:
+  portal_mysql_data:
+
+networks:
+  api_private:
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.30.240.0/24
+  web_private:
+    internal: true
+  mail_egress:
+  edge:
