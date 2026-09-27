@@ -116,4 +116,10 @@ public class Member {
         emailVerifiedAt = clock.instant();
         updatedAt = emailVerifiedAt;
     }
+
+    public void resetPassword(String hash, Clock clock) {
+        passwordHash = hash;
+        authVersion++;
+        updatedAt = clock.instant();
+    }
 }

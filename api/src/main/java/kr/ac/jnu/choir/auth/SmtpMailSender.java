@@ -30,4 +30,15 @@ public class SmtpMailSender implements MailSender {
                 + "\n이 링크는 24시간 동안 한 번만 사용할 수 있습니다.");
         sender.send(message);
     }
+
+    @Override
+    public void sendPasswordReset(String address, String link) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(from);
+        message.setTo(address);
+        message.setSubject("전남대학교 합창단 비밀번호 재설정");
+        message.setText("비밀번호를 재설정하려면 아래 링크를 열어 주세요.\n" + link
+                + "\n이 링크는 30분 동안 한 번만 사용할 수 있습니다.");
+        sender.send(message);
+    }
 }

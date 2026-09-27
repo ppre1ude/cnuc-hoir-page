@@ -160,6 +160,7 @@ class RegistrationFlowTest {
     static class TestMailSender implements MailSender {
         final List<String> messages = new ArrayList<>();
         public void sendVerification(String address, String link) { messages.add(link); }
+        public void sendPasswordReset(String address, String link) { messages.add(link); }
         String lastMessage() { return messages.getLast(); }
         String lastToken() { return lastMessage().split("#token=", 2)[1]; }
     }
