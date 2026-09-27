@@ -5,8 +5,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 import java.time.Clock;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import kr.ac.jnu.choir.auth.MailSender;
 import kr.ac.jnu.choir.common.AdminActionLogRepository;
+import kr.ac.jnu.choir.common.ApiException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +55,7 @@ class MemberApprovalTest {
     @Autowired FilterChainProxy security;
     @Autowired MemberRepository members;
     @Autowired AdminActionLogRepository logs;
+    @Autowired MemberApprovalService approvals;
     @Autowired JdbcTemplate jdbc;
     MockMvc mvc;
 
@@ -74,10 +79,23 @@ class MemberApprovalTest {
     @Test void onlyAdminsCanListAndChangeApplications() throws Exception {
         Member normal = member("APPROVED", false);
         Member applicant = member("APPROVAL_PENDING", false);
+        Member active = member("APPROVED", false);
+        var csrf = mvc.perform(get("/api/v1/auth/csrf").session(session(normal))).andReturn();
+        MockHttpSession normalSession = (MockHttpSession) csrf.getRequest().getSession(false);
+        String token = csrf.getResponse().getContentAsString().split("\"token\":\"", 2)[1].split("\"", 2)[0];
         assertThat(mvc.perform(get("/api/v1/admin/applications").session(session(normal)))
                 .andReturn().getResponse().getStatus()).isEqualTo(403);
         assertThat(mvc.perform(post("/api/v1/admin/applications/" + applicant.getId() + "/approve")
-                .session(session(normal)).contentType("application/json").content("{\"memberType\":\"OB\"}"))
+                .session(normalSession).header("X-CSRF-TOKEN", token)
+                .contentType("application/json").content("{\"memberType\":\"OB\"}"))
+                .andReturn().getResponse().getStatus()).isEqualTo(403);
+        assertThat(mvc.perform(post("/api/v1/admin/applications/" + applicant.getId() + "/reject")
+                .session(normalSession).header("X-CSRF-TOKEN", token)
+                .contentType("application/json").content("{\"reason\":\"명단 확인 불가\"}"))
+                .andReturn().getResponse().getStatus()).isEqualTo(403);
+        assertThat(mvc.perform(post("/api/v1/admin/members/" + active.getId() + "/revoke")
+                .session(normalSession).header("X-CSRF-TOKEN", token)
+                .contentType("application/json").content("{\"reason\":\"접근 해제\"}"))
                 .andReturn().getResponse().getStatus()).isEqualTo(403);
     }
 
@@ -85,6 +103,7 @@ class MemberApprovalTest {
         Member admin = member("APPROVED", true);
         Member unverified = member("EMAIL_PENDING", false);
         Member pending = member("APPROVAL_PENDING", false);
+        MockHttpSession oldSession = session(pending);
         var csrf = mvc.perform(get("/api/v1/auth/csrf").session(session(admin))).andReturn();
         MockHttpSession adminSession = (MockHttpSession) csrf.getRequest().getSession(false);
         String token = csrf.getResponse().getContentAsString().split("\"token\":\"", 2)[1].split("\"", 2)[0];
@@ -101,6 +120,7 @@ class MemberApprovalTest {
         assertThat(approved.getStatus()).isEqualTo(AccountStatus.APPROVED);
         assertThat(approved.getMemberType()).isEqualTo(MemberType.OB);
         assertThat(approved.getAuthVersion()).isEqualTo(1);
+        assertThat(mvc.perform(get("/api/v1/auth/me").session(oldSession)).andReturn().getResponse().getStatus()).isEqualTo(401);
         assertThat(logs.countByTargetMemberId(pending.getId())).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT actor_member_id FROM admin_action_log WHERE target_member_id = ?", Long.class,
                 pending.getId())).isEqualTo(admin.getId());
@@ -114,6 +134,7 @@ class MemberApprovalTest {
     @Test void rejectAndRevokeRecordReasonsAndInvalidateSession() throws Exception {
         Member admin = member("APPROVED", true);
         Member pending = member("APPROVAL_PENDING", false);
+        MockHttpSession rejectedSession = session(pending);
         Member active = member("APPROVED", false);
         MockHttpSession oldSession = session(active);
         var csrf = mvc.perform(get("/api/v1/auth/csrf").session(session(admin))).andReturn();
@@ -126,6 +147,7 @@ class MemberApprovalTest {
                 .session(adminSession).header("X-CSRF-TOKEN", token).contentType("application/json")
                 .content("{\"reason\":\"접근 해제 요청\"}")).andReturn().getResponse().getStatus()).isEqualTo(204);
         assertThat(members.findById(pending.getId()).orElseThrow().getStatus()).isEqualTo(AccountStatus.REJECTED);
+        assertThat(mvc.perform(get("/api/v1/auth/me").session(rejectedSession)).andReturn().getResponse().getStatus()).isEqualTo(401);
         assertThat(members.findById(active.getId()).orElseThrow().getStatus()).isEqualTo(AccountStatus.REVOKED);
         assertThat(logs.countByTargetMemberId(pending.getId())).isEqualTo(1);
         assertThat(logs.countByTargetMemberId(active.getId())).isEqualTo(1);
@@ -138,5 +160,28 @@ class MemberApprovalTest {
         assertThat(jdbc.queryForObject("SELECT acted_at IS NOT NULL FROM admin_action_log WHERE target_member_id = ?", Integer.class,
                 active.getId())).isEqualTo(1);
         assertThat(mvc.perform(get("/api/v1/auth/me").session(oldSession)).andReturn().getResponse().getStatus()).isEqualTo(401);
+    }
+
+    @Test void mutualAdminRevocationCannotRemoveAllAdmins() throws Exception {
+        Member first = member("APPROVED", true);
+        Member second = member("APPROVED", true);
+        jdbc.update("UPDATE member SET admin = FALSE WHERE id NOT IN (?, ?)", first.getId(), second.getId());
+        var start = new CountDownLatch(1);
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var left = executor.submit(() -> {
+                start.await();
+                try { approvals.revoke(first, second.getId(), "운영진 교체"); return true; }
+                catch (ApiException denied) { return false; }
+            });
+            var right = executor.submit(() -> {
+                start.await();
+                try { approvals.revoke(second, first.getId(), "운영진 교체"); return true; }
+                catch (ApiException denied) { return false; }
+            });
+            start.countDown();
+            assertThat(left.get(20, TimeUnit.SECONDS) ^ right.get(20, TimeUnit.SECONDS)).isTrue();
+        }
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM member WHERE admin = TRUE AND status = 'APPROVED'", Long.class))
+                .isEqualTo(1);
     }
 }

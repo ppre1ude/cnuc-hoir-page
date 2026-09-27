@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ApiRequestError } from "../../lib/api";
 import { getSession } from "../auth/session";
 import { approveApplication, getApplications, rejectApplication, type ApplicationPage } from "./adminMembers";
 
 export function ApplicationQueue() {
+  const router = useRouter();
   const [data, setData] = useState<ApplicationPage | null>(null);
   const [page, setPage] = useState(0);
   const [error, setError] = useState("");
@@ -21,10 +23,19 @@ export function ApplicationQueue() {
       }
       if (alive) setAuthorized(true);
       const result = await getApplications(page);
-      if (alive) setData(result);
-    }).catch(() => { if (alive) setError("신청 목록을 불러오지 못했습니다."); });
+      if (alive) {
+        if (page > 0 && result.items.length === 0 && result.total <= page * result.size) {
+          setData(null);
+          setPage(Math.max(0, Math.ceil(result.total / result.size) - 1));
+        } else setData(result);
+      }
+    }).catch((caught) => {
+      if (!alive) return;
+      if (caught instanceof ApiRequestError && caught.status === 401) router.replace("/login");
+      else setError("신청 목록을 불러오지 못했습니다.");
+    });
     return () => { alive = false; };
-  }, [page]);
+  }, [page, router]);
 
   async function update(id: number, action: () => Promise<void>) {
     if (busy !== null) return;
@@ -32,9 +43,14 @@ export function ApplicationQueue() {
     setError("");
     try {
       await action();
-      setData(await getApplications(page));
+      const result = await getApplications(page);
+      if (page > 0 && result.items.length === 0 && result.total <= page * result.size) {
+        setData(null);
+        setPage(Math.max(0, Math.ceil(result.total / result.size) - 1));
+      } else setData(result);
     } catch (caught) {
-      setError(caught instanceof ApiRequestError && caught.status === 409
+      if (caught instanceof ApiRequestError && caught.status === 401) router.replace("/login");
+      else setError(caught instanceof ApiRequestError && caught.status === 409
         ? "이미 처리된 신청입니다. 목록을 새로 확인해 주세요."
         : "처리하지 못했습니다. 잠시 후 다시 시도해 주세요.");
     } finally {

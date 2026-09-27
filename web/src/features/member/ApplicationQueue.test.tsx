@@ -1,10 +1,14 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ApplicationQueue } from "./ApplicationQueue";
 import { approveApplication, getApplications, rejectApplication } from "./adminMembers";
 import { getSession } from "../auth/session";
 import { ApiRequestError } from "../../lib/api";
+
+const replace = vi.fn();
+const router = { replace };
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
 vi.mock("./adminMembers", () => ({ getApplications: vi.fn(), approveApplication: vi.fn(), rejectApplication: vi.fn() }));
 vi.mock("../auth/session", () => ({ getSession: vi.fn() }));
@@ -16,6 +20,42 @@ beforeEach(() => {
   vi.mocked(rejectApplication).mockResolvedValue();
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
+
+test("로그인 세션이 없으면 로그인 화면으로 이동합니다", async () => {
+  vi.mocked(getSession).mockRejectedValue(new ApiRequestError(401, "UNAUTHENTICATED", "로그인이 필요합니다."));
+  render(<ApplicationQueue />);
+  await waitFor(() => expect(replace).toHaveBeenCalledWith("/login"));
+  expect(getApplications).not.toHaveBeenCalled();
+});
+
+test("신청 처리 중 세션이 만료되어도 로그인 화면으로 이동합니다", async () => {
+  vi.mocked(approveApplication).mockRejectedValue(new ApiRequestError(401, "SESSION_EXPIRED", "다시 로그인해 주세요."));
+  render(<ApplicationQueue />);
+  await screen.findByText("member@example.org");
+  await userEvent.click(screen.getByRole("button", { name: "신청자 승인" }));
+  await waitFor(() => expect(replace).toHaveBeenCalledWith("/login"));
+});
+
+test("마지막 페이지의 마지막 신청을 처리하면 첫 페이지를 다시 불러옵니다", async () => {
+  const firstPage = Array.from({ length: 20 }, (_, index) => ({
+    id: index + 2, name: `${index + 1}번 신청자`, email: `member${index + 1}@example.org`,
+    status: "APPROVAL_PENDING" as const, createdAt: "2026-09-27T00:00:00Z",
+  }));
+  const last = { id: 22, name: "마지막 신청자", email: "last@example.org", status: "APPROVAL_PENDING" as const, createdAt: "2026-09-27T00:00:00Z" };
+  vi.mocked(getApplications).mockImplementation(async (page = 0) => {
+    if (page === 0) return { items: firstPage, page: 0, size: 20,
+      total: vi.mocked(approveApplication).mock.calls.length === 0 ? 21 : 20 };
+    if (vi.mocked(approveApplication).mock.calls.length === 0) return { items: [last], page: 1, size: 20, total: 21 };
+    return { items: [], page: 1, size: 20, total: 20 };
+  });
+  render(<ApplicationQueue />);
+  await screen.findByText("member1@example.org");
+  await userEvent.click(screen.getByRole("button", { name: "다음" }));
+  await screen.findByText("last@example.org");
+  await userEvent.click(screen.getByRole("button", { name: "마지막 신청자 승인" }));
+  await waitFor(() => expect(getApplications).toHaveBeenLastCalledWith(0));
+  expect(await screen.findByText("member1@example.org")).toBeInTheDocument();
+});
 
 test("신청 목록에서 OB를 선택해 승인합니다", async () => {
   render(<ApplicationQueue />);

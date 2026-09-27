@@ -22,4 +22,6 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     Optional<Member> findByIdForUpdate(@Param("id") Long id);
 
     Page<Member> findByStatusOrderByCreatedAtAsc(AccountStatus status, Pageable pageable);
+
+    long countByAdminTrueAndStatus(AccountStatus status);
 }
