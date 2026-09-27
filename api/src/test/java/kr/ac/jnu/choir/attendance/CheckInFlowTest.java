@@ -91,6 +91,14 @@ class CheckInFlowTest {
         assertThat(response.getStatus()).isEqualTo(201);
         return response.getContentAsString();
     }
+    private void close(long eventId, MockHttpSession admin) throws Exception {
+        assertThat(mvc.perform(post("/api/v1/admin/events/" + eventId + "/check-in-session/close")
+                .session(admin).header("X-CSRF-TOKEN", csrf(admin))).andReturn().getResponse().getStatus()).isEqualTo(204);
+    }
+    private String own(long eventId, Member member) throws Exception {
+        return mvc.perform(get("/api/v1/events/" + eventId + "/attendance/me").session(session(member)))
+                .andReturn().getResponse().getContentAsString();
+    }
     private String field(String json, String key) {
         return json.split("\"" + key + "\":\"", 2)[1].split("\"", 2)[0];
     }
@@ -168,8 +176,10 @@ class CheckInFlowTest {
         String firstCode = field(open(id, session(admin)), "code");
         jdbc.update("UPDATE check_in_session SET expires_at = '2026-09-27 09:59:59' WHERE event_id = ?", id);
         assertThat(check(id, session(active), firstCode)).isEqualTo(409);
+        assertThat(own(id, active)).contains("\"status\":\"MISSED\"", "\"checkInOpen\":false");
         String secondCode = field(open(id, session(admin)), "code");
         assertThat(secondCode).isNotEqualTo(firstCode);
+        assertThat(own(id, active)).contains("\"status\":\"NOT_OPEN\"", "\"checkInOpen\":true");
         assertThat(check(id, session(active), firstCode)).isEqualTo(409);
         assertThat(check(id, session(active), secondCode)).isEqualTo(204);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM check_in_session WHERE event_id = ? AND closed_at IS NULL",
@@ -233,7 +243,7 @@ class CheckInFlowTest {
         String rows = mvc.perform(get("/api/v1/admin/events/" + id + "/attendance").session(session(admin)))
                 .andReturn().getResponse().getContentAsString();
         assertThat(rows).contains("\"memberId\":" + recorded.getId(), "\"status\":\"CHECKED_IN\"")
-                .doesNotContain("\"memberId\":" + unrecorded.getId());
+                .containsPattern("\\\"memberId\\\":" + unrecorded.getId() + "[^}]*\\\"status\\\":\\\"NOT_ELIGIBLE\\\"");
         MockHttpSession adminSession = session(admin);
         assertThat(mvc.perform(put("/api/v1/admin/events/" + id + "/attendance/" + recorded.getId())
                 .session(adminSession).header("X-CSRF-TOKEN", csrf(adminSession)).contentType("application/json")
@@ -261,10 +271,11 @@ class CheckInFlowTest {
         String own = mvc.perform(get("/api/v1/events/" + id + "/attendance/me").session(session(recorded)))
                 .andReturn().getResponse().getContentAsString();
         assertThat(own).contains("CHECKED_IN");
+        assertThat(check(id, session(unrecorded), code)).isEqualTo(403);
         String rows = mvc.perform(get("/api/v1/admin/events/" + id + "/attendance").session(session(admin)))
                 .andReturn().getResponse().getContentAsString();
         assertThat(rows).contains("\"memberId\":" + recorded.getId(), "\"status\":\"CHECKED_IN\"")
-                .doesNotContain("\"memberId\":" + unrecorded.getId());
+                .containsPattern("\\\"memberId\\\":" + unrecorded.getId() + "[^}]*\\\"status\\\":\\\"NOT_ELIGIBLE\\\"");
         MockHttpSession adminSession = session(admin);
         assertThat(mvc.perform(put("/api/v1/admin/events/" + id + "/attendance/" + recorded.getId())
                 .session(adminSession).header("X-CSRF-TOKEN", csrf(adminSession)).contentType("application/json")
@@ -277,5 +288,106 @@ class CheckInFlowTest {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM admin_action_log WHERE event_id = ? "
                 + "AND target_member_id = ? AND previous_status = 'CHECKED_IN' AND new_status = 'MISSED' "
                 + "AND reason = '대상 변경 후 정정'", Long.class, id, recorded.getId())).isEqualTo(1);
+    }
+
+    @Test void historicalMissedSurvivesAccessRevocationAndCanBeCorrected() throws Exception {
+        Member admin = member("ACTIVE", true);
+        Member historical = member("ACTIVE", false);
+        long id = event(false);
+        open(id, session(admin));
+        close(id, session(admin));
+        jdbc.update("UPDATE member SET status = 'REVOKED', auth_version = auth_version + 1 WHERE id = ?", historical.getId());
+
+        String rows = mvc.perform(get("/api/v1/admin/events/" + id + "/attendance").session(session(admin)))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(rows).containsPattern("\\\"memberId\\\":" + historical.getId() + "[^}]*\\\"status\\\":\\\"MISSED\\\"");
+        MockHttpSession adminSession = session(admin);
+        assertThat(mvc.perform(put("/api/v1/admin/events/" + id + "/attendance/" + historical.getId())
+                .session(adminSession).header("X-CSRF-TOKEN", csrf(adminSession)).contentType("application/json")
+                .content("{\"status\":\"CHECKED_IN\",\"reason\":\"종료 당시 대상 정정\"}"))
+                .andReturn().getResponse().getStatus()).isEqualTo(204);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM admin_action_log WHERE event_id = ? AND target_member_id = ? "
+                + "AND previous_status = 'MISSED' AND new_status = 'CHECKED_IN' AND reason = '종료 당시 대상 정정'",
+                Long.class, id, historical.getId())).isEqualTo(1);
+    }
+
+    @Test void historicalObMissedSurvivesEligibilityChange() throws Exception {
+        Member admin = member("ACTIVE", true);
+        Member historical = member("OB", false);
+        long id = event(true);
+        open(id, session(admin));
+        close(id, session(admin));
+        jdbc.update("UPDATE event SET ob_eligible = FALSE WHERE id = ?", id);
+
+        assertThat(own(id, historical)).contains("\"status\":\"MISSED\"");
+        String rows = mvc.perform(get("/api/v1/admin/events/" + id + "/attendance").session(session(admin)))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(rows).containsPattern("\\\"memberId\\\":" + historical.getId() + "[^}]*\\\"status\\\":\\\"MISSED\\\"");
+        MockHttpSession adminSession = session(admin);
+        assertThat(mvc.perform(put("/api/v1/admin/events/" + id + "/attendance/" + historical.getId())
+                .session(adminSession).header("X-CSRF-TOKEN", csrf(adminSession)).contentType("application/json")
+                .content("{\"status\":\"CHECKED_IN\",\"reason\":\"당시 OB 대상 정정\"}"))
+                .andReturn().getResponse().getStatus()).isEqualTo(204);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM admin_action_log WHERE event_id = ? AND target_member_id = ? "
+                + "AND previous_status = 'MISSED' AND new_status = 'CHECKED_IN' AND reason = '당시 OB 대상 정정'",
+                Long.class, id, historical.getId())).isEqualTo(1);
+    }
+
+    @Test void approvalAfterOpeningDoesNotCreateEarlierAbsenceButCanCheckIn() throws Exception {
+        Member admin = member("ACTIVE", true);
+        Member lateAbsent = member("ACTIVE", false);
+        Member latePresent = member("ACTIVE", false);
+        jdbc.update("UPDATE member SET status = 'APPROVAL_PENDING' WHERE id IN (?, ?)", lateAbsent.getId(), latePresent.getId());
+        long id = event(false);
+        String issued = open(id, session(admin));
+        long sessionId = Long.parseLong(issued.split("\"sessionId\":", 2)[1].split("[,}]", 2)[0]);
+        jdbc.update("UPDATE member SET status = 'APPROVED' WHERE id IN (?, ?)", lateAbsent.getId(), latePresent.getId());
+
+        assertThat(own(id, lateAbsent)).contains("\"status\":\"NOT_OPEN\"", "\"checkInOpen\":true");
+        assertThat(check(id, session(latePresent), field(issued, "code"))).isEqualTo(204);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM attendance_eligibility_snapshot "
+                + "WHERE check_in_session_id = ? AND member_id = ?", Long.class, sessionId, latePresent.getId())).isEqualTo(1);
+        close(id, session(admin));
+        assertThat(own(id, lateAbsent)).contains("\"status\":\"NOT_OPEN\"").doesNotContain("MISSED");
+        assertThat(own(id, latePresent)).contains("\"status\":\"CHECKED_IN\"");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM attendance_eligibility_snapshot "
+                + "WHERE check_in_session_id = ? AND member_id = ?", Long.class, sessionId, lateAbsent.getId())).isZero();
+        jdbc.update("UPDATE member SET status = 'REVOKED', auth_version = auth_version + 1 WHERE id = ?", lateAbsent.getId());
+        MockHttpSession adminSession = session(admin);
+        assertThat(mvc.perform(put("/api/v1/admin/events/" + id + "/attendance/" + lateAbsent.getId())
+                .session(adminSession).header("X-CSRF-TOKEN", csrf(adminSession)).contentType("application/json")
+                .content("{\"status\":\"CHECKED_IN\",\"reason\":\"과거 대상 아님\"}"))
+                .andReturn().getResponse().getStatus()).isEqualTo(403);
+    }
+
+    @Test void reopeningSnapshotsCurrentTargetsAndKeepsOlderTargets() throws Exception {
+        Member admin = member("ACTIVE", true);
+        Member older = member("ACTIVE", false);
+        Member removed = member("ACTIVE", false);
+        long id = event(false);
+        String first = open(id, session(admin));
+        long firstId = Long.parseLong(first.split("\"sessionId\":", 2)[1].split("[,}]", 2)[0]);
+        close(id, session(admin));
+        Member newcomer = member("ACTIVE", false);
+        jdbc.update("UPDATE member SET status = 'REVOKED', auth_version = auth_version + 1 WHERE id = ?", removed.getId());
+        String second = open(id, session(admin));
+        long secondId = Long.parseLong(second.split("\"sessionId\":", 2)[1].split("[,}]", 2)[0]);
+
+        assertThat(own(id, older)).contains("\"status\":\"NOT_OPEN\"", "\"checkInOpen\":true");
+        assertThat(own(id, newcomer)).contains("\"status\":\"NOT_OPEN\"", "\"checkInOpen\":true");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM attendance_eligibility_snapshot "
+                + "WHERE check_in_session_id = ? AND member_id = ?", Long.class, firstId, newcomer.getId())).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM attendance_eligibility_snapshot "
+                + "WHERE check_in_session_id = ? AND member_id = ?", Long.class, secondId, newcomer.getId())).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM attendance_eligibility_snapshot "
+                + "WHERE member_id = ? AND check_in_session_id IN (?, ?)", Long.class, older.getId(), firstId, secondId)).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM attendance_eligibility_snapshot "
+                + "WHERE member_id = ? AND check_in_session_id IN (?, ?)", Long.class, removed.getId(), firstId, secondId)).isEqualTo(1);
+        String rows = mvc.perform(get("/api/v1/admin/events/" + id + "/attendance").session(session(admin)))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(rows).containsPattern("\\\"memberId\\\":" + removed.getId() + "[^}]*\\\"status\\\":\\\"MISSED\\\"");
+        assertThat(check(id, session(older), field(second, "code"))).isEqualTo(204);
+        close(id, session(admin));
+        assertThat(own(id, newcomer)).contains("\"status\":\"MISSED\"");
     }
 }

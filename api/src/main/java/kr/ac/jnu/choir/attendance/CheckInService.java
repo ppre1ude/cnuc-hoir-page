@@ -33,7 +33,7 @@ public class CheckInService {
 
     @Transactional
     public IssuedSession open(long eventId) {
-        lockEvent(eventId);
+        EventRow event = lockEvent(eventId);
         Instant now = clock.instant();
         List<SessionRow> active = activeSession(eventId);
         if (!active.isEmpty()) {
@@ -48,6 +48,10 @@ public class CheckInService {
         jdbc.update("INSERT INTO check_in_session (event_id,opened_at,expires_at,qr_token_hash,code_hash) "
                 + "VALUES (?,?,?,?,?)", eventId, time(now), time(expiresAt), hash(qrToken), hash(code));
         Long id = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+        jdbc.update("INSERT INTO attendance_eligibility_snapshot (check_in_session_id,member_id,snapshotted_at) "
+                + "SELECT ?,m.id,? FROM member m WHERE m.status = 'APPROVED' "
+                + "AND (m.member_type = 'ACTIVE' OR (? AND m.member_type = 'OB'))",
+                id, time(now), event.obEligible());
         return new IssuedSession(id, expiresAt, "/events/" + eventId + "/check-in#token=" + qrToken, code);
     }
 
@@ -92,6 +96,10 @@ public class CheckInService {
         try {
             jdbc.update("INSERT INTO attendance (event_id,member_id,status,checked_in_at) VALUES (?,?,'CHECKED_IN',?)",
                     eventId, member.getId(), time(clock.instant()));
+            jdbc.update("INSERT INTO attendance_eligibility_snapshot (check_in_session_id,member_id,snapshotted_at) "
+                    + "SELECT ?,?,? WHERE NOT EXISTS (SELECT 1 FROM attendance_eligibility_snapshot "
+                    + "WHERE check_in_session_id = ? AND member_id = ?)",
+                    session.id(), member.getId(), time(clock.instant()), session.id(), member.getId());
         } catch (DuplicateKeyException duplicate) {
             throw conflict("ALREADY_CHECKED_IN", "이미 처리된 출석입니다.");
         }
@@ -117,12 +125,15 @@ public class CheckInService {
         return jdbc.query("SELECT id,name,email,status,member_type FROM member WHERE "
                 + "(status = 'APPROVED' AND (member_type = 'ACTIVE' OR (? AND member_type = 'OB'))) "
                 + "OR EXISTS (SELECT 1 FROM attendance a WHERE a.event_id = ? AND a.member_id = member.id) "
+                + "OR EXISTS (SELECT 1 FROM attendance_eligibility_snapshot snap "
+                + "JOIN check_in_session sess ON sess.id = snap.check_in_session_id "
+                + "WHERE sess.event_id = ? AND snap.member_id = member.id) "
                 + "ORDER BY name,id",
                 (rs, row) -> {
                     MemberRow target = new MemberRow(rs.getLong(1), rs.getString(2), rs.getString(3),
                             rs.getString(4), rs.getString(5));
                     return new AdminAttendance(target.id(), target.name(), target.email(), state(event, target).status());
-                }, event.obEligible(), eventId);
+                }, event.obEligible(), eventId, eventId);
     }
 
     @Transactional(readOnly = true)
@@ -138,7 +149,8 @@ public class CheckInService {
     public void correct(long eventId, long memberId, Member actor, String newStatus, String reason) {
         EventRow event = lockEvent(eventId);
         MemberRow target = lockMember(memberId);
-        if (attendance(eventId, memberId) == null && !eligible(event, target)) throw forbidden();
+        if (attendance(eventId, memberId) == null && !eligible(event, target)
+                && !historicalMissed(eventId, memberId)) throw forbidden();
         AttendanceState previous = state(event, target);
         if (newStatus.equals(previous.status())) {
             throw conflict("ATTENDANCE_UNCHANGED", "출석 상태가 이미 같습니다.");
@@ -159,13 +171,25 @@ public class CheckInService {
     private AttendanceState state(EventRow event, MemberRow target) {
         String stored = attendance(event.id(), target.id());
         if (stored != null) return new AttendanceState(event.id(), event.title(), stored, false);
-        if (!eligible(event, target)) return new AttendanceState(event.id(), event.title(), "NOT_ELIGIBLE", false);
-        List<SessionRow> sessions = jdbc.query("SELECT id,expires_at,closed_at,qr_token_hash,code_hash FROM check_in_session "
-                + "WHERE event_id = ? ORDER BY id DESC LIMIT 1", (rs, row) -> sessionRow(rs), event.id());
-        if (sessions.isEmpty()) return new AttendanceState(event.id(), event.title(), "NOT_OPEN", false);
-        SessionRow session = sessions.getFirst();
-        boolean open = session.closedAt() == null && clock.instant().isBefore(session.expiresAt());
-        return new AttendanceState(event.id(), event.title(), open ? "NOT_OPEN" : "MISSED", open);
+        boolean eligibleNow = eligible(event, target);
+        List<SessionRow> active = activeSession(event.id());
+        boolean open = !active.isEmpty() && clock.instant().isBefore(active.getFirst().expiresAt());
+        if (open && eligibleNow) return new AttendanceState(event.id(), event.title(), "NOT_OPEN", true);
+        if (historicalMissed(event.id(), target.id())) {
+            return new AttendanceState(event.id(), event.title(), "MISSED", false);
+        }
+        return new AttendanceState(event.id(), event.title(), eligibleNow ? "NOT_OPEN" : "NOT_ELIGIBLE", false);
+    }
+
+    private boolean historicalMissed(long eventId, long memberId) {
+        List<SessionRow> sessions = jdbc.query("SELECT sess.id,sess.expires_at,sess.closed_at,sess.qr_token_hash,sess.code_hash "
+                + "FROM attendance_eligibility_snapshot snap "
+                + "JOIN check_in_session sess ON sess.id = snap.check_in_session_id "
+                + "WHERE sess.event_id = ? AND snap.member_id = ? ORDER BY sess.id DESC LIMIT 1",
+                (rs, row) -> sessionRow(rs), eventId, memberId);
+        if (sessions.isEmpty()) return false;
+        SessionRow latest = sessions.getFirst();
+        return latest.closedAt() != null || !clock.instant().isBefore(latest.expiresAt());
     }
 
     private String attendance(long eventId, long memberId) {
