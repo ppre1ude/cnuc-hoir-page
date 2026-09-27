@@ -17,7 +17,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class AuthTokenService {
-    private static final String PURPOSE = "EMAIL_VERIFICATION";
+    private static final String PURPOSE = MailOutboxService.VERIFY;
     private static final Duration LIFETIME = Duration.ofHours(24);
     private final JdbcTemplate jdbc;
     private final Clock clock;
@@ -29,14 +29,22 @@ public class AuthTokenService {
     }
 
     public String issue(long memberId) {
+        return issue(memberId, PURPOSE, LIFETIME);
+    }
+
+    public String issuePasswordReset(long memberId) {
+        return issue(memberId, MailOutboxService.RESET, Duration.ofMinutes(30));
+    }
+
+    private String issue(long memberId, String purpose, Duration lifetime) {
         Instant now = clock.instant();
         jdbc.update("UPDATE auth_token SET used_at = ? WHERE member_id = ? AND purpose = ? AND used_at IS NULL",
-                Timestamp.from(now), memberId, PURPOSE);
+                Timestamp.from(now), memberId, purpose);
         byte[] bytes = new byte[32];
         random.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         jdbc.update("INSERT INTO auth_token (member_id, purpose, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)",
-                memberId, PURPOSE, hash(token), Timestamp.from(now.plus(LIFETIME)), Timestamp.from(now));
+                memberId, purpose, hash(token), Timestamp.from(now.plus(lifetime)), Timestamp.from(now));
         return token;
     }
 

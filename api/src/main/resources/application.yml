@@ -28,8 +28,11 @@ spring:
       "[mail.smtp.timeout]": 5000
       "[mail.smtp.writetimeout]": 5000
 choir:
+  security:
+    trusted-proxy-cidrs: ${TRUSTED_PROXY_CIDRS:}
   mail:
     enabled: true
+    retry-poll-ms: ${MAIL_RETRY_POLL_MS:60000}
     from: ${MAIL_FROM:}
     verify-base-url: ${VERIFY_BASE_URL:}
 server:

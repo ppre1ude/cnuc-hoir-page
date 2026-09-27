@@ -26,16 +26,15 @@ public class RegistrationService {
             "[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?");
     private final MemberRepository members;
     private final AuthTokenService tokens;
-    private final MailSender mail;
+    private final MailOutboxService outbox;
     private final Clock clock;
-    private final String verifyBaseUrl;
     private final PasswordEncoder passwords = PasswordEncoderFactories.createDelegatingPasswordEncoder();
 
-    public RegistrationService(MemberRepository members, AuthTokenService tokens, MailSender mail, Clock clock,
+    public RegistrationService(MemberRepository members, AuthTokenService tokens, MailOutboxService outbox, Clock clock,
             @Value("${choir.mail.verify-base-url}") String verifyBaseUrl) {
         this.members = members;
         this.tokens = tokens;
-        this.mail = mail;
+        this.outbox = outbox;
         this.clock = clock;
         URI verifyUri = URI.create(verifyBaseUrl);
         if (!"https".equals(verifyUri.getScheme()) || verifyUri.getHost() == null
@@ -43,7 +42,6 @@ public class RegistrationService {
                 || !"/verify-email".equals(verifyUri.getPath())) {
             throw new IllegalArgumentException("이메일 확인 주소는 HTTPS /verify-email 경로여야 합니다.");
         }
-        this.verifyBaseUrl = verifyBaseUrl;
     }
 
     @Transactional
@@ -71,8 +69,7 @@ public class RegistrationService {
         } catch (DataIntegrityViolationException exception) {
             throw new ApiException(HttpStatus.CONFLICT, "EMAIL_ALREADY_USED", "이미 사용 중인 이메일입니다.");
         }
-        String token = tokens.issue(member.getId());
-        mail.sendVerification(normalized, link(token));
+        outbox.enqueue(member.getId(), MailOutboxService.VERIFY);
     }
 
     @Transactional
@@ -91,15 +88,11 @@ public class RegistrationService {
         String normalized = normalize(email);
         members.findByEmailForUpdate(normalized).ifPresent(member -> {
             if (member.getStatus() == AccountStatus.EMAIL_PENDING
-                    && !tokens.issuedWithin(member.getId(), Duration.ofMinutes(10))) {
-                String token = tokens.issue(member.getId());
-                mail.sendVerification(member.getEmail(), link(token));
+                    && !tokens.issuedWithin(member.getId(), Duration.ofMinutes(10))
+                    && !outbox.queuedWithin(member.getId(), MailOutboxService.VERIFY, Duration.ofMinutes(10))) {
+                outbox.enqueue(member.getId(), MailOutboxService.VERIFY);
             }
         });
-    }
-
-    private String link(String token) {
-        return verifyBaseUrl + "#token=" + token;
     }
 
     private static String normalize(String email) {

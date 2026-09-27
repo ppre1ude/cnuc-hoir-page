@@ -37,7 +37,7 @@ export function RegistrationForm() {
   }
 
   if (complete) {
-    return <p role="status">확인 메일을 보냈습니다. 이메일을 확인한 뒤 운영진 승인을 기다려 주세요.</p>;
+    return <p role="status">가입 신청을 접수했습니다. 확인 메일이 도착하면 이메일을 확인한 뒤 운영진 승인을 기다려 주세요.</p>;
   }
 
   return (

@@ -11,7 +11,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import kr.ac.jnu.choir.member.AccountStatus;
 import kr.ac.jnu.choir.member.Member;
 import kr.ac.jnu.choir.member.MemberRepository;
@@ -52,6 +54,7 @@ class RegistrationFlowTest {
     @Autowired RegistrationService registration;
     @Autowired MemberRepository members;
     @Autowired TestMailSender mail;
+    @Autowired MailOutboxService outbox;
     @Autowired MutableClock clock;
     @Autowired WebApplicationContext webContext;
     @Autowired FilterChainProxy securityFilter;
@@ -77,11 +80,12 @@ class RegistrationFlowTest {
                 .contentType("application/json")
                 .content("{\"email\":\"http@example.org\",\"password\":\"correct-horse-battery\",\"name\":\"신청자\"}"))
                 .andExpect(status().isAccepted());
+        outbox.dispatchDue();
         mvc.perform(post("/api/v1/auth/verify-email")
                 .session(session)
                 .header("X-CSRF-TOKEN", csrf)
                 .contentType("application/json")
-                .content("{\"token\":\"" + mail.lastToken() + "\"}"))
+                .content("{\"token\":\"" + mail.lastTokenFor("http@example.org") + "\"}"))
                 .andExpect(status().isNoContent());
         mvc.perform(get("/api/v1/member/private")).andExpect(status().isUnauthorized());
     }
@@ -89,12 +93,13 @@ class RegistrationFlowTest {
     @Test
     void applicationAndOneUseVerification() {
         registration.apply("  PERSON@Example.org  ", "correct-horse-battery", "신청자");
+        outbox.dispatchDue();
         Member member = members.findByEmailIgnoreCase("person@example.org").orElseThrow();
         assertThat(member.getEmail()).isEqualTo("person@example.org");
         assertThat(member.getStatus()).isEqualTo(AccountStatus.EMAIL_PENDING);
         assertThat(member.getPasswordHash()).doesNotContain("correct-horse-battery");
-        String token = mail.lastToken();
-        assertThat(mail.lastMessage()).contains("https://choir.example/verify-email#token=");
+        String token = mail.lastTokenFor("person@example.org");
+        assertThat(mail.lastMessageFor("person@example.org")).contains("https://choir.example/verify-email#token=");
         registration.verifyEmail(token);
         assertThat(members.findById(member.getId()).orElseThrow().getStatus()).isEqualTo(AccountStatus.APPROVAL_PENDING);
         assertThatThrownBy(() -> registration.verifyEmail(token)).hasMessageContaining("사용할 수 없는 확인 링크");
@@ -103,7 +108,8 @@ class RegistrationFlowTest {
     @Test
     void expiresAfterOneDayAndRejectsDuplicate() {
         registration.apply("expire@example.org", "correct-horse-battery", "신청자");
-        String token = mail.lastToken();
+        outbox.dispatchDue();
+        String token = mail.lastTokenFor("expire@example.org");
         assertThatThrownBy(() -> registration.apply("EXPIRE@example.org", "correct-horse-battery", "다른 사람"))
                 .hasMessageContaining("이미 사용 중인 이메일");
         clock.advance(Duration.ofHours(24));
@@ -113,16 +119,62 @@ class RegistrationFlowTest {
     @Test
     void resendRevokesOldLinkAndLimitsFrequency() {
         registration.apply("resend@example.org", "correct-horse-battery", "신청자");
-        String oldToken = mail.lastToken();
+        outbox.dispatchDue();
+        String oldToken = mail.lastTokenFor("resend@example.org");
         registration.resendVerification("unknown@example.org");
         registration.resendVerification("resend@example.org");
-        assertThat(mail.messages).hasSize(1);
+        assertThat(mail.countFor("resend@example.org")).isEqualTo(1);
         clock.advance(Duration.ofMinutes(10));
         registration.resendVerification("resend@example.org");
-        String newToken = mail.lastToken();
+        outbox.dispatchDue();
+        String newToken = mail.lastTokenFor("resend@example.org");
         assertThat(newToken).isNotEqualTo(oldToken);
         assertThatThrownBy(() -> registration.verifyEmail(oldToken)).hasMessageContaining("사용할 수 없는 확인 링크");
         registration.verifyEmail(newToken);
+    }
+
+    @Test
+    void failedVerificationMailRetriesWithoutExposingAddress() throws Exception {
+        registration.apply("retry-verify@example.org", "correct-horse-battery", "신청자");
+        int sentBefore = mail.countFor("retry-verify@example.org");
+        mail.fail = true;
+        outbox.dispatchDue();
+        assertThat(mail.countFor("retry-verify@example.org")).isEqualTo(sentBefore);
+        var csrfResponse = mvc.perform(get("/api/v1/auth/csrf")).andReturn();
+        String csrf = csrfResponse.getResponse().getContentAsString().split("\"token\":\"", 2)[1].split("\"", 2)[0];
+        MockHttpSession session = (MockHttpSession) csrfResponse.getRequest().getSession(false);
+        for (String address : List.of("retry-verify@example.org", "unknown-verify@example.org")) {
+            mvc.perform(post("/api/v1/auth/resend-verification").session(session)
+                    .header("X-CSRF-TOKEN", csrf).contentType("application/json")
+                    .content("{\"email\":\"" + address + "\"}"))
+                    .andExpect(status().isAccepted());
+        }
+        mail.fail = false;
+        outbox.dispatchDue();
+        assertThat(mail.countFor("retry-verify@example.org")).isEqualTo(sentBefore);
+        clock.advance(Duration.ofMinutes(1));
+        outbox.dispatchDue();
+        assertThat(mail.countFor("retry-verify@example.org")).isEqualTo(sentBefore + 1);
+        String token = mail.lastTokenFor("retry-verify@example.org");
+        outbox.dispatchDue();
+        assertThat(mail.countFor("retry-verify@example.org")).isEqualTo(sentBefore + 1);
+        clock.advance(Duration.ofHours(24));
+        assertThatThrownBy(() -> registration.verifyEmail(token)).isInstanceOf(ApiException.class);
+    }
+
+    @Test
+    void failedResendKeepsPreviouslyDeliveredLinkValid() {
+        registration.apply("old-link@example.org", "correct-horse-battery", "신청자");
+        outbox.dispatchDue();
+        String oldToken = mail.lastTokenFor("old-link@example.org");
+        clock.advance(Duration.ofMinutes(10));
+        registration.resendVerification("old-link@example.org");
+        mail.fail = true;
+        outbox.dispatchDue();
+        mail.fail = false;
+        registration.verifyEmail(oldToken);
+        assertThat(members.findByEmailIgnoreCase("old-link@example.org").orElseThrow().getStatus())
+                .isEqualTo(AccountStatus.APPROVAL_PENDING);
     }
 
     @Test
@@ -139,14 +191,14 @@ class RegistrationFlowTest {
 
     @Test
     void rejectsMalformedAddressBeforeMailAndAcceptsPlusTag() {
-        int sentBefore = mail.messages.size();
+        int sentBefore = mail.totalCount();
         for (String address : List.of("person@example..org", "person@example.org.",
                 ".person@example.org", "person..name@example.org", "person@-example.org")) {
             assertThatThrownBy(() -> registration.apply(address, "correct-horse-battery", "신청자"))
                     .isInstanceOf(ApiException.class)
                     .satisfies(error -> assertThat(((ApiException) error).getStatus().value()).isEqualTo(400));
         }
-        assertThat(mail.messages).hasSize(sentBefore);
+        assertThat(mail.totalCount()).isEqualTo(sentBefore);
         registration.apply("person+choir@example.org", "correct-horse-battery", "신청자");
         assertThat(members.findByEmailIgnoreCase("person+choir@example.org")).isPresent();
     }
@@ -158,11 +210,19 @@ class RegistrationFlowTest {
     }
 
     static class TestMailSender implements MailSender {
-        final List<String> messages = new ArrayList<>();
-        public void sendVerification(String address, String link) { messages.add(link); }
-        public void sendPasswordReset(String address, String link) { messages.add(link); }
-        String lastMessage() { return messages.getLast(); }
-        String lastToken() { return lastMessage().split("#token=", 2)[1]; }
+        final Map<String, List<String>> messages = new HashMap<>();
+        boolean fail;
+        public void sendVerification(String address, String link) {
+            if (fail) throw new IllegalStateException("테스트 송신 실패");
+            messages.computeIfAbsent(address, ignored -> new ArrayList<>()).add(link);
+        }
+        public void sendPasswordReset(String address, String link) {
+            messages.computeIfAbsent(address, ignored -> new ArrayList<>()).add(link);
+        }
+        int countFor(String address) { return messages.getOrDefault(address, List.of()).size(); }
+        int totalCount() { return messages.values().stream().mapToInt(List::size).sum(); }
+        String lastMessageFor(String address) { return messages.get(address).getLast(); }
+        String lastTokenFor(String address) { return lastMessageFor(address).split("#token=", 2)[1]; }
     }
 
     static class MutableClock extends Clock {

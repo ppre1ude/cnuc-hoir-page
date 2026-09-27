@@ -11,8 +11,9 @@ export default function ResetPasswordPage() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    token.current = new URLSearchParams(window.location.hash.slice(1)).get("token");
-    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    const discovered = new URLSearchParams(window.location.hash.slice(1)).get("token");
+    if (discovered && !token.current) token.current = discovered;
+    if (discovered) window.history.replaceState(null, "", window.location.pathname + window.location.search);
     queueMicrotask(() => setHasToken(Boolean(token.current)));
   }, []);
 

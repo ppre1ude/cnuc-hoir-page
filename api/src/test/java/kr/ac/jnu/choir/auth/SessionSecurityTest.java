@@ -41,6 +41,7 @@ class SessionSecurityTest {
         registry.add("spring.datasource.username", database::getUsername);
         registry.add("spring.datasource.password", database::getPassword);
         registry.add("choir.mail.enabled", () -> "false");
+        registry.add("choir.security.trusted-proxy-cidrs", () -> "10.0.0.0/8");
     }
     @Autowired WebApplicationContext context;
     @Autowired FilterChainProxy security;
@@ -108,6 +109,49 @@ class SessionSecurityTest {
                 .contentType("application/json")
                 .content("{\"email\":\"missing-final@example.org\",\"password\":\"incorrect-password\"}"))
                 .andReturn().getResponse().getStatus()).isEqualTo(429);
+    }
+
+    @Test void separateClientsBehindTrustedProxyHaveSeparateLimits() throws Exception {
+        MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).addFilters(security).build();
+        var csrfResponse = mvc.perform(get("/api/v1/auth/csrf")).andReturn();
+        String csrf = csrfResponse.getResponse().getContentAsString().split("\"token\":\"", 2)[1].split("\"", 2)[0];
+        MockHttpSession session = (MockHttpSession) csrfResponse.getRequest().getSession(false);
+        for (int attempt = 0; attempt < 5; attempt++) {
+            assertThat(mvc.perform(post("/api/v1/auth/login").session(session).header("X-CSRF-TOKEN", csrf)
+                    .remoteAddress("10.0.0.8").header("X-Forwarded-For", "198.51.100.11")
+                    .contentType("application/json")
+                    .content("{\"email\":\"first" + attempt + "@example.org\",\"password\":\"incorrect-password\"}"))
+                    .andReturn().getResponse().getStatus()).isEqualTo(401);
+        }
+        assertThat(mvc.perform(post("/api/v1/auth/login").session(session).header("X-CSRF-TOKEN", csrf)
+                .remoteAddress("10.0.0.8").header("X-Forwarded-For", "198.51.100.12")
+                .contentType("application/json")
+                .content("{\"email\":\"second@example.org\",\"password\":\"incorrect-password\"}"))
+                .andReturn().getResponse().getStatus()).isEqualTo(401);
+        assertThat(mvc.perform(post("/api/v1/auth/login").session(session).header("X-CSRF-TOKEN", csrf)
+                .remoteAddress("10.0.0.8").header("X-Forwarded-For", "198.51.100.11")
+                .contentType("application/json")
+                .content("{\"email\":\"blocked@example.org\",\"password\":\"incorrect-password\"}"))
+                .andReturn().getResponse().getStatus()).isEqualTo(429);
+    }
+
+    @Test void invalidTrustedProxyChainIsRejectedBeforeRateLimit() throws Exception {
+        MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).addFilters(security).build();
+        var csrfResponse = mvc.perform(get("/api/v1/auth/csrf")).andReturn();
+        String csrf = csrfResponse.getResponse().getContentAsString().split("\"token\":\"", 2)[1].split("\"", 2)[0];
+        MockHttpSession session = (MockHttpSession) csrfResponse.getRequest().getSession(false);
+        for (int attempt = 0; attempt < 6; attempt++) {
+            assertThat(mvc.perform(post("/api/v1/auth/login").session(session).header("X-CSRF-TOKEN", csrf)
+                    .remoteAddress("10.0.0.9").header("X-Forwarded-For", "not-an-ip")
+                    .contentType("application/json")
+                    .content("{\"email\":\"invalid" + attempt + "@example.org\",\"password\":\"incorrect-password\"}"))
+                    .andReturn().getResponse().getStatus()).isEqualTo(400);
+        }
+        assertThat(mvc.perform(post("/api/v1/auth/login").session(session).header("X-CSRF-TOKEN", csrf)
+                .remoteAddress("10.0.0.9").header("X-Forwarded-For", "198.51.100.31")
+                .contentType("application/json")
+                .content("{\"email\":\"valid-chain@example.org\",\"password\":\"incorrect-password\"}"))
+                .andReturn().getResponse().getStatus()).isEqualTo(401);
     }
 
     @Test void logoutInvalidatesSession() throws Exception {

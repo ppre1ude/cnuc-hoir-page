@@ -26,14 +26,17 @@ public class AuthController {
     private final SessionMemberService sessions;
     private final LoginAttemptLimiter limiter;
     private final PasswordResetService resets;
+    private final ClientIpResolver clientIps;
 
     public AuthController(RegistrationService registration, MemberRepository members,
-            SessionMemberService sessions, LoginAttemptLimiter limiter, PasswordResetService resets) {
+            SessionMemberService sessions, LoginAttemptLimiter limiter, PasswordResetService resets,
+            ClientIpResolver clientIps) {
         this.registration = registration;
         this.members = members;
         this.sessions = sessions;
         this.limiter = limiter;
         this.resets = resets;
+        this.clientIps = clientIps;
     }
 
     @GetMapping("/csrf")
@@ -62,7 +65,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<Void> login(@Valid @RequestBody LoginRequest body, HttpServletRequest request) {
         String email = body.email().strip().toLowerCase(Locale.ROOT);
-        String ip = request.getRemoteAddr();
+        String ip = clientIps.resolve(request);
         limiter.reserve("LOGIN_IP", ip, 5);
         try {
             limiter.reserve("LOGIN_EMAIL", email, 5);
@@ -101,7 +104,7 @@ public class AuthController {
 
     @PostMapping("/password-reset/request")
     public ResponseEntity<Void> requestReset(@Valid @RequestBody ResendRequest body, HttpServletRequest request) {
-        resets.request(body.email(), request.getRemoteAddr());
+        resets.request(body.email(), clientIps.resolve(request));
         return ResponseEntity.status(HttpStatus.ACCEPTED).build();
     }
 
