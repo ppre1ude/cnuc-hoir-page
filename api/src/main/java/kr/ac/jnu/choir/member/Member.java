@@ -10,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Locale;
 
 @Entity
 @Table(name = "member")
@@ -55,7 +56,7 @@ public class Member {
     }
 
     public Member(String email, String name, String passwordHash, Clock clock) {
-        this.email = email;
+        this.email = email.strip().toLowerCase(Locale.ROOT);
         this.name = name;
         this.passwordHash = passwordHash;
         this.status = AccountStatus.EMAIL_PENDING;
@@ -105,5 +106,14 @@ public class Member {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public void verifyEmail(Clock clock) {
+        if (status != AccountStatus.EMAIL_PENDING) {
+            throw new IllegalStateException("이메일 확인 대기 상태가 아닙니다.");
+        }
+        status = AccountStatus.APPROVAL_PENDING;
+        emailVerifiedAt = clock.instant();
+        updatedAt = emailVerifiedAt;
     }
 }
