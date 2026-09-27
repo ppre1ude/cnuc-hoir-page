@@ -15,6 +15,7 @@ import java.util.List;
 import kr.ac.jnu.choir.member.AccountStatus;
 import kr.ac.jnu.choir.member.Member;
 import kr.ac.jnu.choir.member.MemberRepository;
+import kr.ac.jnu.choir.common.ApiException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -122,6 +123,32 @@ class RegistrationFlowTest {
         assertThat(newToken).isNotEqualTo(oldToken);
         assertThatThrownBy(() -> registration.verifyEmail(oldToken)).hasMessageContaining("사용할 수 없는 확인 링크");
         registration.verifyEmail(newToken);
+    }
+
+    @Test
+    void rejectsPasswordBeyondSeventyTwoUtf8Bytes() {
+        String seventyTwoBytes = "a".repeat(69) + "가";
+        String seventyThreeBytes = "a".repeat(70) + "가";
+        registration.apply("limit72@example.org", seventyTwoBytes, "신청자");
+        assertThat(members.findByEmailIgnoreCase("limit72@example.org")).isPresent();
+        assertThatThrownBy(() -> registration.apply("limit73@example.org", seventyThreeBytes, "신청자"))
+                .isInstanceOf(ApiException.class)
+                .satisfies(error -> assertThat(((ApiException) error).getStatus().value()).isEqualTo(400));
+        assertThat(members.findByEmailIgnoreCase("limit73@example.org")).isEmpty();
+    }
+
+    @Test
+    void rejectsMalformedAddressBeforeMailAndAcceptsPlusTag() {
+        int sentBefore = mail.messages.size();
+        for (String address : List.of("person@example..org", "person@example.org.",
+                ".person@example.org", "person..name@example.org", "person@-example.org")) {
+            assertThatThrownBy(() -> registration.apply(address, "correct-horse-battery", "신청자"))
+                    .isInstanceOf(ApiException.class)
+                    .satisfies(error -> assertThat(((ApiException) error).getStatus().value()).isEqualTo(400));
+        }
+        assertThat(mail.messages).hasSize(sentBefore);
+        registration.apply("person+choir@example.org", "correct-horse-battery", "신청자");
+        assertThat(members.findByEmailIgnoreCase("person+choir@example.org")).isPresent();
     }
 
     @TestConfiguration

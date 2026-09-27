@@ -26,6 +26,8 @@ export function RegistrationForm() {
     } catch (caught) {
       if (caught instanceof ApiRequestError && caught.code === "EMAIL_ALREADY_USED") {
         setError("이미 사용 중인 이메일입니다.");
+      } else if (caught instanceof ApiRequestError && caught.code === "PASSWORD_TOO_LONG") {
+        setError("비밀번호는 UTF-8 기준 72바이트 이하로 입력해 주세요.");
       } else {
         setError("가입 신청을 처리하지 못했습니다. 입력 내용을 확인하고 다시 시도해 주세요.");
       }

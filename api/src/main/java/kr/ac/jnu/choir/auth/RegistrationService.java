@@ -3,6 +3,7 @@ package kr.ac.jnu.choir.auth;
 import java.time.Clock;
 import java.time.Duration;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.regex.Pattern;
 import kr.ac.jnu.choir.common.ApiException;
@@ -19,7 +20,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class RegistrationService {
-    private static final Pattern EMAIL = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
+    private static final Pattern LOCAL_PART = Pattern.compile(
+            "[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*");
+    private static final Pattern DOMAIN_LABEL = Pattern.compile(
+            "[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?");
     private final MemberRepository members;
     private final AuthTokenService tokens;
     private final MailSender mail;
@@ -45,11 +49,15 @@ public class RegistrationService {
     @Transactional
     public void apply(String email, String password, String name) {
         String normalized = normalize(email);
-        if (!EMAIL.matcher(normalized).matches() || normalized.length() > 320) {
+        if (!validEmail(normalized)) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EMAIL", "이메일 형식을 확인해 주세요.");
         }
         if (password == null || password.length() < 12) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "WEAK_PASSWORD", "비밀번호는 12자 이상 입력해 주세요.");
+        }
+        if (password.getBytes(StandardCharsets.UTF_8).length > 72) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "PASSWORD_TOO_LONG",
+                    "비밀번호는 UTF-8 기준 72바이트 이하로 입력해 주세요.");
         }
         if (name == null || name.isBlank() || name.strip().length() > 100) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_NAME", "이름을 확인해 주세요.");
@@ -96,5 +104,27 @@ public class RegistrationService {
 
     private static String normalize(String email) {
         return email == null ? "" : email.strip().toLowerCase(Locale.ROOT);
+    }
+
+    private static boolean validEmail(String email) {
+        if (email.length() > 254) {
+            return false;
+        }
+        int separator = email.indexOf('@');
+        if (separator < 1 || separator != email.lastIndexOf('@')) {
+            return false;
+        }
+        String localPart = email.substring(0, separator);
+        String domain = email.substring(separator + 1);
+        if (localPart.length() > 64 || domain.length() > 253
+                || !LOCAL_PART.matcher(localPart).matches() || !domain.contains(".")) {
+            return false;
+        }
+        for (String label : domain.split("\\.", -1)) {
+            if (!DOMAIN_LABEL.matcher(label).matches()) {
+                return false;
+            }
+        }
+        return true;
     }
 }
