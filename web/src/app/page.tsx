@@ -67,7 +67,6 @@ export default function Home() {
             <div className={styles.memberLinks}>
               <span>단원 공간</span>
               <Link href="/login">로그인</Link>
-              <Link href="/join">단원 계정 가입 신청</Link>
             </div>
           </div>
         </div>
