@@ -4,7 +4,7 @@
 .page a { color: var(--choir-deep-green); text-underline-offset: 4px; }
 .eyebrow { color: var(--choir-deep-green); font-size: 12px; font-weight: 700; letter-spacing: .08em; margin: 0; }
 .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
-.card { background: white; border: 1px solid var(--choir-line); border-radius: 12px; padding: 28px; min-width: 0; }
+.card { background: white; border: 1px solid var(--choir-line); padding: 28px; min-width: 0; }
 .card h2 { margin: 0 0 20px; }
 .listHeader { display: flex; justify-content: space-between; gap: 10px; align-items: start; flex-wrap: wrap; }
 .listHeader label { font-size: 13px; }
@@ -12,12 +12,12 @@
 .eventRow { display: flex; flex-direction: column; gap: 5px; width: 100%; padding: 14px 4px; border: 0; border-top: 1px solid var(--choir-line); background: transparent; text-align: left; font: inherit; cursor: pointer; }
 .eventRow span { color: #697178; font-size: 13px; }
 .form { display: flex; flex-direction: column; gap: 8px; }
-.form input:not([type="checkbox"]), .form textarea { font: inherit; border: 1px solid #bbd1c0; border-radius: 6px; padding: 10px 12px; width: 100%; margin-bottom: 8px; }
+.form input:not([type="checkbox"]), .form textarea { font: inherit; border: 1px solid #bbd1c0; padding: 10px 12px; width: 100%; margin-bottom: 8px; }
 .form textarea { resize: vertical; }
 .check { display: flex; align-items: center; gap: 8px; }
 .hint { font-size: 13px; color: #697178; margin: 0 0 12px; }
 .actions { display: flex; gap: 8px; }
-.actions button { border: 1px solid var(--choir-deep-green); background: var(--choir-deep-green); color: white; border-radius: 6px; padding: 10px 18px; font: inherit; cursor: pointer; }
+.actions button { border: 1px solid var(--choir-deep-green); background: var(--choir-deep-green); color: white; padding: 10px 18px; font: inherit; cursor: pointer; }
 .actions button + button { background: white; color: var(--choir-deep-green); }
 .actions button:disabled { opacity: .55; cursor: default; }
 @media (max-width: 760px) { .page { padding-top: 28px; } .grid { display: flex; flex-direction: column; } .card { width: 100%; padding: 20px; } }
