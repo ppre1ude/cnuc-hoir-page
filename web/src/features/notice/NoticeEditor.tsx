@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ApiRequestError } from "../../lib/api";
 import { getSession } from "../auth/session";
 import { createNotice, getAdminNotices, updateNotice, type Notice, type NoticePage } from "./notices";
+import styles from "../member/AdminPages.module.css";
 
 export function NoticeEditor() {
   const router = useRouter();
@@ -84,34 +85,31 @@ export function NoticeEditor() {
   }
 
   const visibleData = !listError && data?.page === page ? data : null;
-  return <section>
+  return <section className={styles.page}>
     <h1>공지 관리</h1>
-    {error && <p role="alert">{error}</p>}
-    {saved && <p role="status">공지를 저장했습니다.</p>}
-    {listError && <><p role="alert">{listError}</p><button type="button" onClick={() => { setListError(""); setData(null); setRetry(retry + 1); }}>다시 시도</button></>}
-    {visibleData && <>
+    {error && <p className={styles.error} role="alert">{error}</p>}
+    {saved && <p className={styles.message} role="status">공지를 저장했습니다.</p>}
+    {listError && <><p className={styles.error} role="alert">{listError}</p><button className={styles.secondary} type="button" onClick={() => { setListError(""); setData(null); setRetry(retry + 1); }}>다시 시도</button></>}
+    {canEdit && <div className={styles.grid}><div className={styles.list}>{visibleData && <>
       {visibleData.items.length === 0 && <p>작성된 공지가 없습니다.</p>}
-      {visibleData.items.map((notice) => <button type="button" key={notice.id} onClick={() => edit(notice)}>
-        {notice.title} ({notice.published ? "게시" : "초안"})
+      {visibleData.items.map((notice) => <button className={styles.rowButton} type="button" key={notice.id} onClick={() => edit(notice)}>
+        <strong>{notice.title}</strong><span>{notice.published ? "게시" : "초안"}</span>
       </button>)}
-      {visibleData.total > visibleData.size && <nav aria-label="공지 관리 페이지">
-        <button type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>이전</button>
+      {visibleData.total > visibleData.size && <nav className={styles.pagination} aria-label="공지 관리 페이지">
+        <button className={styles.secondary} type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>이전</button>
         <span>{page + 1} / {Math.ceil(visibleData.total / visibleData.size)}</span>
-        <button type="button" disabled={(page + 1) * visibleData.size >= visibleData.total} onClick={() => setPage(page + 1)}>다음</button>
+        <button className={styles.secondary} type="button" disabled={(page + 1) * visibleData.size >= visibleData.total} onClick={() => setPage(page + 1)}>다음</button>
       </nav>}
-    </>}
-    {canEdit &&
-      <form onSubmit={save}>
+    </>}</div>
+      <form className={`${styles.panel} ${styles.form}`} onSubmit={save}>
         <h2>{selected ? "공지 수정" : "공지 작성"}</h2>
         <label htmlFor="notice-title">제목</label>
         <input id="notice-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={200} required />
         <label htmlFor="notice-body">본문</label>
         <textarea id="notice-body" value={body} onChange={(event) => setBody(event.target.value)} maxLength={10000} required />
-        <label htmlFor="notice-published">게시</label>
-        <input id="notice-published" type="checkbox" checked={published} onChange={(event) => setPublished(event.target.checked)} />
-        <button type="submit" disabled={busy || !title.trim() || !body.trim()}>저장</button>
-        {selected && <button type="button" onClick={clear}>새 공지</button>}
-      </form>
-    }
+        <label className={styles.check} htmlFor="notice-published"><input id="notice-published" type="checkbox" checked={published} onChange={(event) => setPublished(event.target.checked)} /> 게시</label>
+        <div className={styles.actions}><button className={styles.button} type="submit" disabled={busy || !title.trim() || !body.trim()}>저장</button>
+        {selected && <button className={styles.secondary} type="button" onClick={clear}>새 공지</button>}</div>
+      </form></div>}
   </section>;
 }

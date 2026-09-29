@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { ApiRequestError } from "../../lib/api";
 import { applyForMembership } from "./registration";
+import styles from "./RegistrationForm.module.css";
 
 export function RegistrationForm() {
   const [pending, setPending] = useState(false);
@@ -37,11 +38,11 @@ export function RegistrationForm() {
   }
 
   if (complete) {
-    return <p role="status">가입 신청을 접수했습니다. 확인 메일이 도착하면 이메일을 확인한 뒤 운영진 승인을 기다려 주세요.</p>;
+    return <p className={styles.complete} role="status">가입 신청을 접수했습니다. 확인 메일이 도착하면 이메일을 확인한 뒤 운영진 승인을 기다려 주세요.</p>;
   }
 
   return (
-    <form onSubmit={submit}>
+    <form className={styles.form} onSubmit={submit}>
       <label htmlFor="join-email">이메일</label>
       <input id="join-email" name="email" type="email" autoComplete="email" required maxLength={320} />
       <label htmlFor="join-name">이름</label>
@@ -49,7 +50,7 @@ export function RegistrationForm() {
       <label htmlFor="join-password">비밀번호</label>
       <input id="join-password" name="password" type="password" autoComplete="new-password" required minLength={12} />
       <button type="submit" disabled={pending}>{pending ? "신청 중..." : "가입 신청"}</button>
-      {error && <p role="alert">{error}</p>}
+      {error && <p className={styles.error} role="alert">{error}</p>}
     </form>
   );
 }

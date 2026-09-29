@@ -65,6 +65,18 @@ test("신청 목록에서 OB를 선택해 승인합니다", async () => {
   expect(approveApplication).toHaveBeenCalledWith(2, "OB");
 });
 
+test("신청 목록 조회 실패 후 다시 시도하면 목록을 표시합니다", async () => {
+  vi.mocked(getApplications).mockRejectedValueOnce(new Error("연결 실패"))
+    .mockResolvedValueOnce({ items: [{ id: 2, name: "신청자", email: "member@example.org",
+      status: "APPROVAL_PENDING", createdAt: "2026-09-27T00:00:00Z" }], page: 0, size: 20, total: 1 });
+  render(<ApplicationQueue />);
+  expect(await screen.findByRole("alert")).toHaveTextContent("신청 목록을 불러오지 못했습니다");
+  expect(screen.queryByText("신청 목록을 불러오는 중입니다.")).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "다시 시도" }));
+  expect(await screen.findByText("member@example.org")).toBeInTheDocument();
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+});
+
 test("반려 이유를 입력하고 충돌을 안내합니다", async () => {
   vi.mocked(rejectApplication).mockRejectedValue(new ApiRequestError(409, "INVALID_MEMBER_STATE", "이미 처리됨"));
   render(<ApplicationQueue />);

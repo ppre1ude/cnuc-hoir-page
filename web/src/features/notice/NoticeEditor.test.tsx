@@ -40,7 +40,7 @@ describe("공지 편집기", () => {
     expect(screen.getByLabelText("제목")).toHaveValue("");
     expect(createNotice).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
-    expect(await screen.findByText("새 공지 (초안)")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /새 공지\s*초안/ })).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
     expect(createNotice).toHaveBeenCalledTimes(1);
   });
@@ -51,7 +51,7 @@ describe("공지 편집기", () => {
       items: [{ id: 1, title: "기존 공지", body: "이전 본문", published: false }], page: 0, size: 20, total: 1,
     }).mockRejectedValueOnce(new Error("목록 오류"));
     render(<NoticeEditor />);
-    fireEvent.click(await screen.findByRole("button", { name: "기존 공지 (초안)" }));
+    fireEvent.click(await screen.findByRole("button", { name: /기존 공지\s*초안/ }));
     fireEvent.change(screen.getByLabelText("본문"), { target: { value: "수정 본문" } });
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("공지는 저장됐지만 목록을 새로고침하지 못했습니다.");
@@ -67,12 +67,12 @@ describe("공지 편집기", () => {
         ? Promise.reject(new Error("목록 오류"))
         : Promise.resolve({ items: [{ id: 2, title: "다음 공지", body: "본문", published: false }], page, size: 1, total: 2 }));
     render(<NoticeEditor />);
-    await screen.findByText("첫 공지 (게시)");
+    await screen.findByRole("button", { name: /첫 공지\s*게시/ });
     fireEvent.click(screen.getByRole("button", { name: "다음" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("공지 목록을 불러오지 못했습니다.");
-    expect(screen.queryByText("첫 공지 (게시)")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /첫 공지\s*게시/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
-    expect(await screen.findByText("다음 공지 (초안)")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /다음 공지\s*초안/ })).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });

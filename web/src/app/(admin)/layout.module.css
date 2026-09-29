@@ -1,0 +1,26 @@
+.shell {
+  --choir-green: #008a3e;
+  --choir-deep-green: #006b34;
+  --choir-ink: #202823;
+  --choir-muted: #626e66;
+  --choir-line: #dfe8e0;
+  min-height: 100svh;
+  background: #fff;
+  color: var(--choir-ink);
+  font-family: "Pretendard", "Noto Sans KR", "Malgun Gothic", sans-serif;
+}
+
+.shell :is(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--choir-green);
+  outline-offset: 3px;
+}
+
+.adminNav { border-bottom: 1px solid var(--choir-line); }
+.adminNavInner { display: flex; gap: 32px; width: min(100% - 64px, 1240px); margin: auto; overflow-x: auto; }
+.adminNav a { display: inline-flex; align-items: center; min-height: 52px; color: var(--choir-muted); font-size: 14px; font-weight: 650; text-decoration: none; white-space: nowrap; }
+.adminNav a:hover { color: var(--choir-deep-green); }
+
+@media (max-width: 760px) {
+  .adminNavInner { width: min(100% - 36px, 1240px); gap: 22px; }
+  .adminNav a { min-height: 46px; font-size: 13px; }
+}
