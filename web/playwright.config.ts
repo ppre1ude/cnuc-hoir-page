@@ -15,7 +15,6 @@ const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
   launcherPid: number;
   databasePasswordDigest: string;
   rootPasswordDigest: string;
-  smtpPasswordDigest: string;
 };
 const digest = (value: string | undefined) => createHash("sha256").update(value ?? "").digest("hex");
 if (!/^choir-portal-e2e-[a-f0-9]{32}$/.test(manifest.projectName)
@@ -25,8 +24,7 @@ if (!/^choir-portal-e2e-[a-f0-9]{32}$/.test(manifest.projectName)
     || !Number.isSafeInteger(manifest.launcherPid) || manifest.launcherPid <= 0
     || digest(process.env.E2E_DB_PASSWORD) !== manifest.databasePasswordDigest
     || process.env.MYSQL_PASSWORD !== process.env.E2E_DB_PASSWORD
-    || digest(process.env.MYSQL_ROOT_PASSWORD) !== manifest.rootPasswordDigest
-    || digest(process.env.SMTP_PASSWORD) !== manifest.smtpPasswordDigest) {
+    || digest(process.env.MYSQL_ROOT_PASSWORD) !== manifest.rootPasswordDigest) {
   throw new Error("격리 E2E 실행 식별자 또는 비밀번호가 일치하지 않습니다.");
 }
 const environment: Record<string, string> = {};

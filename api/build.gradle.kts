@@ -20,7 +20,6 @@ repositories {
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-flyway")
-	implementation("org.springframework.boot:spring-boot-starter-mail")
 	implementation("org.springframework.boot:spring-boot-starter-security")
 	implementation("org.springframework.boot:spring-boot-starter-session-jdbc")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
@@ -39,10 +38,10 @@ tasks.withType<Test> {
 	useJUnitPlatform()
 }
 
-tasks.register<JavaExec>("bootstrapAdmin") {
+tasks.register<JavaExec>("bootstrapAdminInvite") {
 	group = "운영"
-	description = "DB 비밀번호를 콘솔 또는 CHOIR_BOOTSTRAP_DB_PASSWORD로 받아 최초 운영진을 지정합니다."
+	description = "최초 운영진 계정을 만들고 1회용 계정 설정 토큰을 발급합니다."
 	classpath = sourceSets.main.get().runtimeClasspath
-	mainClass = "kr.ac.jnu.choir.member.AdminBootstrapCommand"
+	mainClass = "kr.ac.jnu.choir.member.AdminBootstrapInvitationCommand"
 	standardInput = System.`in`
 }

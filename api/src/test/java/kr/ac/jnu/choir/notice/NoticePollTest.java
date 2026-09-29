@@ -11,17 +11,12 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.UUID;
-import kr.ac.jnu.choir.auth.MailSender;
 import kr.ac.jnu.choir.member.Member;
 import kr.ac.jnu.choir.member.MemberRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.web.FilterChainProxy;
@@ -38,24 +33,12 @@ import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest
 @Testcontainers
-@Import(NoticePollTest.MailConfiguration.class)
 class NoticePollTest {
-    @TestConfiguration
-    static class MailConfiguration {
-        @Bean @Primary MailSender testMailSender() {
-            return new MailSender() {
-                public void sendVerification(String address, String link) {}
-                public void sendPasswordReset(String address, String link) {}
-            };
-        }
-    }
-
     @Container static final MySQLContainer database = new MySQLContainer("mysql:8.4");
     @DynamicPropertySource static void properties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", database::getJdbcUrl);
         registry.add("spring.datasource.username", database::getUsername);
         registry.add("spring.datasource.password", database::getPassword);
-        registry.add("choir.mail.enabled", () -> "false");
     }
 
     @Autowired WebApplicationContext context;

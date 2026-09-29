@@ -3,7 +3,7 @@ import { apiRequest } from "../../lib/api";
 export type MemberSession = {
   id: number;
   name: string;
-  status: "EMAIL_PENDING" | "APPROVAL_PENDING" | "APPROVED" | "REJECTED" | "REVOKED";
+  status: "INVITED" | "EMAIL_PENDING" | "APPROVAL_PENDING" | "APPROVED" | "REJECTED" | "REVOKED";
   memberType: "ACTIVE" | "OB" | null;
   admin: boolean;
 };
@@ -24,16 +24,8 @@ export function getSession(): Promise<MemberSession> {
   return apiRequest<MemberSession>("/auth/me");
 }
 
-export function requestPasswordReset(email: string): Promise<void> {
-  return apiRequest<void>("/auth/password-reset/request", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
-  });
-}
-
-export function confirmPasswordReset(token: string, newPassword: string): Promise<void> {
-  return apiRequest<void>("/auth/password-reset/confirm", {
+export function completeAccountSetup(token: string, newPassword: string): Promise<void> {
+  return apiRequest<void>("/auth/account-setup/confirm", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token, newPassword }),

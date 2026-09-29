@@ -23,5 +23,7 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     Page<Member> findByStatusOrderByCreatedAtAsc(AccountStatus status, Pageable pageable);
 
+    Page<Member> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
     long countByAdminTrueAndStatus(AccountStatus status);
 }

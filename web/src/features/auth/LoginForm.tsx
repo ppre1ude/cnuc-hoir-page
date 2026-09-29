@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ApiRequestError } from "../../lib/api";
 import { getSession, login } from "./session";
@@ -20,8 +19,8 @@ export function LoginForm() {
     setError("");
     try {
       await login(String(values.get("email") ?? ""), String(values.get("password") ?? ""));
-      const member = await getSession();
-      router.replace(member.status === "APPROVED" ? "/dashboard" : "/application-status");
+      await getSession();
+      router.replace("/dashboard");
     } catch (caught) {
       if (caught instanceof ApiRequestError && caught.code === "RATE_LIMITED") {
         setError("로그인 시도가 많습니다. 잠시 후 다시 시도해 주세요.");
@@ -44,6 +43,6 @@ export function LoginForm() {
     </div>
     <button className={styles.submit} type="submit" disabled={pending}>{pending ? "로그인 중..." : "로그인"}</button>
     {error && <p className={styles.error} role="alert">{error}</p>}
-    <Link className={styles.reset} href="/reset-password">비밀번호 재설정</Link>
+    <p className={styles.help}>계정 발급이나 비밀번호 재설정은 운영진에게 요청해 주세요.</p>
   </form>;
 }

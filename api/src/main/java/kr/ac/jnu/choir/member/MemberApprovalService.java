@@ -60,7 +60,8 @@ public class MemberApprovalService {
     public void revoke(Member actor, Long targetId, String reason) {
         LockedMembers locked = lockMembers(actor.getId(), targetId);
         Member target = locked.target();
-        if (target.getStatus() != AccountStatus.APPROVED || target.getId().equals(locked.actor().getId())) {
+        if ((target.getStatus() != AccountStatus.APPROVED && target.getStatus() != AccountStatus.INVITED)
+                || target.getId().equals(locked.actor().getId())) {
             throw conflict();
         }
         if (target.isAdmin() && members.countByAdminTrueAndStatus(AccountStatus.APPROVED) <= 1) {

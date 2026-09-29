@@ -29,6 +29,9 @@
 .back { display: inline-block; margin-bottom: 26px; color: var(--choir-deep-green); font-size: 14px; text-decoration: none; }
 .back:hover { text-decoration: underline; text-underline-offset: 4px; }
 .code { display: inline-block; margin-top: 10px; color: var(--choir-deep-green); font-size: clamp(24px, 5vw, 38px); letter-spacing: .14em; }
+.linkInput { display: block; width: 100%; min-height: 46px; margin-top: 8px; padding: 10px 12px; border: 1px solid #bbd1c0; color: var(--choir-ink); background: #fff; font: inherit; }
+.memberSection { margin-top: 42px; }
+.memberSection h2 { margin-bottom: 16px; }
 .qr { display: block; max-width: 100%; height: auto; margin-top: 18px; }
 .pollFields { display: grid; gap: 10px; margin-top: 12px; padding-top: 18px; border-top: 1px solid var(--choir-line); }
 .pollFields p, .pollDetails p { margin: 4px 0; color: var(--choir-muted); font-size: 13px; line-height: 1.5; }

@@ -9,7 +9,6 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import kr.ac.jnu.choir.auth.MailSender;
 import kr.ac.jnu.choir.common.ApiException;
 import kr.ac.jnu.choir.member.Member;
 import kr.ac.jnu.choir.member.MemberRepository;
@@ -35,19 +34,12 @@ class ConcurrentCheckInTest {
         @Bean @Primary Clock concurrentClock() {
             return Clock.fixed(Instant.parse("2026-09-27T10:00:00Z"), ZoneOffset.UTC);
         }
-        @Bean @Primary MailSender concurrentMailSender() {
-            return new MailSender() {
-                public void sendVerification(String address, String link) {}
-                public void sendPasswordReset(String address, String link) {}
-            };
-        }
     }
     @Container static final MySQLContainer database = new MySQLContainer("mysql:8.4");
     @DynamicPropertySource static void properties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", database::getJdbcUrl);
         registry.add("spring.datasource.username", database::getUsername);
         registry.add("spring.datasource.password", database::getPassword);
-        registry.add("choir.mail.enabled", () -> "false");
     }
     @Autowired JdbcTemplate jdbc;
     @Autowired MemberRepository members;

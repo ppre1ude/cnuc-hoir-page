@@ -1,8 +1,8 @@
 import { randomBytes } from "node:crypto";
 import { expect, test } from "@playwright/test";
-import { join, login, verificationLink } from "./helpers";
+import { activate, login } from "./helpers";
 
-test("가입부터 운영진 정정 반영까지 실제 서비스 흐름", async ({ browser, page }, testInfo) => {
+test("운영진 초대부터 출석 정정 반영까지 실제 서비스 흐름", async ({ browser, page }, testInfo) => {
   const browserErrors: string[] = [];
   page.on("pageerror", (error) => browserErrors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") browserErrors.push(message.text()); });
@@ -13,14 +13,6 @@ test("가입부터 운영진 정정 반영까지 실제 서비스 흐름", async
   const eventId = Number(process.env.E2E_EVENT_ID);
   const eventTitle = process.env.E2E_EVENT_TITLE!;
 
-  await join(page, email, password, name);
-  await page.goto(await verificationLink(page.context().request, email));
-  await expect(page.getByRole("status")).toContainText("이메일 확인을 마쳤습니다");
-  expect(page.url()).not.toContain("#token=");
-  await login(page, email, password);
-  await expect(page).toHaveURL(/\/application-status$/);
-  await expect(page.getByText("운영진 승인을 기다리고 있습니다.")).toBeVisible();
-
   const adminContext = await browser.newContext({ baseURL: process.env.E2E_PORTAL_BASE_URL });
   const adminPage = await adminContext.newPage();
   adminPage.on("pageerror", (error) => browserErrors.push(error.message));
@@ -28,13 +20,16 @@ test("가입부터 운영진 정정 반영까지 실제 서비스 흐름", async
   try {
     await login(adminPage, process.env.E2E_ADMIN_EMAIL!, process.env.E2E_ADMIN_PASSWORD!);
     await expect(adminPage).toHaveURL(/\/dashboard$/);
-    await adminPage.goto("/admin/applications");
+    await adminPage.goto("/admin/members");
     await expect(adminPage.getByRole("navigation", { name: "운영진 메뉴" }))
-      .toContainText("가입 신청");
-    const application = adminPage.getByRole("article").filter({ hasText: email });
-    await expect(application).toBeVisible();
-    await application.getByRole("button", { name: `${name} 승인` }).click();
-    await expect(application).toHaveCount(0);
+      .toContainText("단원 계정");
+    await adminPage.getByLabel("이름").fill(name);
+    await adminPage.getByLabel("로그인 이메일").fill(email);
+    await adminPage.getByRole("button", { name: "1회용 링크 발급" }).click();
+    const invitationLink = await adminPage.getByLabel("계정 설정 링크").inputValue();
+    await activate(page, invitationLink, password);
+    await login(page, email, password);
+    await expect(page).toHaveURL(/\/dashboard$/);
 
     await adminPage.goto("/admin/notices");
     await adminPage.getByLabel("제목").fill("연습 참여 조사");
@@ -137,7 +132,7 @@ test("가입부터 운영진 정정 반영까지 실제 서비스 흐름", async
 
     await adminPage.setViewportSize({ width: 390, height: 844 });
     for (const [route, heading] of [
-      ["/admin/applications", "가입 신청 관리"],
+      ["/admin/members", "단원 계정"],
       ["/admin/notices", "공지 관리"],
       ["/admin/events", "행사 관리"],
       [`/admin/events/${eventId}/attendance`, `${eventTitle} 출석 관리`],

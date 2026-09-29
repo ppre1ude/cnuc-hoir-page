@@ -20,10 +20,8 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http, SessionMemberService sessions) throws Exception {
         http.authorizeHttpRequests(authorize -> authorize
                 .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
-                .requestMatchers("/api/v1/auth/csrf", "/api/v1/auth/applications",
-                        "/api/v1/auth/verify-email", "/api/v1/auth/resend-verification",
-                        "/api/v1/auth/login", "/api/v1/auth/password-reset/request",
-                        "/api/v1/auth/password-reset/confirm").permitAll()
+                .requestMatchers("/api/v1/auth/csrf", "/api/v1/auth/login",
+                        "/api/v1/auth/account-setup/confirm").permitAll()
                 .requestMatchers("/api/v1/auth/me", "/api/v1/auth/logout").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/v1/public/events").permitAll()
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")

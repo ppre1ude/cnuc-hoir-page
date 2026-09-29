@@ -25,18 +25,11 @@ test("잘못된 자격 증명을 안내합니다", async () => {
   expect(await screen.findByRole("alert")).toHaveTextContent("이메일 또는 비밀번호");
 });
 
-test("승인 대기 회원을 상태 화면으로 이동합니다", async () => {
-  vi.mocked(login).mockResolvedValue();
-  vi.mocked(getSession).mockResolvedValue({ id: 1, name: "신청자", status: "APPROVAL_PENDING", memberType: null, admin: false });
-  render(<LoginForm />);
-  await fill();
-  expect(replace).toHaveBeenCalledWith("/application-status");
-});
-
 test("승인 회원을 대시보드로 이동합니다", async () => {
   vi.mocked(login).mockResolvedValue();
   vi.mocked(getSession).mockResolvedValue({ id: 1, name: "단원", status: "APPROVED", memberType: "ACTIVE", admin: false });
   render(<LoginForm />);
   await fill();
   expect(replace).toHaveBeenCalledWith("/dashboard");
+  expect(screen.getByText("계정 발급이나 비밀번호 재설정은 운영진에게 요청해 주세요.")).toBeInTheDocument();
 });

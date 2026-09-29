@@ -24,8 +24,12 @@ if ($LASTEXITCODE -ne 0 -or -not $container.State.Running -or
 $env:CHOIR_BOOTSTRAP_DB_PASSWORD = $env:E2E_DB_PASSWORD
 Push-Location (Join-Path $repositoryRoot 'api')
 try {
-  & .\gradlew.bat bootstrapAdmin "--args=jdbc:mysql://127.0.0.1:$($env:E2E_DB_PORT)/choir choir $Email ACTIVE" --quiet
-  if ($LASTEXITCODE -ne 0) { throw '최초 운영진 지정에 실패했습니다.' }
+  $result = & .\gradlew.bat bootstrapAdminInvite "--args=jdbc:mysql://127.0.0.1:$($env:E2E_DB_PORT)/choir choir $Email TestAdmin ACTIVE" --quiet
+  if ($LASTEXITCODE -ne 0) { throw '최초 운영진 초대에 실패했습니다.' }
+  $line = @($result | Where-Object { $_ -match '[A-Za-z0-9_-]{43}' }) | Select-Object -Last 1
+  $tokenMatch = [regex]::Match([string]$line, '[A-Za-z0-9_-]{43}')
+  if (-not $tokenMatch.Success) { throw '초대 토큰을 확인하지 못했습니다.' }
+  Write-Output $tokenMatch.Value
 } finally {
   Pop-Location
   Remove-Item Env:CHOIR_BOOTSTRAP_DB_PASSWORD -ErrorAction SilentlyContinue

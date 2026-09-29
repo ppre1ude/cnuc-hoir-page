@@ -14,7 +14,6 @@ export default function LoginPage() {
           <div className={styles.content}>
             <h1 id="login-title">단원 로그인</h1>
             <LoginForm />
-            <Link className={styles.join} href="/join">단원 계정 가입 신청 <span aria-hidden="true">↗</span></Link>
           </div>
           <Link className={styles.home} href="/">합창단 홈으로</Link>
         </div>
