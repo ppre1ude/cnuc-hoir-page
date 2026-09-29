@@ -1,6 +1,6 @@
 # 회원 포털 프록시 실행 구성
 
-Vercel에 웹을 올릴 때의 설정과 회원 기능 검증 조건은 [Vercel 웹 배포 준비](vercel.md)를 확인합니다.
+Vercel에 웹을 올릴 때의 설정과 회원 기능 검증 조건은 [Vercel 웹 배포 준비](vercel.md)를 확인합니다. API·DB의 저비용 선택지는 [배포 장소 비교](hosting-options.md)에 정리했습니다.
 
 `compose.portal.yaml`은 Nginx 하나만 호스트의 `127.0.0.1:${PORTAL_HTTP_PORT:-8080}`에 연결합니다. `/api/v1/`은 Spring API로 직접 보내고 나머지는 Next로 보냅니다. API, 웹, MySQL에는 호스트 공개 포트가 없습니다. `compose.yaml`은 기존 DB 단독 개발 구성입니다.
 

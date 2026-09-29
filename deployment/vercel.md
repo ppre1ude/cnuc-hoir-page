@@ -12,13 +12,13 @@ Vercel 프로젝트 생성과 Git 연결은 배포를 시작하는 작업입니�
 
 ## 회원 기능을 포함한 검증 조건
 
-Spring API, MySQL, SMTP를 별도 운영 환경에 준비하고 HTTPS 주소를 확정해야 합니다. 웹은 같은 출처의 `/api/v1`을 호출합니다. Vercel 웹 프로젝트의 `CHOIR_API_ORIGIN` 환경 변수에 API의 **경로 없는 HTTPS 출처**를 넣으면 Next.js가 `/api/v1/*` 요청을 해당 출처의 같은 경로로 전달합니다. 값은 빌드 시 적용되므로 변경 뒤 웹을 다시 배포합니다. API 주소가 아직 없으면 이 변수는 비워 둡니다. HTTP 주소, 경로, 쿼리 또는 인증 정보를 넣으면 빌드가 실패합니다.
+Spring API, MySQL, 메일 발송 서비스를 별도 운영 환경에 준비하고 HTTPS 주소를 확정해야 합니다. 웹은 같은 출처의 `/api/v1`을 호출합니다. Vercel 웹 프로젝트의 `CHOIR_API_ORIGIN` 환경 변수에 API의 **경로 없는 HTTPS 출처**를 넣으면 Next.js가 `/api/v1/*` 요청을 해당 출처의 같은 경로로 전달합니다. 값은 빌드 시 적용되므로 변경 뒤 웹을 다시 배포합니다. API 주소가 아직 없으면 이 변수는 비워 둡니다. HTTP 주소, 경로, 쿼리 또는 인증 정보를 넣으면 빌드가 실패합니다.
 
 API 앞단 프록시가 전달 IP 헤더를 다루는 방식도 확정해야 합니다. 현재 Compose Nginx는 연결 주소로 `X-Forwarded-For`를 덮어쓰므로, 그대로 Vercel 앞단에 두면 여러 단원의 요청이 같은 IP로 집계될 수 있습니다. 실제 프록시 경로에서 헤더 위조 차단과 로그인·출석 시도 제한을 검증한 뒤 연결합니다. API 응답의 `Cache-Control: no-store`, `Secure` 세션 쿠키와 CSRF 처리도 공개 HTTPS 주소에서 확인합니다.
 
-API·DB 호스팅이 미정이라면 **Railway Pro**가 기존 구현을 적게 바꾸는 시범 운영 후보입니다. `api/Dockerfile`로 Spring 서비스를 만들고 MySQL 서비스를 같은 프로젝트의 사설 네트워크에 둡니다. 현재 메일 발송은 SMTP를 사용하며 Railway의 Free·Trial·Hobby에서는 외부 SMTP 연결이 제한됩니다. Pro의 월 최소 사용료와 실제 자원 사용량을 확인한 뒤 선택합니다. Railway MySQL의 엔진 버전은 현재 검증에 사용한 MySQL 8.4와 대조해야 합니다. 서비스가 확정되기 전에는 해당 업체 전용 구성 파일이나 비밀값을 저장소에 넣지 않습니다. [Railway 요금](https://railway.com/pricing), [MySQL 연결](https://docs.railway.com/databases/mysql), [메일 발송 제한](https://docs.railway.com/networking/outbound-networking)
+API·DB 호스팅의 비용과 변경 범위는 [배포 장소 비교](hosting-options.md)에 정리했습니다. 현재 메일 발송은 SMTP를 사용하며 Railway의 Free·Trial·Hobby에서는 외부 SMTP 연결이 제한됩니다. 호스팅과 메일 발송 방식을 결정한 뒤 API 설정을 연결합니다. Railway MySQL의 엔진 버전은 현재 검증에 사용한 MySQL 8.4와 대조해야 합니다. 서비스가 확정되기 전에는 해당 업체 전용 구성 파일이나 비밀값을 저장소에 넣지 않습니다. [MySQL 연결](https://docs.railway.com/databases/mysql), [메일 발송 제한](https://docs.railway.com/networking/outbound-networking)
 
-인증 메일을 쓸 때 `VERIFY_BASE_URL`은 실제 회원이 접속할 고정 HTTPS 주소의 `/verify-email`이어야 합니다. 임시 미리보기 주소로 운영 메일을 발송하지 않습니다. DB·SMTP 비밀번호는 API 운영 환경의 비밀 저장소에서 관리하고 Git과 웹 프로젝트에 넣지 않습니다. 회원 시범 사용 전 점검 순서는 [운영 절차](../docs/operations.md)를 따릅니다.
+인증 메일을 쓸 때 `VERIFY_BASE_URL`은 실제 회원이 접속할 고정 HTTPS 주소의 `/verify-email`이어야 합니다. 임시 미리보기 주소로 운영 메일을 발송하지 않습니다. DB 비밀번호와 메일 발송 인증 정보는 API 운영 환경의 비밀 저장소에서 관리하고 Git과 웹 프로젝트에 넣지 않습니다. 회원 시범 사용 전 점검 순서는 [운영 절차](../docs/operations.md)를 따릅니다.
 
 ## 확인 항목
 
