@@ -1,0 +1,34 @@
+.gallery {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  align-items: end;
+  gap: 24px;
+}
+
+.photo {
+  position: relative;
+  min-width: 0;
+  height: clamp(440px, 43vw, 610px);
+  overflow: hidden;
+  background: #e4e9e4;
+}
+
+.photo:nth-child(even) {
+  height: clamp(300px, 32vw, 450px);
+}
+
+.photo img {
+  object-fit: cover;
+}
+
+@media (max-width: 760px) {
+  .gallery {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .photo,
+  .photo:nth-child(even) {
+    height: 370px;
+  }
+}

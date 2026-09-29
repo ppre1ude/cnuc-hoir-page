@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ApiRequestError } from "../../lib/api";
 import { getSession, login } from "./session";
+import styles from "./LoginForm.module.css";
 
 export function LoginForm() {
   const router = useRouter();
@@ -32,13 +33,17 @@ export function LoginForm() {
     }
   }
 
-  return <form onSubmit={submit}>
-    <label htmlFor="login-email">이메일</label>
-    <input id="login-email" name="email" type="email" autoComplete="email" required />
-    <label htmlFor="login-password">비밀번호</label>
-    <input id="login-password" name="password" type="password" autoComplete="current-password" required />
-    <button type="submit" disabled={pending}>{pending ? "로그인 중..." : "로그인"}</button>
-    {error && <p role="alert">{error}</p>}
-    <Link href="/reset-password">비밀번호 재설정</Link>
+  return <form className={styles.form} onSubmit={submit}>
+    <div className={styles.field}>
+      <label htmlFor="login-email">이메일</label>
+      <input id="login-email" name="email" type="email" autoComplete="email" required />
+    </div>
+    <div className={styles.field}>
+      <label htmlFor="login-password">비밀번호</label>
+      <input id="login-password" name="password" type="password" autoComplete="current-password" required />
+    </div>
+    <button className={styles.submit} type="submit" disabled={pending}>{pending ? "로그인 중..." : "로그인"}</button>
+    {error && <p className={styles.error} role="alert">{error}</p>}
+    <Link className={styles.reset} href="/reset-password">비밀번호 재설정</Link>
   </form>;
 }

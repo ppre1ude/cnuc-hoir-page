@@ -1,0 +1,22 @@
+.reveal[data-reveal="pending"] {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.reveal[data-reveal="visible"] {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 540ms ease, transform 540ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.reveal[data-reveal="visible"][data-delay="short"] {
+  transition-delay: 110ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal[data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
