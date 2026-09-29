@@ -1,7 +1,7 @@
 services:
   mysql:
     ports:
-      - "127.0.0.1:3308:3306"
+      - "127.0.0.1:${E2E_DB_PORT:-3308}:3306"
     networks:
       - api_private
       - edge
@@ -11,7 +11,7 @@ services:
     environment:
       MP_MAX_MESSAGES: 100
     ports:
-      - "127.0.0.1:8026:8025"
+      - "127.0.0.1:${E2E_MAIL_PORT:-8026}:8025"
     networks:
       - mail_egress
 

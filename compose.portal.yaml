@@ -11,7 +11,7 @@ services:
     volumes:
       - portal_mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD-SHELL", "mysql --protocol=TCP -h 127.0.0.1 -u \"$$MYSQL_USER\" -p\"$$MYSQL_PASSWORD\" -D \"$$MYSQL_DATABASE\" -e 'SELECT 1' >/dev/null 2>&1"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -30,7 +30,7 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:?SMTP_PASSWORD 환경 변수가 필요합니다}
       MAIL_FROM: ${MAIL_FROM:?MAIL_FROM 환경 변수가 필요합니다}
       VERIFY_BASE_URL: ${VERIFY_BASE_URL:?VERIFY_BASE_URL 환경 변수가 필요합니다}
-      TRUSTED_PROXY_CIDRS: 172.30.240.10/32
+      TRUSTED_PROXY_CIDRS: ${E2E_PROXY_IP:-172.30.240.10}/32
       REQUIRE_TRUSTED_PROXY: "true"
     depends_on:
       mysql:
@@ -55,7 +55,7 @@ services:
       - "127.0.0.1:${PORTAL_HTTP_PORT:-8080}:80"
     networks:
       api_private:
-        ipv4_address: 172.30.240.10
+        ipv4_address: ${E2E_PROXY_IP:-172.30.240.10}
       web_private:
       edge:
 
@@ -67,7 +67,7 @@ networks:
     internal: true
     ipam:
       config:
-        - subnet: 172.30.240.0/24
+        - subnet: ${E2E_API_PRIVATE_SUBNET:-172.30.240.0/24}
   web_private:
     internal: true
   mail_egress:

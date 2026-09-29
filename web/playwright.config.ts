@@ -33,13 +33,17 @@ const environment: Record<string, string> = {};
 for (const [key, value] of Object.entries(process.env)) {
   if (value !== undefined) environment[key] = value;
 }
+const portalBase = process.env.E2E_PORTAL_BASE_URL;
+if (!portalBase || !/^http:\/\/localhost:\d{4,5}$/.test(portalBase)) {
+  throw new Error("격리 E2E 웹 주소가 올바르지 않습니다.");
+}
 
 export default defineConfig({
   testDir: "./e2e",
   timeout: 180_000,
   workers: 1,
   use: {
-    baseURL: "http://localhost:8081",
+    baseURL: portalBase,
     browserName: "chromium",
     viewport: { width: 1280, height: 800 },
     trace: "retain-on-failure",
@@ -48,7 +52,7 @@ export default defineConfig({
   webServer: {
     command: "docker compose -f compose.portal.yaml -f deployment/compose.e2e.yaml up --build",
     cwd: projectRoot,
-    url: "http://localhost:8081/api/v1/auth/csrf",
+    url: `${portalBase}/api/v1/auth/csrf`,
     timeout: 600_000,
     reuseExistingServer: false,
     env: environment,

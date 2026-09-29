@@ -1,16 +1,17 @@
 import { expect, type APIRequestContext, type Page } from "@playwright/test";
 
 export async function verificationLink(request: APIRequestContext, email: string): Promise<string> {
+  const mailBase = process.env.E2E_MAIL_BASE_URL!;
   let identifier = "";
   await expect.poll(async () => {
-    const response = await request.get("http://localhost:8026/api/v1/messages");
+    const response = await request.get(`${mailBase}/api/v1/messages`);
     if (!response.ok()) return false;
     const data = await response.json() as { messages?: Array<{ ID: string; To: unknown }> };
     const message = data.messages?.find((item) => JSON.stringify(item.To).includes(email));
     identifier = message?.ID ?? "";
     return Boolean(identifier);
   }, { timeout: 60_000, intervals: [500, 1000, 2000] }).toBe(true);
-  const response = await request.get(`http://localhost:8026/api/v1/message/${identifier}`);
+  const response = await request.get(`${mailBase}/api/v1/message/${identifier}`);
   expect(response.ok()).toBe(true);
   const message = await response.json() as { Text?: string };
   const link = message.Text?.match(/https?:\/\/[^\s]+\/verify-email#token=[^\s]+/)?.[0];
@@ -18,7 +19,7 @@ export async function verificationLink(request: APIRequestContext, email: string
   const url = new URL(link!);
   expect(url.protocol).toBe("https:");
   expect(url.hostname).toBe("localhost");
-  return `http://localhost:8081${url.pathname}${url.search}${url.hash}`;
+  return `${process.env.E2E_PORTAL_BASE_URL}${url.pathname}${url.search}${url.hash}`;
 }
 
 export async function join(page: Page, email: string, password: string, name: string): Promise<void> {

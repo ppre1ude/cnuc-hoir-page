@@ -21,7 +21,7 @@ test("가입부터 운영진 정정 반영까지 실제 서비스 흐름", async
   await expect(page).toHaveURL(/\/application-status$/);
   await expect(page.getByText("운영진 승인을 기다리고 있습니다.")).toBeVisible();
 
-  const adminContext = await browser.newContext({ baseURL: "http://localhost:8081" });
+  const adminContext = await browser.newContext({ baseURL: process.env.E2E_PORTAL_BASE_URL });
   const adminPage = await adminContext.newPage();
   adminPage.on("pageerror", (error) => browserErrors.push(error.message));
   adminPage.on("console", (message) => { if (message.type() === "error") browserErrors.push(message.text()); });
@@ -29,6 +29,8 @@ test("가입부터 운영진 정정 반영까지 실제 서비스 흐름", async
     await login(adminPage, process.env.E2E_ADMIN_EMAIL!, process.env.E2E_ADMIN_PASSWORD!);
     await expect(adminPage).toHaveURL(/\/dashboard$/);
     await adminPage.goto("/admin/applications");
+    await expect(adminPage.getByRole("navigation", { name: "운영진 메뉴" }))
+      .toContainText("가입 신청");
     const application = adminPage.getByRole("article").filter({ hasText: email });
     await expect(application).toBeVisible();
     await application.getByRole("button", { name: `${name} 승인` }).click();
@@ -76,7 +78,7 @@ test("가입부터 운영진 정정 반영까지 실제 서비스 흐름", async
     await page.reload();
     await expect(page.getByRole("listitem").filter({ hasText: eventTitle })).toContainText("미출석");
 
-    const mobile = await browser.newContext({ baseURL: "http://localhost:8081", viewport: { width: 390, height: 844 } });
+    const mobile = await browser.newContext({ baseURL: process.env.E2E_PORTAL_BASE_URL, viewport: { width: 390, height: 844 } });
     const mobilePage = await mobile.newPage();
     mobilePage.on("pageerror", (error) => browserErrors.push(error.message));
     mobilePage.on("console", (message) => { if (message.type() === "error") browserErrors.push(message.text()); });
@@ -87,7 +89,9 @@ test("가입부터 운영진 정정 반영까지 실제 서비스 흐름", async
       await expect(mobilePage.getByRole("region", { name: "최근 공지" }))
         .toContainText(process.env.E2E_NOTICE_TITLE!);
       await expect(mobilePage.getByRole("region", { name: "내 출석 요약" }))
-        .toContainText(`${eventTitle} · 미출석`);
+        .toContainText(eventTitle);
+      await expect(mobilePage.getByRole("region", { name: "내 출석 요약" }))
+        .toContainText("미출석");
       const metrics = await mobilePage.evaluate(() => {
         const names = ["행사 달력", "선택한 행사", "최근 공지", "내 출석 요약"];
         const tops = names.map((name) => document.querySelector(`[aria-label="${name}"]`)?.getBoundingClientRect().top ?? -1);
@@ -101,6 +105,19 @@ test("가입부터 운영진 정정 반영까지 실제 서비스 흐름", async
     } finally {
       await mobile.close();
     }
+
+    await adminPage.setViewportSize({ width: 390, height: 844 });
+    for (const [route, heading] of [
+      ["/admin/applications", "가입 신청 관리"],
+      ["/admin/notices", "공지 관리"],
+      ["/admin/events", "행사 관리"],
+      [`/admin/events/${eventId}/attendance`, `${eventTitle} 출석 관리`],
+    ]) {
+      await adminPage.goto(route);
+      await expect(adminPage.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+      expect(await adminPage.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+    }
+    await adminPage.screenshot({ path: testInfo.outputPath("admin-attendance-mobile.png"), fullPage: true });
   } finally {
     await adminContext.close();
   }

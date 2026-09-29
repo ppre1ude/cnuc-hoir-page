@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import { mkdtempSync, readFileSync, rmdirSync, unlinkSync, writeFileSync } from "node:fs";
+import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -22,7 +23,6 @@ const environment = {
   SMTP_PASSWORD: randomBytes(32).toString("hex"),
   MAIL_FROM: "choir-e2e@example.test",
   VERIFY_BASE_URL: "https://localhost/verify-email",
-  PORTAL_HTTP_PORT: "8081",
   E2E_DB_PASSWORD: databasePassword,
   CHOIR_E2E_RUN_TOKEN: runToken,
 };
@@ -41,6 +41,40 @@ function docker(args, options = {}) {
 function lines(value) {
   return value ? value.split(/\r?\n/).filter(Boolean) : [];
 }
+
+async function availablePort() {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        server.close();
+        reject(new Error("루프백 포트를 선택하지 못했습니다."));
+        return;
+      }
+      server.close((error) => error ? reject(error) : resolve(address.port));
+    });
+  });
+}
+
+const selectedPorts = new Set();
+while (selectedPorts.size < 3) selectedPorts.add(await availablePort());
+const [portalPort, databasePort, mailPort] = [...selectedPorts];
+environment.PORTAL_HTTP_PORT = String(portalPort);
+environment.E2E_DB_PORT = String(databasePort);
+environment.E2E_MAIL_PORT = String(mailPort);
+environment.E2E_PORTAL_BASE_URL = `http://localhost:${portalPort}`;
+environment.E2E_MAIL_BASE_URL = `http://127.0.0.1:${mailPort}`;
+
+const usedSubnets = new Set(lines(docker(["network", "ls", "-q"]))
+  .flatMap((id) => JSON.parse(docker(["network", "inspect", id]))
+    .flatMap((network) => (network.IPAM?.Config ?? []).map((config) => config.Subnet))));
+const subnetNumber = Array.from({ length: 14 }, (_, index) => index + 241)
+  .find((value) => !usedSubnets.has(`172.30.${value}.0/24`));
+if (!subnetNumber) throw new Error("격리 테스트에 사용할 내부 네트워크가 없습니다.");
+environment.E2E_API_PRIVATE_SUBNET = `172.30.${subnetNumber}.0/24`;
+environment.E2E_PROXY_IP = `172.30.${subnetNumber}.10`;
 
 function resources() {
   return {

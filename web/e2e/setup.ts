@@ -7,7 +7,7 @@ import { csrf, join, login, verificationLink } from "./helpers";
 
 export default async function setup(): Promise<void> {
   const browser = await chromium.launch();
-  const context = await browser.newContext({ baseURL: "http://localhost:8081" });
+  const context = await browser.newContext({ baseURL: process.env.E2E_PORTAL_BASE_URL });
   const page = await context.newPage();
   try {
     await expect.poll(async () => (await context.request.get("/api/v1/auth/csrf")).status(),
@@ -29,7 +29,7 @@ export default async function setup(): Promise<void> {
     await login(page, email, password);
     await expect(page).toHaveURL(/\/dashboard$/);
     await page.reload();
-    await expect(page.getByRole("heading", { name: /이번 달 일정을 확인하세요/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "일정", exact: true })).toBeVisible();
     const cookies = await context.cookies();
     expect(cookies.some((cookie) => cookie.name === "SESSION" && cookie.secure && cookie.httpOnly)).toBe(true);
 
