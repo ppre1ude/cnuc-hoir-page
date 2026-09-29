@@ -23,7 +23,7 @@ afterEach(() => { cleanup(); vi.clearAllMocks(); });
 test("행사 상세에서 창이 닫히면 참여 버튼을 보여주지 않습니다", async () => {
   vi.mocked(attendance.getEventAttendance).mockResolvedValue({ eventId: 3, eventTitle: "연습", status: "NOT_OPEN", checkInOpen: false });
   render(<EventPage />);
-  await screen.findByText(/내 출석: 출석 창 대기/);
+  await screen.findByText("출석 창 대기");
   expect(screen.queryByRole("link", { name: "현장 출석하기" })).toBeNull();
 });
 

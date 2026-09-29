@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ApiRequestError } from "../../lib/api";
 import { attendanceLabel, getEventAttendance, submitCheckIn, type AttendanceState } from "./attendance";
+import styles from "./CheckInPanel.module.css";
 
 export function CheckInPanel({ eventId }: { eventId: number }) {
   const [status, setStatus] = useState<AttendanceState | null>(null);
@@ -111,7 +112,7 @@ export function CheckInPanel({ eventId }: { eventId: number }) {
     } catch { setMessage("출석은 완료됐지만 상태를 확인하지 못했습니다."); }
   }
 
-  return <section aria-label="현장 출석">
+  return <section aria-label="현장 출석" className={styles.panel}>
     <h1>현장 출석</h1>
     {status && <p>현재 상태: <strong>{attendanceLabel[status.status]}</strong></p>}
     <form onSubmit={submit}>

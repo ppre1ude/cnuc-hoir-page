@@ -46,15 +46,16 @@ export function EventPage() {
     return () => { alive = false; if (timer !== undefined) window.clearInterval(timer); };
   }, [id, router]);
 
-  return <div className={styles.dashboard}>
-    <p><Link href="/dashboard">← 달력으로 돌아가기</Link></p>
+  return <main className={styles.eventPage}>
+    <Link className={styles.backLink} href="/dashboard">← 일정</Link>
+    <h1>행사</h1>
     {error && <p role="alert">{error}</p>}
     {!Number.isSafeInteger(Number(id)) || Number(id) < 1 ? <p>행사 주소를 확인해 주세요.</p> :
-      event && session ? <div className={styles.card}><EventDetail event={event} memberType={session.memberType}
+      event && session ? <div className={styles.eventPageCard}><EventDetail event={event} memberType={session.memberType}
         checkInOpen={attendance?.checkInOpen ?? false} />
-        <p>내 출석: {attendance ? attendanceLabel[attendance.status] : "확인 중"}</p>
+        <p className={styles.eventAttendance}>내 출석: <strong>{attendance ? attendanceLabel[attendance.status] : "확인 중"}</strong></p>
         {attendanceError && <p role="alert">{attendanceError}</p>}
         {session.admin && <p><Link href={`/admin/events/${event.id}/attendance`}>운영진 출석 관리</Link></p>}</div>
         : !error && <p role="status">행사를 불러오는 중입니다.</p>}
-  </div>;
+  </main>;
 }

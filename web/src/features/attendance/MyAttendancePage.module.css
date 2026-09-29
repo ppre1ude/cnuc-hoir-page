@@ -1,0 +1,12 @@
+.page { width: min(100% - 64px, 1000px); margin: 0 auto; padding: 42px 0 88px; }
+.page h1 { margin: 0 0 30px; font-size: clamp(30px, 3vw, 42px); letter-spacing: -.055em; }
+.list { margin: 0; padding: 0; border-top: 2px solid var(--choir-ink); list-style: none; }
+.list li { border-bottom: 1px solid var(--choir-line); }
+.list a { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 76px; padding: 16px 4px; color: var(--choir-ink); font-size: 16px; font-weight: 650; text-decoration: none; }
+.list a:hover { color: var(--choir-deep-green); }
+.list span { flex: none; padding: 6px 10px; border-radius: 4px; background: #edf7ef; color: var(--choir-deep-green); font-size: 12px; }
+.empty { margin: 0; padding: 22px 4px; border-top: 2px solid var(--choir-ink); border-bottom: 1px solid var(--choir-line); color: var(--choir-muted); }
+@media (max-width: 760px) {
+  .page { width: min(100% - 36px, 680px); padding-top: 28px; }
+  .list a { font-size: 14px; }
+}

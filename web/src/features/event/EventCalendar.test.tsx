@@ -49,10 +49,10 @@ describe("일정 중심 회원 화면", () => {
     await screen.findByRole("button", { name: /29일/ });
     fireEvent.click(screen.getByRole("button", { name: /29일/ }));
     expect(await screen.findByRole("heading", { name: "정기 연습" })).toBeInTheDocument();
-    expect(screen.getByText("OB 출석 대상이 아닙니다.")).toBeInTheDocument();
+    expect(screen.getByText("OB 참여 불가")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /30일/ }));
     expect(await screen.findByRole("heading", { name: "가을 공연" })).toBeInTheDocument();
-    expect(screen.getByText("OB 출석 대상 행사입니다.")).toBeInTheDocument();
+    expect(screen.getByText("OB 참여 가능")).toBeInTheDocument();
     await waitFor(() => expect(getEvents).toHaveBeenCalledTimes(1));
   });
 

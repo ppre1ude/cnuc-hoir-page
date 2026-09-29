@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { attendanceLabel, getMyAttendance, type AttendanceState } from "./attendance";
+import styles from "./MyAttendancePage.module.css";
 
 export function MyAttendancePage() {
   const [items, setItems] = useState<AttendanceState[]>([]);
@@ -13,13 +14,12 @@ export function MyAttendancePage() {
       .catch(() => { if (alive) setError("출석 기록을 불러오지 못했습니다."); });
     return () => { alive = false; };
   }, []);
-  return <main style={{ maxWidth: 900, margin: "auto", padding: 24 }}>
-    <p><Link href="/dashboard">← 달력으로 돌아가기</Link></p>
+  return <main className={styles.page}>
     <h1>내 출석 기록</h1>
     {error && <p role="alert">{error}</p>}
-    {items.length === 0 && !error && <p>표시할 행사가 없습니다.</p>}
-    <ul>{items.map((item) => <li key={item.eventId}>
-      <Link href={`/events/${item.eventId}`}>{item.eventTitle}</Link> — {attendanceLabel[item.status]}
+    {items.length === 0 && !error && <p className={styles.empty}>출석 기록이 없습니다.</p>}
+    <ul className={styles.list}>{items.map((item) => <li key={item.eventId}>
+      <Link href={`/events/${item.eventId}`}>{item.eventTitle}<span>{attendanceLabel[item.status]}</span></Link>
     </li>)}</ul>
   </main>;
 }

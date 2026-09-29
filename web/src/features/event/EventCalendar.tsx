@@ -107,7 +107,10 @@ export function EventCalendar() {
     const last = seoulDateKey(new Date(new Date(event.endAt).getTime() - 1));
     return first <= selectedDate && selectedDate <= last;
   });
-  const selected = dayEvents.find((event) => event.id === selectedEventId) ?? dayEvents[0];
+  const sortedEvents = [...monthEvents].sort((first, second) => first.startAt.localeCompare(second.startAt));
+  const upcomingEvent = sortedEvents.find((event) => seoulDateKey(event.startAt) >= selectedDate);
+  const selected = dayEvents.find((event) => event.id === selectedEventId)
+    ?? dayEvents[0] ?? upcomingEvent ?? sortedEvents[sortedEvents.length - 1];
   const selectedId = selected?.id;
   useEffect(() => {
     if (session?.status !== "APPROVED" || selectedId == null) return;
@@ -122,25 +125,19 @@ export function EventCalendar() {
   const slots = Array.from({ length: mondayOffset(month) }, (_, index) => `blank-${index}`);
   const days = Array.from({ length: daysInMonth(month) }, (_, index) => index + 1);
 
-  return <div className={styles.dashboard}>
+  return <main className={styles.dashboard}>
     <header className={styles.hero}>
-      <p className={styles.eyebrow}>전남대학교 합창단 · 회원 공간</p>
-      <h1>{session ? `${session.name}님, 이번 달 일정을 확인하세요` : "이번 달 일정"}</h1>
-      <p>날짜를 선택하면 행사와 참여 대상을 확인할 수 있습니다.</p>
-      <nav aria-label="회원 메뉴" className={styles.links}>
-        <Link href="/notices">공지 전체 보기</Link>
-        <Link href="/attendance">내 출석 기록</Link>
-        {session?.admin && <Link href="/admin/events">행사 관리</Link>}
-      </nav>
+      <h1>일정</h1>
+      <span>{month.replace("-", ". ")} · 행사 {monthEvents.length}건</span>
     </header>
     {error && <div role="alert" className={styles.error}>{error} <button type="button" onClick={() => setRetry(retry + 1)}>다시 시도</button></div>}
     <div className={styles.grid}>
       <section aria-label="행사 달력" className={`${styles.card} ${styles.calendar}`}>
         <div className={styles.calendarHeader}>
-          <div><p className={styles.eyebrow}>행사 달력</p><h2>{month.replace("-", "년 ")}월</h2></div>
+          <h2>{month.replace("-", "년 ")}월</h2>
           <div className={styles.monthControls}>
-            <button type="button" onClick={() => changeMonth(-1)} aria-label="이전 달">‹</button>
-            <button type="button" onClick={() => changeMonth(1)} aria-label="다음 달">›</button>
+            <button type="button" onClick={() => changeMonth(-1)} aria-label="이전 달">←</button>
+            <button type="button" onClick={() => changeMonth(1)} aria-label="다음 달">→</button>
           </div>
         </div>
         <div className={styles.weekdays}>{["월", "화", "수", "목", "금", "토", "일"].map((day) => <span key={day}>{day}</span>)}</div>
@@ -148,46 +145,64 @@ export function EventCalendar() {
           {slots.map((slot) => <span key={slot} aria-hidden="true" />)}
           {days.map((day) => {
             const key = `${month}-${String(day).padStart(2, "0")}`;
-            const count = monthEvents.filter((event) => {
+            const eventsOnDay = monthEvents.filter((event) => {
               const first = seoulDateKey(event.startAt);
               const last = seoulDateKey(new Date(new Date(event.endAt).getTime() - 1));
               return first <= key && key <= last;
-            }).length;
+            });
+            const count = eventsOnDay.length;
             return <button type="button" key={key} className={`${styles.day} ${key === selectedDate ? styles.selectedDay : ""}`}
               onClick={() => { setSelectedDate(key); setSelectedEventId(null); }} aria-pressed={key === selectedDate}
               aria-label={`${day}일${count ? `, 행사 ${count}개` : ""}`}>
-              <span>{day}</span>{count > 0 && <i aria-hidden="true" />}
+              <span className={styles.dayNumber}>{day}</span>
+              {count > 0 && <span className={styles.dayEvent}>{eventsOnDay[0].title}</span>}
+              {count > 1 && <span className={styles.moreEvents}>+{count - 1}</span>}
+              {count > 0 && <i aria-hidden="true" />}
             </button>;
           })}
         </div>
         <div className={styles.dayList}>
-          <h3>{Number(selectedDate.slice(-2))}일 행사</h3>
-          {dayEvents.length === 0 && <p>선택한 날짜에 행사가 없습니다.</p>}
+          <h3>{Number(selectedDate.slice(-2))}일 일정</h3>
+          {dayEvents.length === 0 && <p>일정 없음</p>}
           {dayEvents.map((event) => <button key={event.id} type="button" className={styles.eventButton}
             aria-pressed={selected?.id === event.id} onClick={() => setSelectedEventId(event.id)}>{event.title}</button>)}
         </div>
       </section>
+      <div className={styles.rightColumn}>
       <section aria-label="선택한 행사" className={`${styles.card} ${styles.detail}`}>
-        {selected ? <EventDetail event={selected} memberType={session?.memberType ?? null}
-          checkInOpen={selectedAttendance?.eventId === selected.id && selectedAttendance.checkInOpen} link />
-          : <><p className={styles.eyebrow}>선택한 행사</p><h2>날짜를 선택해 주세요</h2><p>선택한 날짜의 행사가 이곳에 표시됩니다.</p></>}
+        <div className={styles.sectionHeader}><h2>이달의 행사</h2><span>{monthEvents.length}건</span></div>
+        {sortedEvents.length === 0 && <p className={styles.empty}>등록된 행사가 없습니다.</p>}
+        {sortedEvents.length > 0 && <div className={styles.eventList}>
+          {sortedEvents.map((event) => {
+            const date = seoulDateKey(event.startAt);
+            return <button key={event.id} type="button" className={styles.eventRow}
+              aria-pressed={selected?.id === event.id}
+              onClick={() => { setSelectedDate(date); setSelectedEventId(event.id); }}>
+              <span className={styles.eventDate}>{date.slice(5).replace("-", ".")}</span>
+              <span className={styles.eventTitle}>{event.title}</span>
+              <span aria-hidden="true">↗</span>
+            </button>;
+          })}
+        </div>}
+        {selected && <div className={styles.selectedEvent}><EventDetail event={selected} memberType={session?.memberType ?? null}
+          checkInOpen={selectedAttendance?.eventId === selected.id && selectedAttendance.checkInOpen} link /></div>}
       </section>
       <section aria-label="최근 공지" className={`${styles.card} ${styles.notices}`}>
-        <div className={styles.sectionHeader}><div><p className={styles.eyebrow}>최근 공지</p><h2>알려드립니다</h2></div><Link href="/notices">전체 보기</Link></div>
+        <div className={styles.sectionHeader}><h2>공지</h2><Link href="/notices">전체 보기 <span aria-hidden="true">→</span></Link></div>
         {noticeError && <p role="alert">{noticeError} <button type="button" onClick={() => { setNoticeError(""); setNoticesLoaded(false); setNoticeRetry(noticeRetry + 1); }}>다시 시도</button></p>}
         {!noticeError && !noticesLoaded && <p role="status">공지를 불러오는 중입니다.</p>}
         {!noticeError && noticesLoaded && notices.length === 0 && <p>게시된 공지가 없습니다.</p>}
-        {!noticeError && notices.map((notice) => <p key={notice.id} className={styles.noticeItem}>{notice.title}</p>)}
+        {!noticeError && notices.map((notice) => <Link key={notice.id} href="/notices" className={styles.noticeItem}>{notice.title}<span aria-hidden="true">→</span></Link>)}
       </section>
+      </div>
       <section aria-label="내 출석 요약" className={`${styles.card} ${styles.attendance}`}>
-        <p className={styles.eyebrow}>내 출석 요약</p><h2>출석 기록</h2>
+        <div className={styles.sectionHeader}><h2>내 출석</h2><Link href="/attendance">전체 보기 <span aria-hidden="true">→</span></Link></div>
         {attendanceError && <p role="alert">{attendanceError}</p>}
-        {!attendanceError && attendance.length === 0 && <p>표시할 행사가 없습니다.</p>}
-        {!attendanceError && attendance.slice(0, 3).map((item) => <p key={item.eventId}>
-          <Link href={`/events/${item.eventId}`}>{item.eventTitle}</Link> · {attendanceLabel[item.status]}
-        </p>)}
-        <Link href="/attendance">내 출석 전체 보기</Link>
+        {!attendanceError && attendance.length === 0 && <p className={styles.empty}>출석 기록이 없습니다.</p>}
+        {!attendanceError && attendance.slice(0, 3).map((item) => <Link key={item.eventId} href={`/events/${item.eventId}`} className={styles.attendanceRow}>
+          <span>{item.eventTitle}</span><strong>{attendanceLabel[item.status]}</strong>
+        </Link>)}
       </section>
     </div>
-  </div>;
+  </main>;
 }

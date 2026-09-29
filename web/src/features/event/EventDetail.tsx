@@ -6,14 +6,13 @@ type Props = { event: ChoirEvent; memberType: "ACTIVE" | "OB" | null; checkInOpe
 
 export function EventDetail({ event, memberType, checkInOpen, link = false }: Props) {
   return <article className={styles.eventDetail}>
-    <p className={styles.eyebrow}>선택한 행사</p>
     <h2>{event.title}</h2>
     <p className={styles.eventTime}>{seoulDateTime(event.startAt)} – {seoulDateTime(event.endAt)}</p>
     <p className={styles.description}>{event.description}</p>
     <p className={event.obEligible ? styles.eligible : styles.muted}>
       {memberType === "OB"
-        ? event.obEligible ? "OB 출석 대상 행사입니다." : "OB 출석 대상이 아닙니다."
-        : "활동 단원 출석 대상 행사입니다."}
+        ? event.obEligible ? "OB 참여 가능" : "OB 참여 불가"
+        : "활동 단원 대상"}
     </p>
     {link && <Link href={`/events/${event.id}`}>행사 자세히 보기</Link>}
     {checkInOpen && (memberType === "ACTIVE" || memberType === "OB" && event.obEligible) &&
