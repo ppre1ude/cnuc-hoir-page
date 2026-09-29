@@ -12,7 +12,27 @@ export type Notice = {
 };
 
 export type NoticePage = { items: Notice[]; page: number; size: number; total: number };
-export type NoticeInput = { title: string; body: string; published: boolean };
+export type PollInput = {
+  question: string;
+  firstOption: string;
+  secondOption: string;
+  closesAt: string;
+};
+export type PollView = PollInput & {
+  closed: boolean;
+  firstCount: number;
+  secondCount: number;
+  myChoice: number | null;
+};
+export type PollRespondent = {
+  memberId: number;
+  name: string;
+  email: string;
+  choice: number;
+  updatedAt: string;
+};
+export type AdminPollView = { poll: PollView; respondents: PollRespondent[] };
+export type NoticeInput = { title: string; body: string; published: boolean; poll?: PollInput };
 
 export function getNotices(page = 0): Promise<NoticePage> {
   return apiRequest<NoticePage>(`/notices?page=${page}&size=20`);
@@ -36,4 +56,18 @@ export function updateNotice(id: number, input: NoticeInput): Promise<Notice> {
   return apiRequest<Notice>(`/admin/notices/${id}`, {
     method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
   });
+}
+
+export function getNoticePoll(id: number): Promise<PollView> {
+  return apiRequest<PollView>(`/notices/${id}/poll`);
+}
+
+export function voteNoticePoll(id: number, choice: number): Promise<PollView> {
+  return apiRequest<PollView>(`/notices/${id}/poll/vote`, {
+    method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ choice }),
+  });
+}
+
+export function getAdminNoticePoll(id: number): Promise<AdminPollView> {
+  return apiRequest<AdminPollView>(`/admin/notices/${id}/poll`);
 }

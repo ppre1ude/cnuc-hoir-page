@@ -60,13 +60,13 @@ public class NoticeController {
     @PostMapping("/admin/notices")
     public ResponseEntity<NoticeItem> create(HttpServletRequest request, @Valid @RequestBody NoticeInput body) {
         return ResponseEntity.status(HttpStatus.CREATED).body(item(notices.create(body.title(), body.body(),
-                body.published(), sessions.requireAdmin(request))));
+                body.published(), sessions.requireAdmin(request), poll(body.poll()))));
     }
 
     @PutMapping("/admin/notices/{id}")
     public NoticeItem update(HttpServletRequest request, @PathVariable long id, @Valid @RequestBody NoticeInput body) {
         sessions.requireAdmin(request);
-        return item(notices.update(id, body.title(), body.body(), body.published()));
+        return item(notices.update(id, body.title(), body.body(), body.published(), poll(body.poll())));
     }
 
     private NoticePage page(Page<Notice> result, int page, int size) {
@@ -79,8 +79,17 @@ public class NoticeController {
                 notice.isPublished(), notice.getCreatedAt(), notice.getUpdatedAt(), notice.getPublishedAt());
     }
 
+    private NoticePollService.PollInput poll(PollInput input) {
+        return input == null ? null : new NoticePollService.PollInput(input.question(), input.firstOption(),
+                input.secondOption(), input.closesAt());
+    }
+
     public record NoticeInput(@NotBlank @Size(max = 200) String title,
-            @NotBlank @Size(max = 10000) String body, @NotNull Boolean published) {}
+            @NotBlank @Size(max = 10000) String body, @NotNull Boolean published,
+            @Valid PollInput poll) {}
+    public record PollInput(@NotBlank @Size(max = 200) String question,
+            @NotBlank @Size(max = 80) String firstOption,
+            @NotBlank @Size(max = 80) String secondOption, @NotNull Instant closesAt) {}
     public record NoticeItem(Long id, String title, String body, String author, boolean published,
             Instant createdAt, Instant updatedAt, Instant publishedAt) {}
     public record NoticePage(List<NoticeItem> items, int page, int size, long total) {}

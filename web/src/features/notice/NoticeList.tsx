@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ApiRequestError } from "../../lib/api";
 import { getSession } from "../auth/session";
 import { getNotice, getNotices, type Notice, type NoticePage } from "./notices";
+import { NoticePoll } from "./NoticePoll";
 import styles from "./NoticeList.module.css";
 
 function dateTime(value: string) {
@@ -61,6 +62,7 @@ export function NoticeList() {
       <h2>{selected.title}</h2>
       <p className={styles.meta}>{selected.author} · {dateTime(selected.createdAt)}</p>
       <p className={styles.body}>{selected.body}</p>
+      <NoticePoll key={selected.id} noticeId={selected.id} />
       <button type="button" onClick={() => setSelected(null)}>닫기</button>
     </article>}
     {visibleData && visibleData.total > visibleData.size && <nav aria-label="공지 목록 페이지" className={styles.pagination}>

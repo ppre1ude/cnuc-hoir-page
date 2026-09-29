@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiRequestError } from "../../lib/api";
 import { getSession } from "../auth/session";
-import { createNotice, getAdminNotices, updateNotice, type Notice, type NoticePage } from "./notices";
+import { createNotice, getAdminNoticePoll, getAdminNotices, updateNotice,
+  type AdminPollView, type Notice, type NoticePage, type PollInput } from "./notices";
 import styles from "../member/AdminPages.module.css";
 
 export function NoticeEditor() {
@@ -21,6 +22,15 @@ export function NoticeEditor() {
   const [saved, setSaved] = useState(false);
   const [retry, setRetry] = useState(0);
   const [canEdit, setCanEdit] = useState(false);
+  const [pollStatus, setPollStatus] = useState<"none" | "loading" | "exists" | "error">("none");
+  const [adminPoll, setAdminPoll] = useState<AdminPollView | null>(null);
+  const [pollRetry, setPollRetry] = useState(0);
+  const [includePoll, setIncludePoll] = useState(false);
+  const [pollPreset, setPollPreset] = useState<"attendance" | "agree" | "custom">("attendance");
+  const [pollQuestion, setPollQuestion] = useState("");
+  const [firstOption, setFirstOption] = useState("참석");
+  const [secondOption, setSecondOption] = useState("불참");
+  const [pollClosesAt, setPollClosesAt] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -44,8 +54,31 @@ export function NoticeEditor() {
     return () => { alive = false; };
   }, [page, retry, router]);
 
+  useEffect(() => {
+    if (!selected) return;
+    let active = true;
+    getAdminNoticePoll(selected.id).then((result) => {
+      if (!active) return;
+      setAdminPoll(result);
+      setPollStatus("exists");
+    }).catch((caught) => {
+      if (!active) return;
+      setAdminPoll(null);
+      setPollStatus(caught instanceof ApiRequestError && caught.status === 404 ? "none" : "error");
+    });
+    return () => { active = false; };
+  }, [selected, pollRetry]);
+
   function edit(notice: Notice) {
     setSelected(notice);
+    setPollStatus("loading");
+    setAdminPoll(null);
+    setIncludePoll(false);
+    setPollPreset("attendance");
+    setPollQuestion("");
+    setFirstOption("참석");
+    setSecondOption("불참");
+    setPollClosesAt("");
     setTitle(notice.title);
     setBody(notice.body);
     setPublished(notice.published);
@@ -53,6 +86,14 @@ export function NoticeEditor() {
 
   function clear() {
     setSelected(null);
+    setPollStatus("none");
+    setAdminPoll(null);
+    setIncludePoll(false);
+    setPollPreset("attendance");
+    setPollQuestion("");
+    setFirstOption("참석");
+    setSecondOption("불참");
+    setPollClosesAt("");
     setTitle("");
     setBody("");
     setPublished(false);
@@ -65,13 +106,25 @@ export function NoticeEditor() {
     setError("");
     setSaved(false);
     try {
-      const input = { title: title.trim(), body, published };
+      let poll: PollInput | undefined;
+      if (includePoll) {
+        const closesAt = new Date(`${pollClosesAt}:00+09:00`);
+        if (Number.isNaN(closesAt.getTime())) {
+          setError("투표 마감 시각을 확인해 주세요.");
+          setBusy(false);
+          return;
+        }
+        poll = { question: pollQuestion.trim(), firstOption: firstOption.trim(),
+          secondOption: secondOption.trim(), closesAt: closesAt.toISOString() };
+      }
+      const input = { title: title.trim(), body, published, ...(poll ? { poll } : {}) };
       if (selected) await updateNotice(selected.id, input);
       else await createNotice(input);
       clear();
       setSaved(true);
-    } catch {
-      setError("공지를 저장하지 못했습니다.");
+    } catch (caught) {
+      setError(caught instanceof ApiRequestError && ["INVALID_POLL", "POLL_EXISTS"].includes(caught.code)
+        ? caught.message : "공지를 저장하지 못했습니다.");
       setBusy(false);
       return;
     }
@@ -108,6 +161,44 @@ export function NoticeEditor() {
         <label htmlFor="notice-body">본문</label>
         <textarea id="notice-body" value={body} onChange={(event) => setBody(event.target.value)} maxLength={10000} required />
         <label className={styles.check} htmlFor="notice-published"><input id="notice-published" type="checkbox" checked={published} onChange={(event) => setPublished(event.target.checked)} /> 게시</label>
+        {pollStatus === "loading" && <p role="status">투표 정보를 불러오는 중입니다.</p>}
+        {pollStatus === "error" && <p className={styles.error} role="alert">투표 정보를 불러오지 못했습니다.
+          <button className={styles.secondary} type="button" onClick={() => { setPollStatus("loading"); setPollRetry((value) => value + 1); }}>다시 시도</button></p>}
+        {adminPoll && <section className={styles.pollDetails} aria-label="투표 결과">
+          <h3>{adminPoll.poll.question}</h3>
+          <p>마감 {new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", dateStyle: "medium", timeStyle: "short" }).format(new Date(adminPoll.poll.closesAt))}</p>
+          <p>{adminPoll.poll.firstOption} {adminPoll.poll.firstCount}명 · {adminPoll.poll.secondOption} {adminPoll.poll.secondCount}명</p>
+          <h4>응답자</h4>
+          {adminPoll.respondents.length === 0 && <p>아직 응답이 없습니다.</p>}
+          <ul>{adminPoll.respondents.map((respondent) => <li key={respondent.memberId}>
+            <span>{respondent.name} ({respondent.email})</span>
+            <strong>{respondent.choice === 1 ? adminPoll.poll.firstOption : adminPoll.poll.secondOption}</strong>
+          </li>)}</ul>
+        </section>}
+        {pollStatus === "none" && <>
+          <label className={styles.check} htmlFor="notice-poll"><input id="notice-poll" type="checkbox" checked={includePoll}
+            onChange={(event) => setIncludePoll(event.target.checked)} /> 투표 추가</label>
+          {includePoll && <div className={styles.pollFields}>
+            <label htmlFor="poll-question">질문</label>
+            <input id="poll-question" value={pollQuestion} onChange={(event) => setPollQuestion(event.target.value)} maxLength={200} required />
+            <label htmlFor="poll-preset">선택지 형식</label>
+            <select id="poll-preset" value={pollPreset}
+              onChange={(event) => { const next = event.target.value as "attendance" | "agree" | "custom";
+                setPollPreset(next);
+                if (next === "agree") { setFirstOption("찬성"); setSecondOption("반대"); }
+                if (next === "attendance") { setFirstOption("참석"); setSecondOption("불참"); } }}>
+              <option value="attendance">참석 / 불참</option><option value="agree">찬성 / 반대</option><option value="custom">직접 입력</option>
+            </select>
+            <label htmlFor="poll-first">첫 번째 선택지</label>
+            <input id="poll-first" value={firstOption} onChange={(event) => { setFirstOption(event.target.value); setPollPreset("custom"); }} maxLength={80} required />
+            <label htmlFor="poll-second">두 번째 선택지</label>
+            <input id="poll-second" value={secondOption} onChange={(event) => { setSecondOption(event.target.value); setPollPreset("custom"); }} maxLength={80} required />
+            <label htmlFor="poll-closes">마감 시각 (한국 시간)</label>
+            <input id="poll-closes" type="datetime-local" value={pollClosesAt} onChange={(event) => setPollClosesAt(event.target.value)} required />
+            <p>등록한 투표의 질문과 선택지는 변경할 수 없습니다.</p>
+            <p>참석 응답은 행사 출석 기록과 별도로 관리됩니다.</p>
+          </div>}
+        </>}
         <div className={styles.actions}><button className={styles.button} type="submit" disabled={busy || !title.trim() || !body.trim()}>저장</button>
         {selected && <button className={styles.secondary} type="button" onClick={clear}>새 공지</button>}</div>
       </form></div>}

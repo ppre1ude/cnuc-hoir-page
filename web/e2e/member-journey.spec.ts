@@ -36,6 +36,21 @@ test("가입부터 운영진 정정 반영까지 실제 서비스 흐름", async
     await application.getByRole("button", { name: `${name} 승인` }).click();
     await expect(application).toHaveCount(0);
 
+    await adminPage.goto("/admin/notices");
+    await adminPage.getByLabel("제목").fill("연습 참여 조사");
+    await adminPage.getByLabel("본문").fill("이번 주 연습 참여 여부를 선택해 주세요.");
+    await adminPage.getByLabel("게시", { exact: true }).check();
+    await adminPage.getByLabel("투표 추가").check();
+    await adminPage.getByLabel("질문").fill("연습에 참석하시나요?");
+    const deadlineParts = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Seoul", year: "numeric",
+      month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+      .formatToParts(new Date(Date.now() + 86_400_000));
+    const deadlinePart = (type: string) => deadlineParts.find((value) => value.type === type)?.value ?? "";
+    await adminPage.getByLabel("마감 시각 (한국 시간)").fill(
+      `${deadlinePart("year")}-${deadlinePart("month")}-${deadlinePart("day")}T${deadlinePart("hour")}:${deadlinePart("minute")}`);
+    await adminPage.getByRole("button", { name: "저장" }).click();
+    await expect(adminPage.getByRole("status")).toContainText("공지를 저장했습니다.");
+
     await adminPage.goto(`/admin/events/${eventId}/attendance`);
     await adminPage.getByRole("button", { name: "출석 창 열기" }).click();
     const code = await adminPage.locator('section[aria-label="출석 창"] strong').innerText();
@@ -43,6 +58,20 @@ test("가입부터 운영진 정정 반영까지 실제 서비스 흐름", async
 
     await login(page, email, password);
     await expect(page).toHaveURL(/\/dashboard$/);
+    await page.goto("/notices");
+    await page.getByRole("button", { name: "연습 참여 조사" }).click();
+    await page.getByRole("radio", { name: /^참석/ }).check();
+    await page.getByRole("button", { name: "투표하기" }).click();
+    await expect(page.getByText("내 선택: 참석")).toBeVisible();
+    await page.getByRole("radio", { name: /^불참/ }).check();
+    await page.getByRole("button", { name: "선택 변경" }).click();
+    await expect(page.getByText("내 선택: 불참")).toBeVisible();
+    await adminPage.goto("/admin/notices");
+    await adminPage.getByRole("button", { name: /연습 참여 조사/ }).click();
+    await expect(adminPage.getByRole("region", { name: "투표 결과" })).toContainText(email);
+    await expect(adminPage.getByRole("region", { name: "투표 결과" })).toContainText("불참 1명");
+
+    await page.goto("/dashboard");
     const calendar = page.getByRole("region", { name: "행사 달력" });
     const targetMonth = `${process.env.E2E_TODAY!.slice(0, 4)}년 ${process.env.E2E_TODAY!.slice(5, 7)}월`;
     const currentMonth = await calendar.locator("h2").innerText();
@@ -69,7 +98,7 @@ test("가입부터 운영진 정정 반영까지 실제 서비스 흐름", async
     await page.goto("/attendance");
     await expect(page.getByRole("listitem").filter({ hasText: eventTitle })).toContainText("출석 완료");
 
-    await adminPage.reload();
+    await adminPage.goto(`/admin/events/${eventId}/attendance`);
     const row = adminPage.locator("section[aria-label='단원 출석 기록'] > div").filter({ hasText: email });
     await expect(row).toContainText("출석 완료");
     await row.getByLabel("정정 이유").fill("현장 기록 확인");

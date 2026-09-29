@@ -13,10 +13,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class NoticeService {
     private final NoticeRepository notices;
+    private final NoticePollService polls;
     private final Clock clock;
 
-    public NoticeService(NoticeRepository notices, Clock clock) {
+    public NoticeService(NoticeRepository notices, NoticePollService polls, Clock clock) {
         this.notices = notices;
+        this.polls = polls;
         this.clock = clock;
     }
 
@@ -39,13 +41,28 @@ public class NoticeService {
 
     @Transactional
     public Notice create(String title, String body, boolean published, Member author) {
-        return notices.save(new Notice(title, body, published, author, clock));
+        return create(title, body, published, author, null);
+    }
+
+    @Transactional
+    public Notice create(String title, String body, boolean published, Member author,
+            NoticePollService.PollInput poll) {
+        Notice notice = notices.saveAndFlush(new Notice(title, body, published, author, clock));
+        if (poll != null) polls.create(notice.getId(), poll);
+        return notice;
     }
 
     @Transactional
     public Notice update(long id, String title, String body, boolean published) {
+        return update(id, title, body, published, null);
+    }
+
+    @Transactional
+    public Notice update(long id, String title, String body, boolean published,
+            NoticePollService.PollInput poll) {
         Notice notice = notices.findById(id).orElseThrow(this::missing);
         notice.update(title, body, published, clock);
+        if (poll != null) polls.create(id, poll);
         return notice;
     }
 

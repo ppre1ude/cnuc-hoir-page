@@ -1,17 +1,20 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NoticeEditor } from "./NoticeEditor";
+import { ApiRequestError } from "../../lib/api";
 
 const getSession = vi.fn();
 const getAdminNotices = vi.fn();
 const createNotice = vi.fn();
 const updateNotice = vi.fn();
+const getAdminNoticePoll = vi.fn();
 const router = vi.hoisted(() => ({ replace: vi.fn() }));
 vi.mock("../auth/session", () => ({ getSession: () => getSession() }));
 vi.mock("./notices", () => ({
   getAdminNotices: (page: number) => getAdminNotices(page),
   createNotice: (input: unknown) => createNotice(input),
   updateNotice: (id: number, input: unknown) => updateNotice(id, input),
+  getAdminNoticePoll: (id: number) => getAdminNoticePoll(id),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
@@ -22,6 +25,8 @@ describe("공지 편집기", () => {
     getAdminNotices.mockReset();
     createNotice.mockReset();
     updateNotice.mockReset();
+    getAdminNoticePoll.mockReset();
+    getAdminNoticePoll.mockRejectedValue(new ApiRequestError(404, "POLL_NOT_FOUND", "투표가 없습니다."));
     getSession.mockResolvedValue({ status: "APPROVED", admin: true });
     createNotice.mockResolvedValue({ id: 2 });
   });
@@ -74,5 +79,22 @@ describe("공지 편집기", () => {
     fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
     expect(await screen.findByRole("button", { name: /다음 공지\s*초안/ })).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("공지와 참석 여부 투표를 한 번에 등록한다", async () => {
+    getAdminNotices.mockResolvedValue({ items: [], page: 0, size: 20, total: 0 });
+    render(<NoticeEditor />);
+    await screen.findByText("작성된 공지가 없습니다.");
+    fireEvent.change(screen.getByLabelText("제목"), { target: { value: "연습 참여 조사" } });
+    fireEvent.change(screen.getByLabelText("본문"), { target: { value: "참석 여부를 선택해 주세요." } });
+    fireEvent.click(screen.getByLabelText("투표 추가"));
+    fireEvent.change(screen.getByLabelText("질문"), { target: { value: "연습에 참석하시나요?" } });
+    fireEvent.change(screen.getByLabelText("마감 시각 (한국 시간)"), { target: { value: "2027-10-01T14:00" } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    await waitFor(() => expect(createNotice).toHaveBeenCalledWith({
+      title: "연습 참여 조사", body: "참석 여부를 선택해 주세요.", published: false,
+      poll: { question: "연습에 참석하시나요?", firstOption: "참석", secondOption: "불참",
+        closesAt: "2027-10-01T05:00:00.000Z" },
+    }));
   });
 });
