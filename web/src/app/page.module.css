@@ -13,24 +13,22 @@
 .container { width: min(100% - 96px, 1320px); margin-inline: auto; }
 
 .header {
-  position: relative;
   display: flex;
   align-items: center;
-  gap: 32px;
+  justify-content: space-between;
+  gap: 24px;
   height: 76px;
   padding: 0 max(48px, calc((100vw - 1320px) / 2));
   border-bottom: 1px solid #e4eae4;
   background: #fff;
 }
-.brand { position: absolute; left: 50%; display: flex; align-items: center; transform: translateX(-50%); }
+.brand { display: flex; align-items: center; }
 .brandLogo { display: block; width: 214px; height: auto; }
-.nav { display: flex; gap: 28px; }
-.nav a, .login { font-size: 14px; font-weight: 650; white-space: nowrap; }
-.nav a:hover, .memberLinks a:hover { color: var(--deep-green); text-decoration: underline; text-underline-offset: 5px; }
-.login { margin-left: auto; padding: 12px 18px; border: 1px solid var(--ink); }
+.login { padding: 12px 18px; border: 1px solid var(--ink); font-size: 14px; font-weight: 650; white-space: nowrap; }
+.memberLinks a:hover { color: var(--deep-green); text-decoration: underline; text-underline-offset: 5px; }
 .login:hover { border-color: var(--deep-green); color: var(--deep-green); }
 
-.hero { scroll-margin-top: 76px; overflow: hidden; text-align: center; }
+.hero { overflow: hidden; text-align: center; }
 .heroContent { width: min(100% - 48px, 1120px); margin: 0 auto; padding: clamp(72px, 10vh, 130px) 0 0; }
 .heroMark { display: block; width: clamp(170px, 17vw, 240px); height: auto; margin: 0 auto 26px; }
 .heroName { margin: 0 0 16px; color: var(--deep-green); font-size: 15px; font-weight: 700; }
@@ -80,11 +78,8 @@
 @media (max-width: 760px) {
   .container { width: min(100% - 40px, 560px); }
   .header { height: 66px; gap: 12px; padding: 0 20px; }
-  .brand { left: 20px; transform: none; }
   .brandLogo { width: min(48vw, 188px); }
-  .nav { display: none; }
-  .login { margin-left: auto; padding: 9px 11px; font-size: 12px; }
-  .hero { scroll-margin-top: 66px; }
+  .login { padding: 9px 11px; font-size: 12px; }
   .heroContent { width: min(100% - 40px, 560px); padding-top: 78px; }
   .heroMark { width: 150px; margin-bottom: 22px; }
   .heroName { margin-bottom: 16px; font-size: 13px; }

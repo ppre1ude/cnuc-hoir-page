@@ -20,15 +20,10 @@ export default function Home() {
             priority
           />
         </Link>
-        <nav className={styles.nav} aria-label="주요 메뉴">
-          <a href="#about">합창단 소개</a>
-          <a href="#activity">공연·활동</a>
-          <a href="#participate">함께하기</a>
-        </nav>
         <Link className={styles.login} href="/login">단원 로그인</Link>
       </header>
 
-      <section className={styles.hero} id="about" aria-labelledby="hero-title">
+      <section className={styles.hero} aria-labelledby="hero-title">
         <div className={styles.heroContent}>
           <Image className={styles.heroMark} src="/images/choir-mark.png" alt="" width={168} height={130} priority />
           <p className={styles.heroName}>전남대학교 합창단</p>
