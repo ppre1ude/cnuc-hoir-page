@@ -12,10 +12,4 @@ export const activityPhotos: ActivityPhoto[] = [
     alt: "지휘자와 단원들이 무대에서 합창하는 모습",
     objectPosition: "center bottom",
   },
-  {
-    id: "group",
-    src: "/images/choir-group.jpg",
-    alt: "무대에 모인 전남대학교 합창단 단원들",
-    objectPosition: "center 56%",
-  },
 ];

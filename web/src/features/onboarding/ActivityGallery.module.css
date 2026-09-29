@@ -17,6 +17,11 @@
   height: clamp(300px, 32vw, 450px);
 }
 
+.photo:only-child {
+  grid-column: 1 / -1;
+  height: clamp(450px, 49vw, 650px);
+}
+
 .photo img {
   object-fit: cover;
 }
@@ -28,7 +33,8 @@
   }
 
   .photo,
-  .photo:nth-child(even) {
-    height: 370px;
+  .photo:nth-child(even),
+  .photo:only-child {
+    height: 300px;
   }
 }

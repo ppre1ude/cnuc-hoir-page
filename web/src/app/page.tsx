@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ActivityGallery } from "@/features/onboarding/ActivityGallery";
-import { Reveal } from "@/features/onboarding/Reveal";
 import { activityPhotos } from "@/features/onboarding/activityPhotos";
 import styles from "./page.module.css";
 
@@ -29,37 +28,19 @@ export default function Home() {
         <Link className={styles.login} href="/login">단원 로그인</Link>
       </header>
 
-      <section className={styles.hero} aria-labelledby="hero-title">
-        <Image
-          className={styles.heroPhoto}
-          src="/images/choir-group.jpg"
-          alt="무대에 선 전남대학교 합창단 단원들"
-          fill
-          sizes="100vw"
-          priority
-        />
+      <section className={styles.hero} id="about" aria-labelledby="hero-title">
         <div className={styles.heroContent}>
-          <h1 id="hero-title">전남대학교 합창단</h1>
-          <a className={styles.heroLink} href="#about">합창단 소개 <span aria-hidden="true">↗</span></a>
-        </div>
-      </section>
-
-      <section className={styles.about} id="about" aria-labelledby="about-title">
-        <div className={styles.container}>
-          <div className={styles.aboutGrid}>
-            <Reveal>
-              <Image className={styles.aboutMark} src="/images/choir-mark.png" alt="" width={210} height={162} />
-            </Reveal>
-            <Reveal delayed>
-              <h2 id="about-title">
-                <span className={styles.aboutLead}>합창으로 전하는</span>
-                <span className={styles.aboutFinal}>
-                  <strong>울림과 감동</strong><span className={styles.aboutTail}>의 이야기</span>
-                </span>
-              </h2>
-            </Reveal>
+          <Image className={styles.heroMark} src="/images/choir-mark.png" alt="" width={168} height={130} priority />
+          <p className={styles.heroName}>전남대학교 합창단</p>
+          <h1 id="hero-title">합창으로 전하는<br /><strong>울림과 감동</strong>의 이야기</h1>
+          <div className={styles.heroActions}>
+            <a className={styles.heroPrimary} href="#activity">공연·활동 보기 <span aria-hidden="true">↗</span></a>
+            <a className={styles.heroSecondary} href="#participate">함께하기 <span aria-hidden="true">↗</span></a>
           </div>
         </div>
+        <Image className={styles.heroPhoto} src="/images/choir-group.jpg"
+          alt="무대에 모인 전남대학교 합창단 단원들" width={5360} height={3573}
+          sizes="(max-width: 760px) 100vw, 90vw" priority />
       </section>
 
       <section className={styles.activity} id="activity" aria-labelledby="activity-title">
