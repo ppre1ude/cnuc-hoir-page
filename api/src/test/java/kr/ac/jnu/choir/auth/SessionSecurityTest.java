@@ -144,14 +144,16 @@ class SessionSecurityTest {
 
     @Test void logoutInvalidatesSession() throws Exception {
         MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).addFilters(security).build();
-        members.save(new Member("logout@example.org", "단원",
+        Member member = members.save(new Member("logout@example.org", "단원",
                 PasswordEncoderFactories.createDelegatingPasswordEncoder().encode("correct-horse-battery"), Clock.systemUTC()));
+        jdbc.update("UPDATE member SET status = 'APPROVED', member_type = 'ACTIVE' WHERE id = ?", member.getId());
         var csrfResponse = mvc.perform(get("/api/v1/auth/csrf")).andReturn();
         String csrf = csrfResponse.getResponse().getContentAsString().split("\"token\":\"", 2)[1].split("\"", 2)[0];
         MockHttpSession session = (MockHttpSession) csrfResponse.getRequest().getSession(false);
-        mvc.perform(post("/api/v1/auth/login").session(session).header("X-CSRF-TOKEN", csrf)
+        assertThat(mvc.perform(post("/api/v1/auth/login").session(session).header("X-CSRF-TOKEN", csrf)
                 .contentType("application/json")
-                .content("{\"email\":\"logout@example.org\",\"password\":\"correct-horse-battery\"}"));
+                .content("{\"email\":\"logout@example.org\",\"password\":\"correct-horse-battery\"}"))
+                .andReturn().getResponse().getStatus()).isEqualTo(204);
         assertThat(mvc.perform(post("/api/v1/auth/logout").session(session).header("X-CSRF-TOKEN", csrf))
                 .andReturn().getResponse().getStatus()).isEqualTo(204);
         assertThat(mvc.perform(get("/api/v1/auth/me").session(session)).andReturn().getResponse().getStatus()).isEqualTo(401);
