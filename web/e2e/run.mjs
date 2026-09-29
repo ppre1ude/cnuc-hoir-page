@@ -18,11 +18,6 @@ const environment = {
   COMPOSE_PROJECT_NAME: projectName,
   MYSQL_PASSWORD: databasePassword,
   MYSQL_ROOT_PASSWORD: randomBytes(32).toString("hex"),
-  SMTP_HOST: "mailpit",
-  SMTP_USER: "e2e",
-  SMTP_PASSWORD: randomBytes(32).toString("hex"),
-  MAIL_FROM: "choir-e2e@example.test",
-  VERIFY_BASE_URL: "https://localhost/verify-email",
   E2E_DB_PASSWORD: databasePassword,
   CHOIR_E2E_RUN_TOKEN: runToken,
 };
@@ -59,13 +54,11 @@ async function availablePort() {
 }
 
 const selectedPorts = new Set();
-while (selectedPorts.size < 3) selectedPorts.add(await availablePort());
-const [portalPort, databasePort, mailPort] = [...selectedPorts];
+while (selectedPorts.size < 2) selectedPorts.add(await availablePort());
+const [portalPort, databasePort] = [...selectedPorts];
 environment.PORTAL_HTTP_PORT = String(portalPort);
 environment.E2E_DB_PORT = String(databasePort);
-environment.E2E_MAIL_PORT = String(mailPort);
 environment.E2E_PORTAL_BASE_URL = `http://localhost:${portalPort}`;
-environment.E2E_MAIL_BASE_URL = `http://127.0.0.1:${mailPort}`;
 
 const usedSubnets = new Set(lines(docker(["network", "ls", "-q"]))
   .flatMap((id) => JSON.parse(docker(["network", "inspect", id]))
@@ -85,7 +78,7 @@ function resources() {
 }
 
 function assertOwnedResources(found) {
-  const allowedServices = new Set(["mysql", "mailpit", "api", "web", "proxy"]);
+  const allowedServices = new Set(["mysql", "api", "web", "proxy"]);
   for (const id of found.containers) {
     const [container] = JSON.parse(docker(["inspect", "--type", "container", id]));
     const labels = container.Config?.Labels ?? {};
@@ -102,7 +95,7 @@ function assertOwnedResources(found) {
       throw new Error("격리 프로젝트에 속하지 않은 볼륨이 있어 정리를 중단했습니다.");
     }
   }
-  const allowedNetworks = new Set(["api_private", "web_private", "edge", "mail_egress"]);
+  const allowedNetworks = new Set(["api_private", "web_private", "edge"]);
   for (const name of found.networks) {
     const [network] = JSON.parse(docker(["network", "inspect", name]));
     const suffix = name.startsWith(`${projectName}_`) ? name.slice(projectName.length + 1) : "";
@@ -125,7 +118,6 @@ writeFileSync(manifestPath, JSON.stringify({
   projectName, runToken, launcherPid: process.pid,
   databasePasswordDigest: digest(databasePassword),
   rootPasswordDigest: digest(environment.MYSQL_ROOT_PASSWORD),
-  smtpPasswordDigest: digest(environment.SMTP_PASSWORD),
 }), { flag: "wx", mode: 0o600 });
 environment.CHOIR_E2E_RUN_MANIFEST = manifestPath;
 

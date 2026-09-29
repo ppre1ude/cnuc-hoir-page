@@ -16,7 +16,7 @@ test("방문자에게 회원 행사·공지·투표·출석이 노출되지 않�
     "/api/v1/events?from=2026-01-01T00:00:00Z&to=2027-01-01T00:00:00Z",
     `/api/v1/events/${process.env.E2E_EVENT_ID}/attendance/me`,
     "/api/v1/attendance/me",
-    "/api/v1/admin/applications",
+    "/api/v1/admin/members",
   ];
   for (const path of protectedPaths) {
     const response = await request.get(path);

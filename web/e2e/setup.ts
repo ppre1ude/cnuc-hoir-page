@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium, expect } from "@playwright/test";
-import { csrf, join, login, verificationLink } from "./helpers";
+import { activate, csrf, login } from "./helpers";
 
 export default async function setup(): Promise<void> {
   const browser = await chromium.launch();
@@ -15,16 +15,14 @@ export default async function setup(): Promise<void> {
     const suffix = randomBytes(8).toString("hex");
     const email = `admin-${suffix}@example.test`;
     const password = randomBytes(24).toString("base64url");
-    await join(page, email, password, "테스트 운영진");
-    await page.goto(await verificationLink(context.request, email));
-    await expect(page.getByRole("status")).toContainText("이메일 확인을 마쳤습니다");
-    expect(page.url()).not.toContain("#token=");
-
     const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-    execFileSync("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+    const output = execFileSync("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
       path.join(root, "deployment/bootstrap-e2e.ps1"), email], {
       cwd: root, env: process.env, timeout: 180_000, stdio: "pipe",
-    });
+    }).toString("utf8").trim();
+    const setupToken = output.match(/[A-Za-z0-9_-]{43}/)?.[0];
+    expect(setupToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    await activate(page, `/activate#token=${setupToken}`, password);
 
     await login(page, email, password);
     await expect(page).toHaveURL(/\/dashboard$/);

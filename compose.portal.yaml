@@ -24,12 +24,6 @@ services:
       DB_URL: jdbc:mysql://mysql:3306/choir
       DB_USER: choir
       DB_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD 환경 변수가 필요합니다}
-      SMTP_HOST: ${SMTP_HOST:?SMTP_HOST 환경 변수가 필요합니다}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER:?SMTP_USER 환경 변수가 필요합니다}
-      SMTP_PASSWORD: ${SMTP_PASSWORD:?SMTP_PASSWORD 환경 변수가 필요합니다}
-      MAIL_FROM: ${MAIL_FROM:?MAIL_FROM 환경 변수가 필요합니다}
-      VERIFY_BASE_URL: ${VERIFY_BASE_URL:?VERIFY_BASE_URL 환경 변수가 필요합니다}
       TRUSTED_PROXY_CIDRS: ${E2E_PROXY_IP:-172.30.240.10}/32
       REQUIRE_TRUSTED_PROXY: "true"
     depends_on:
@@ -37,7 +31,6 @@ services:
         condition: service_healthy
     networks:
       - api_private
-      - mail_egress
 
   web:
     build: ./web
@@ -70,5 +63,4 @@ networks:
         - subnet: ${E2E_API_PRIVATE_SUBNET:-172.30.240.0/24}
   web_private:
     internal: true
-  mail_egress:
   edge:
