@@ -6,16 +6,6 @@ import styles from "./page.module.css";
 export default function LoginPage() {
   return (
     <main className={styles.page}>
-      <div className={styles.artPanel}>
-        <Image
-          src="/images/choir-songbooks.png"
-          alt=""
-          width={1774}
-          height={887}
-          className={styles.illustration}
-          priority
-        />
-      </div>
       <section className={styles.panel} aria-labelledby="login-title">
         <div className={styles.panelInner}>
           <Link className={styles.brand} href="/" aria-label="전남대학교 합창단 홈">
