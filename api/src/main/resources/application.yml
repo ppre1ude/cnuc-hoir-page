@@ -15,27 +15,10 @@ spring:
     timeout: 30m
     jdbc:
       initialize-schema: never
-  mail:
-    host: ${SMTP_HOST:}
-    port: ${SMTP_PORT:587}
-    username: ${SMTP_USER:}
-    password: ${SMTP_PASSWORD:}
-    properties:
-      "[mail.smtp.auth]": true
-      "[mail.smtp.starttls.enable]": true
-      "[mail.smtp.starttls.required]": true
-      "[mail.smtp.connectiontimeout]": 5000
-      "[mail.smtp.timeout]": 5000
-      "[mail.smtp.writetimeout]": 5000
 choir:
   security:
     trusted-proxy-cidrs: ${TRUSTED_PROXY_CIDRS:}
     require-trusted-proxy: ${REQUIRE_TRUSTED_PROXY:false}
-  mail:
-    enabled: true
-    retry-poll-ms: ${MAIL_RETRY_POLL_MS:60000}
-    from: ${MAIL_FROM:}
-    verify-base-url: ${VERIFY_BASE_URL:}
 server:
   servlet:
     session:

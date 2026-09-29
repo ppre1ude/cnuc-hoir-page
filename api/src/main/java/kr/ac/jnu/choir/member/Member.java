@@ -26,7 +26,7 @@ public class Member {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(name = "password_hash", nullable = false)
+    @Column(name = "password_hash")
     private String passwordHash;
 
     @Enumerated(EnumType.STRING)
@@ -62,6 +62,17 @@ public class Member {
         this.status = AccountStatus.EMAIL_PENDING;
         this.createdAt = clock.instant();
         this.updatedAt = this.createdAt;
+    }
+
+    public static Member invited(String email, String name, MemberType type, Clock clock) {
+        Member member = new Member();
+        member.email = email.strip().toLowerCase(Locale.ROOT);
+        member.name = name.strip();
+        member.status = AccountStatus.INVITED;
+        member.memberType = type;
+        member.createdAt = clock.instant();
+        member.updatedAt = member.createdAt;
+        return member;
     }
 
     public Long getId() {
@@ -119,6 +130,20 @@ public class Member {
 
     public void resetPassword(String hash, Clock clock) {
         passwordHash = hash;
+        if (status == AccountStatus.INVITED) {
+            status = AccountStatus.APPROVED;
+        }
+        authVersion++;
+        updatedAt = clock.instant();
+    }
+
+    public void reinvite(Clock clock) {
+        if (status != AccountStatus.REVOKED) {
+            throw new IllegalStateException("접근 해제된 계정만 다시 초대할 수 있습니다.");
+        }
+        status = AccountStatus.INVITED;
+        passwordHash = null;
+        admin = false;
         authVersion++;
         updatedAt = clock.instant();
     }

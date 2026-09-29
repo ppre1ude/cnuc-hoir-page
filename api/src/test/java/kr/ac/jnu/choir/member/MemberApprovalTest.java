@@ -8,17 +8,12 @@ import java.time.Clock;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import kr.ac.jnu.choir.auth.MailSender;
 import kr.ac.jnu.choir.common.AdminActionLogRepository;
 import kr.ac.jnu.choir.common.ApiException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.web.FilterChainProxy;
@@ -33,23 +28,12 @@ import org.testcontainers.mysql.MySQLContainer;
 
 @SpringBootTest
 @Testcontainers
-@Import(MemberApprovalTest.MailConfiguration.class)
 class MemberApprovalTest {
-    @TestConfiguration
-    static class MailConfiguration {
-        @Bean @Primary MailSender testMailSender() {
-            return new MailSender() {
-                public void sendVerification(String address, String link) {}
-                public void sendPasswordReset(String address, String link) {}
-            };
-        }
-    }
     @Container static final MySQLContainer database = new MySQLContainer("mysql:8.4");
     @DynamicPropertySource static void properties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", database::getJdbcUrl);
         registry.add("spring.datasource.username", database::getUsername);
         registry.add("spring.datasource.password", database::getPassword);
-        registry.add("choir.mail.enabled", () -> "false");
     }
     @Autowired WebApplicationContext context;
     @Autowired FilterChainProxy security;

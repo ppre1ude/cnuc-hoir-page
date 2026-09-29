@@ -21,45 +21,25 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
-    private final RegistrationService registration;
     private final MemberRepository members;
     private final SessionMemberService sessions;
     private final LoginAttemptLimiter limiter;
-    private final PasswordResetService resets;
+    private final AccountSetupService accountSetup;
     private final ClientIpResolver clientIps;
 
-    public AuthController(RegistrationService registration, MemberRepository members,
-            SessionMemberService sessions, LoginAttemptLimiter limiter, PasswordResetService resets,
+    public AuthController(MemberRepository members,
+            SessionMemberService sessions, LoginAttemptLimiter limiter, AccountSetupService accountSetup,
             ClientIpResolver clientIps) {
-        this.registration = registration;
         this.members = members;
         this.sessions = sessions;
         this.limiter = limiter;
-        this.resets = resets;
+        this.accountSetup = accountSetup;
         this.clientIps = clientIps;
     }
 
     @GetMapping("/csrf")
     public CsrfResponse csrf(CsrfToken token) {
         return new CsrfResponse(token.getToken());
-    }
-
-    @PostMapping("/applications")
-    public ResponseEntity<Void> apply(@Valid @RequestBody ApplicationRequest request) {
-        registration.apply(request.email(), request.password(), request.name());
-        return ResponseEntity.status(HttpStatus.ACCEPTED).build();
-    }
-
-    @PostMapping("/verify-email")
-    public ResponseEntity<Void> verify(@Valid @RequestBody VerificationRequest request) {
-        registration.verifyEmail(request.token());
-        return ResponseEntity.noContent().build();
-    }
-
-    @PostMapping("/resend-verification")
-    public ResponseEntity<Void> resend(@Valid @RequestBody ResendRequest request) {
-        registration.resendVerification(request.email());
-        return ResponseEntity.status(HttpStatus.ACCEPTED).build();
     }
 
     @PostMapping("/login")
@@ -74,7 +54,8 @@ public class AuthController {
             throw exception;
         }
         var member = members.findByEmailIgnoreCase(email).orElse(null);
-        boolean valid = member != null && member.getStatus() != AccountStatus.REVOKED && PasswordEncoderFactories.createDelegatingPasswordEncoder()
+        boolean valid = member != null && member.getStatus() == AccountStatus.APPROVED
+                && member.getPasswordHash() != null && PasswordEncoderFactories.createDelegatingPasswordEncoder()
                 .matches(body.password(), member.getPasswordHash());
         if (!valid) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다.");
@@ -102,23 +83,14 @@ public class AuthController {
                 member.getMemberType() == null ? null : member.getMemberType().name(), member.isAdmin());
     }
 
-    @PostMapping("/password-reset/request")
-    public ResponseEntity<Void> requestReset(@Valid @RequestBody ResendRequest body, HttpServletRequest request) {
-        resets.request(body.email(), clientIps.resolve(request));
-        return ResponseEntity.status(HttpStatus.ACCEPTED).build();
-    }
-
-    @PostMapping("/password-reset/confirm")
-    public ResponseEntity<Void> confirmReset(@Valid @RequestBody ConfirmResetRequest body) {
-        resets.confirm(body.token(), body.newPassword());
+    @PostMapping("/account-setup/confirm")
+    public ResponseEntity<Void> completeSetup(@Valid @RequestBody CompleteSetupRequest body) {
+        accountSetup.complete(body.token(), body.newPassword());
         return ResponseEntity.noContent().build();
     }
 
     public record CsrfResponse(String token) {}
-    public record ApplicationRequest(@NotBlank String email, @NotBlank String password, @NotBlank String name) {}
-    public record VerificationRequest(@NotBlank String token) {}
-    public record ResendRequest(@NotBlank String email) {}
     public record LoginRequest(@NotBlank String email, @NotBlank String password) {}
-    public record ConfirmResetRequest(@NotBlank String token, @NotBlank String newPassword) {}
+    public record CompleteSetupRequest(@NotBlank String token, @NotBlank String newPassword) {}
     public record MeResponse(Long id, String name, String status, String memberType, boolean admin) {}
 }

@@ -12,10 +12,7 @@ import kr.ac.jnu.choir.member.MemberRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Import;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.web.FilterChainProxy;
@@ -40,7 +37,6 @@ class SessionSecurityTest {
         registry.add("spring.datasource.url", database::getJdbcUrl);
         registry.add("spring.datasource.username", database::getUsername);
         registry.add("spring.datasource.password", database::getPassword);
-        registry.add("choir.mail.enabled", () -> "false");
         registry.add("choir.security.trusted-proxy-cidrs", () -> "10.0.0.0/8");
     }
     @Autowired WebApplicationContext context;
@@ -51,16 +47,6 @@ class SessionSecurityTest {
     @RestController
     static class MemberProbe {
         @GetMapping("/api/v1/member/probe") String probe() { return "확인"; }
-    }
-
-    @TestConfiguration
-    static class MailConfiguration {
-        @Bean @Primary MailSender testMailSender() {
-            return new MailSender() {
-                public void sendVerification(String address, String link) {}
-                public void sendPasswordReset(String address, String link) {}
-            };
-        }
     }
 
     @Test void loginAndAccess() throws Exception {
@@ -74,11 +60,13 @@ class SessionSecurityTest {
         var login = mvc.perform(post("/api/v1/auth/login").session(session).header("X-CSRF-TOKEN", token)
                 .contentType("application/json").content("{\"email\":\"session@example.org\",\"password\":\"correct-horse-battery\"}"))
                 .andReturn();
-        assertThat(login.getResponse().getStatus()).isEqualTo(204);
-        assertThat(mvc.perform(get("/api/v1/auth/me").session(session)).andReturn().getResponse().getStatus()).isEqualTo(200);
-        assertThat(mvc.perform(get("/api/v1/member/private").session(session)).andReturn().getResponse().getStatus()).isEqualTo(403);
-        assertThat(mvc.perform(post("/api/v1/auth/logout").session(session)).andReturn().getResponse().getStatus()).isEqualTo(403);
+        assertThat(login.getResponse().getStatus()).isEqualTo(401);
+        assertThat(mvc.perform(get("/api/v1/auth/me").session(session)).andReturn().getResponse().getStatus()).isEqualTo(401);
         jdbc.update("UPDATE member SET status = 'APPROVED', member_type = 'ACTIVE' WHERE id = ?", member.getId());
+        assertThat(mvc.perform(post("/api/v1/auth/login").session(session).header("X-CSRF-TOKEN", token)
+                .contentType("application/json").content("{\"email\":\"session@example.org\",\"password\":\"correct-horse-battery\"}"))
+                .andReturn().getResponse().getStatus()).isEqualTo(204);
+        assertThat(mvc.perform(get("/api/v1/auth/me").session(session)).andReturn().getResponse().getStatus()).isEqualTo(200);
         assertThat(mvc.perform(get("/api/v1/member/probe").session(session)).andReturn().getResponse().getStatus()).isEqualTo(200);
         jdbc.update("UPDATE member SET auth_version = auth_version + 1 WHERE id = ?", member.getId());
         assertThat(mvc.perform(get("/api/v1/auth/me").session(session)).andReturn().getResponse().getStatus()).isEqualTo(401);

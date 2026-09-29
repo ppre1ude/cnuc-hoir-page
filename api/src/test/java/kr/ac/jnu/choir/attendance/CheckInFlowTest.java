@@ -9,7 +9,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.UUID;
-import kr.ac.jnu.choir.auth.MailSender;
 import kr.ac.jnu.choir.member.Member;
 import kr.ac.jnu.choir.member.MemberRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,19 +39,12 @@ class CheckInFlowTest {
         @Bean @Primary Clock attendanceTestClock() {
             return Clock.fixed(Instant.parse("2026-09-27T10:00:00Z"), ZoneOffset.UTC);
         }
-        @Bean @Primary MailSender attendanceMailSender() {
-            return new MailSender() {
-                public void sendVerification(String address, String link) {}
-                public void sendPasswordReset(String address, String link) {}
-            };
-        }
     }
     @Container static final MySQLContainer database = new MySQLContainer("mysql:8.4");
     @DynamicPropertySource static void properties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", database::getJdbcUrl);
         registry.add("spring.datasource.username", database::getUsername);
         registry.add("spring.datasource.password", database::getPassword);
-        registry.add("choir.mail.enabled", () -> "false");
     }
     @Autowired WebApplicationContext context;
     @Autowired FilterChainProxy security;

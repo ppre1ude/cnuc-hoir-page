@@ -1,0 +1,1 @@
+ALTER TABLE member MODIFY password_hash VARCHAR(255) NULL;
