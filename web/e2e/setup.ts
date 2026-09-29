@@ -55,12 +55,14 @@ export default async function setup(): Promise<void> {
       data: { title: noticeTitle, body: "격리 테스트 공지", published: true },
     });
     expect(noticeResponse.status()).toBe(201);
+    const notice = await noticeResponse.json() as { id: number };
 
     process.env.E2E_ADMIN_EMAIL = email;
     process.env.E2E_ADMIN_PASSWORD = password;
     process.env.E2E_EVENT_ID = String(event.id);
     process.env.E2E_EVENT_TITLE = eventTitle;
     process.env.E2E_NOTICE_TITLE = noticeTitle;
+    process.env.E2E_NOTICE_ID = String(notice.id);
     process.env.E2E_TODAY = today;
   } finally {
     await browser.close();

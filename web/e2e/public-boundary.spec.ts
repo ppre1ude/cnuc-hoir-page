@@ -1,15 +1,17 @@
 import { expect, test } from "@playwright/test";
 
-test("방문자에게 회원 행사·공지·출석이 노출되지 않는다", async ({ page, request }) => {
+test("방문자에게 회원 행사·공지·투표·출석이 노출되지 않는다", async ({ page, request }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "전남대학교 합창단" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "합창으로 전하는 울림과 감동의 이야기" })).toBeVisible();
   await expect(page.getByText(process.env.E2E_EVENT_TITLE!)).toHaveCount(0);
   await expect(page.getByText(process.env.E2E_NOTICE_TITLE!)).toHaveCount(0);
   const protectedPaths = [
     "/api/v1/notices",
+    `/api/v1/notices/${process.env.E2E_NOTICE_ID}/poll`,
+    `/api/v1/admin/notices/${process.env.E2E_NOTICE_ID}/poll`,
     `/api/v1/events/${process.env.E2E_EVENT_ID}`,
     "/api/v1/events?from=2026-01-01T00:00:00Z&to=2027-01-01T00:00:00Z",
     `/api/v1/events/${process.env.E2E_EVENT_ID}/attendance/me`,
