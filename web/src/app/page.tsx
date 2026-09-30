@@ -4,6 +4,7 @@ import { ActionLink, BrandLogo } from "../components/ui";
 import { ActivityGallery } from "@/features/onboarding/ActivityGallery";
 import { activityPhotos } from "@/features/onboarding/activityPhotos";
 import { ChoirHistory } from "@/features/onboarding/ChoirHistory";
+import { Reveal } from "@/features/onboarding/Reveal";
 import { choirChannels, choirMilestones } from "@/features/onboarding/choirProfile";
 import styles from "./page.module.css";
 
@@ -32,10 +33,12 @@ export default function Home() {
           sizes="(max-width: 760px) 100vw, 90vw" priority />
       </section>
 
-      <section className={styles.history} aria-labelledby="history-title">
+      <section className={styles.introduction} aria-label="합창단 소개">
         <div className={styles.container}>
-          <h2 id="history-title">연혁</h2>
-          <ChoirHistory milestones={choirMilestones} />
+          <Reveal><p className={styles.introductionLine}><strong>내 목소리</strong>를 알아가고,</p></Reveal>
+          <Reveal delayed><p className={styles.introductionLine}><strong>나</strong>를 발견하고,</p></Reveal>
+          <Reveal delayed><p className={styles.introductionLine}>함께 노래하며<br /><strong>우리가 됩니다.</strong></p></Reveal>
+          <Reveal><p className={styles.introductionIdentity}>전남대학교 중앙동아리, 전남대학교 합창단</p></Reveal>
         </div>
       </section>
 
@@ -61,6 +64,13 @@ export default function Home() {
             </div>
             <BrandLogo mark className={styles.participateMark} alt="" />
           </div>
+        </div>
+      </section>
+
+      <section className={styles.history} aria-labelledby="history-title">
+        <div className={styles.container}>
+          <h2 id="history-title">연혁</h2>
+          <ChoirHistory milestones={choirMilestones} />
         </div>
       </section>
 
