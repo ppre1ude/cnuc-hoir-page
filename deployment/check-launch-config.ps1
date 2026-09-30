@@ -7,10 +7,14 @@
 $ErrorActionPreference = 'Stop'
 $problems = [System.Collections.Generic.List[string]]::new()
 
-foreach ($name in @('MYSQL_PASSWORD', 'MYSQL_ROOT_PASSWORD')) {
+foreach ($name in @('DB_URL', 'DB_USER', 'DB_PASSWORD')) {
     if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name))) {
         $problems.Add("환경 변수 $name 이(가) 비어 있습니다.")
     }
+}
+
+if ($env:DB_URL -and $env:DB_URL -notmatch '^jdbc:postgresql://[^/]+/[^?]+') {
+    $problems.Add('DB_URL은 PostgreSQL JDBC 주소여야 합니다.')
 }
 
 $origin = $null

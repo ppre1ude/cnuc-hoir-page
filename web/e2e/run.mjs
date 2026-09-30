@@ -16,8 +16,7 @@ const environment = {
   ...process.env,
   CHOIR_E2E_PROJECT_NAME: projectName,
   COMPOSE_PROJECT_NAME: projectName,
-  MYSQL_PASSWORD: databasePassword,
-  MYSQL_ROOT_PASSWORD: randomBytes(32).toString("hex"),
+  POSTGRES_PASSWORD: databasePassword,
   E2E_DB_PASSWORD: databasePassword,
   CHOIR_E2E_RUN_TOKEN: runToken,
 };
@@ -78,7 +77,7 @@ function resources() {
 }
 
 function assertOwnedResources(found) {
-  const allowedServices = new Set(["mysql", "api", "web", "proxy"]);
+  const allowedServices = new Set(["postgres", "api", "web", "proxy"]);
   for (const id of found.containers) {
     const [container] = JSON.parse(docker(["inspect", "--type", "container", id]));
     const labels = container.Config?.Labels ?? {};
@@ -90,7 +89,7 @@ function assertOwnedResources(found) {
   }
   for (const name of found.volumes) {
     const [volume] = JSON.parse(docker(["volume", "inspect", name]));
-    if (name !== `${projectName}_portal_mysql_data`
+    if (name !== `${projectName}_portal_postgres_data`
         || volume.Labels?.["com.docker.compose.project"] !== projectName) {
       throw new Error("격리 프로젝트에 속하지 않은 볼륨이 있어 정리를 중단했습니다.");
     }
@@ -117,7 +116,6 @@ const digest = (value) => createHash("sha256").update(value).digest("hex");
 writeFileSync(manifestPath, JSON.stringify({
   projectName, runToken, launcherPid: process.pid,
   databasePasswordDigest: digest(databasePassword),
-  rootPasswordDigest: digest(environment.MYSQL_ROOT_PASSWORD),
 }), { flag: "wx", mode: 0o600 });
 environment.CHOIR_E2E_RUN_MANIFEST = manifestPath;
 

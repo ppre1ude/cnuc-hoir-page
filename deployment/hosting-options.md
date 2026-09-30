@@ -1,22 +1,21 @@
-# 로그인·투표 배포 장소 비교
+# 무료 미리보기 배포 구성
 
-확인일: 2026-09-29. 웹은 Vercel에 두고 Spring API와 MySQL을 별도로 운영합니다. 단원 계정은 운영진이 명단을 확인해 초대하므로 메일 발송 서비스 비용은 필요하지 않습니다.
+2026-09-30 기준 시범 배포 구성은 **Vercel 웹 + Render Free Spring API + Supabase Free PostgreSQL**입니다. 메일 발송은 사용하지 않으며, 운영진이 단원 명단을 확인하고 1회용 초대 링크를 발급합니다. 무료 플랜의 제한 때문에 정식 운영 전에 유료 서비스와 백업 방식을 다시 결정해야 합니다.
 
-| 선택지 | 기본 비용 | 운영 부담 |
-| --- | --- | --- |
-| Railway Hobby | 월 5달러부터. 5달러의 자원 사용량이 포함되며 초과분은 추가 청구 | API와 MySQL 배포, 사용량·백업 확인 |
-| Render 유료 서비스 2개 | API 월 7달러, MySQL용 사설 서비스 월 7달러, 저장 공간 별도 | MySQL 이미지·디스크·백업 직접 관리 |
-| 단일 VPS | 예: Hetzner CX23 유럽 지역 월 5.49유로, IPv4·세금 별도 | OS 보안 업데이트, TLS, DB 백업·복구, 장애 대응 직접 수행 |
+## 설정 순서
 
-현재 선택지는 **Railway Hobby를 먼저 검토**하는 것입니다. 메일 서비스가 없어 SMTP 연결 제한은 계정 기능에 영향을 주지 않습니다. 실제 요금은 API와 MySQL의 CPU·메모리·저장 공간 사용량에 따라 달라집니다. 비용 상한과 백업 방법을 확인한 뒤 운영 환경을 만듭니다.
+1. Supabase에서 새 프로젝트를 만듭니다. 프로젝트의 **Session pooler** 연결 정보를 확인합니다. Render의 IPv4 환경에서는 직접 연결 주소 대신 Session pooler를 사용합니다. DB 비밀번호는 비밀 저장소에서만 관리합니다.
+2. Render에서 GitHub 저장소의 `api/`를 Root Directory로 지정한 **Docker Web Service**를 만들고 Free 인스턴스를 선택합니다. 환경 변수 `DB_URL`, `DB_USER`, `DB_PASSWORD`를 설정합니다. `DB_URL`은 Session pooler 주소와 포트 5432를 사용한 `jdbc:postgresql://호스트:5432/postgres?sslmode=require` 형식입니다. 사용자 이름은 Supabase 연결 정보에 표시된 값을 그대로 사용합니다. Render가 제공하는 `PORT`에서 API가 수신합니다.
+3. Render 배포가 끝나면 `https://발급된-Render-주소/api/v1/auth/csrf`가 정상 응답하는지 확인합니다. 이때 Flyway가 새 PostgreSQL 데이터베이스에 스키마를 만듭니다.
+4. Vercel의 `web/` 프로젝트에 `CHOIR_API_ORIGIN`을 경로 없는 Render HTTPS 출처로 설정하고 다시 배포합니다. 브라우저 요청은 웹의 `/api/v1/*`을 거쳐 API로 전달됩니다. DB 연결값을 Vercel에 넣지 않습니다.
+5. [운영 절차](../docs/operations.md)에 따라 첫 운영진을 초대하고 로그인·공지 투표·행사·출석을 실제 HTTPS 주소에서 검증합니다. 실제 단원 명단을 넣기 전에 백업과 복구 방법을 확인합니다.
 
-## 다음 작업
+기존 MySQL 데이터가 있다면 PostgreSQL로 자동 이전되지 않습니다. 이번 구성은 **새 빈 PostgreSQL 데이터베이스**에 적용합니다. 기존 데이터 이전이 필요할 때는 별도 이전 절차와 검증이 필요합니다.
 
-1. Railway에서 API와 MySQL을 만들고 DB를 외부에 공개하지 않습니다. MySQL 버전은 검증에 사용한 8.4와 대조합니다.
-2. 첫 운영진을 `bootstrapAdminInvite` 명령으로 초대합니다. 초대 토큰은 비공개로 전달하고 공유 터미널 기록에 남기지 않습니다.
-3. Vercel의 `CHOIR_API_ORIGIN`을 실제 API HTTPS 출처로 설정하고 웹을 다시 배포합니다.
-4. 실제 접속 경로에서 세션 쿠키, CSRF, 초대 링크의 만료·재발급, 공지 투표와 출석을 확인합니다. 전달 IP 헤더는 프록시의 위조 차단을 확인한 뒤 신뢰합니다.
+## 무료 플랜의 한계
 
-계정 생성, 요금제 결제, 도메인 소유 확인은 계정 소유자가 수행합니다. 코드와 설정 점검, 비밀값을 제외한 검증은 저장소 작업으로 진행할 수 있습니다.
+- Render Free 웹 서비스는 유휴 상태가 15분 이어지면 내려가며, 다음 요청에서 다시 시작하는 데 시간이 걸립니다. 출석 현장 운영에 그대로 사용하지 않습니다.
+- Supabase Free는 데이터베이스 500MB 제한이 있고 비활성 프로젝트가 일시 중지될 수 있습니다. 운영 데이터의 정기 백업과 복구 검증이 필요합니다.
+- API 앞단의 실제 접속 IP 전달 방식은 호스팅 경로에서 검증해야 합니다. 검증되지 않은 프록시 주소를 신뢰 목록에 넣지 않습니다.
 
-근거: [Railway 요금](https://docs.railway.com/pricing/plans), [Railway MySQL](https://docs.railway.com/databases/mysql), [Render 요금](https://render.com/pricing), [Render MySQL](https://render.com/docs/deploy-mysql), [Hetzner VPS 요금](https://docs.hetzner.com/general/infrastructure-and-availability/price-adjustment/)
+근거: [Render 무료 서비스](https://render.com/docs/free), [Render Docker 배포](https://render.com/docs/docker), [Supabase 연결 방식](https://supabase.com/docs/guides/database/connecting-to-postgres), [Supabase 요금제](https://supabase.com/pricing)
