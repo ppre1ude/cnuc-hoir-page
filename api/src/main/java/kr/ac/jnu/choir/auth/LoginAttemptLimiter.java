@@ -29,8 +29,9 @@ public class LoginAttemptLimiter {
         Timestamp now = Timestamp.from(clock.instant());
         Timestamp threshold = Timestamp.from(clock.instant().minus(Duration.ofMinutes(15)));
         jdbc.update("INSERT INTO auth_attempt (kind, identity_hash, window_start, attempt_count) VALUES (?, ?, ?, 1) "
-                        + "ON DUPLICATE KEY UPDATE attempt_count = IF(window_start <= ?, 1, attempt_count + 1), "
-                        + "window_start = IF(window_start <= ?, VALUES(window_start), window_start)",
+                        + "ON CONFLICT (kind, identity_hash) DO UPDATE SET "
+                        + "attempt_count = CASE WHEN auth_attempt.window_start <= ? THEN 1 ELSE auth_attempt.attempt_count + 1 END, "
+                        + "window_start = CASE WHEN auth_attempt.window_start <= ? THEN EXCLUDED.window_start ELSE auth_attempt.window_start END",
                 kind, key, now, threshold, threshold);
         Integer count = jdbc.queryForObject("SELECT attempt_count FROM auth_attempt WHERE kind = ? AND identity_hash = ?",
                 Integer.class, kind, key);

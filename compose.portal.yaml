@@ -1,17 +1,16 @@
 name: choir-portal
 
 services:
-  mysql:
-    image: mysql:8.4
+  postgres:
+    image: postgres:17-alpine
     environment:
-      MYSQL_DATABASE: choir
-      MYSQL_USER: choir
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD 환경 변수가 필요합니다}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD 환경 변수가 필요합니다}
+      POSTGRES_DB: choir
+      POSTGRES_USER: choir
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD 환경 변수가 필요합니다}
     volumes:
-      - portal_mysql_data:/var/lib/mysql
+      - portal_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "mysql --protocol=TCP -h 127.0.0.1 -u \"$$MYSQL_USER\" -p\"$$MYSQL_PASSWORD\" -D \"$$MYSQL_DATABASE\" -e 'SELECT 1' >/dev/null 2>&1"]
+      test: ["CMD-SHELL", "PGPASSWORD=\"$$POSTGRES_PASSWORD\" psql -h 127.0.0.1 -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\" -tAc 'SELECT 1' | grep -qx 1"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -21,13 +20,13 @@ services:
   api:
     build: ./api
     environment:
-      DB_URL: jdbc:mysql://mysql:3306/choir
+      DB_URL: jdbc:postgresql://postgres:5432/choir
       DB_USER: choir
-      DB_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD 환경 변수가 필요합니다}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD 환경 변수가 필요합니다}
       TRUSTED_PROXY_CIDRS: ${E2E_PROXY_IP:-172.30.240.10}/32
       REQUIRE_TRUSTED_PROXY: "true"
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
     networks:
       - api_private
@@ -53,7 +52,7 @@ services:
       edge:
 
 volumes:
-  portal_mysql_data:
+  portal_postgres_data:
 
 networks:
   api_private:

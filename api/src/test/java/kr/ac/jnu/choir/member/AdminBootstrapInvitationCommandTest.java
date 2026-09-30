@@ -8,14 +8,15 @@ import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.mysql.MySQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @Testcontainers
 class AdminBootstrapInvitationCommandTest {
-    @Container static final MySQLContainer database = new MySQLContainer("mysql:8.4");
+    @Container static final PostgreSQLContainer database = new PostgreSQLContainer("postgres:17-alpine");
 
     @Test void createsOneInvitedAdminWithHashedToken() throws Exception {
         Flyway.configure().dataSource(database.getJdbcUrl(), database.getUsername(), database.getPassword())
+                .locations("classpath:db/postgresql")
                 .load().migrate();
         String token = AdminBootstrapInvitationCommand.run(database.getJdbcUrl(), database.getUsername(),
                 database.getPassword(), "FIRST@example.org", "첫 운영진", MemberType.ACTIVE);

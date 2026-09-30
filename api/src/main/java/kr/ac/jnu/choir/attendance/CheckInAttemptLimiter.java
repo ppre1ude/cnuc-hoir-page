@@ -34,8 +34,9 @@ public class CheckInAttemptLimiter {
         Timestamp now = Timestamp.from(clock.instant());
         Timestamp expired = Timestamp.from(clock.instant().minus(Duration.ofMinutes(1)));
         jdbc.update("INSERT INTO check_in_attempt (kind,identity_hash,window_start,attempt_count) VALUES (?,?,?,1) "
-                + "ON DUPLICATE KEY UPDATE attempt_count = IF(window_start <= ?, 1, attempt_count + 1), "
-                + "window_start = IF(window_start <= ?, VALUES(window_start), window_start)",
+                + "ON CONFLICT (kind, identity_hash) DO UPDATE SET "
+                + "attempt_count = CASE WHEN check_in_attempt.window_start <= ? THEN 1 ELSE check_in_attempt.attempt_count + 1 END, "
+                + "window_start = CASE WHEN check_in_attempt.window_start <= ? THEN EXCLUDED.window_start ELSE check_in_attempt.window_start END",
                 kind, key, now, expired, expired);
         Integer count = jdbc.queryForObject("SELECT attempt_count FROM check_in_attempt WHERE kind = ? AND identity_hash = ?",
                 Integer.class, kind, key);
