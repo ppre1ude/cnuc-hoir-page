@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: cnuc-hoir-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./api/Dockerfile
+    dockerContext: ./api
+    buildFilter:
+      paths:
+        - api/**
+    envVars:
+      - key: DB_URL
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
