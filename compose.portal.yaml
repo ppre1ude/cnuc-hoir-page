@@ -23,6 +23,7 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/choir
       DB_USER: choir
       DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD 환경 변수가 필요합니다}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       TRUSTED_PROXY_CIDRS: ${E2E_PROXY_IP:-172.30.240.10}/32
       REQUIRE_TRUSTED_PROXY: "true"
     depends_on:
@@ -32,7 +33,10 @@ services:
       - api_private
 
   web:
-    build: ./web
+    build:
+      context: ./web
+      args:
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-}
     networks:
       - web_private
 
