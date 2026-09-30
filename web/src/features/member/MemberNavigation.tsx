@@ -1,7 +1,8 @@
 "use client";
 
+import { BrandLogo, Button } from "../../components/ui";
+
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ApiRequestError } from "../../lib/api";
@@ -49,19 +50,19 @@ export function MemberNavigation() {
   return <header className={styles.header}>
     <div className={styles.inner}>
       <Link className={styles.brand} href="/dashboard" aria-label="전남대학교 합창단 일정">
-        <Image src="/images/choir-logo-horizontal.png" alt="전남대학교 합창단" width={280} height={61} priority />
+        <BrandLogo priority />
       </Link>
       <nav className={styles.nav} aria-label="회원 메뉴">
         {links.map((link) => <Link key={link.href} href={link.href}
           aria-current={pathname === link.href || link.href === "/dashboard" && pathname.startsWith("/events/") ? "page" : undefined}>
           {link.label}
         </Link>)}
-        {session?.admin && <Link href="/admin/events">운영진</Link>}
+        {session?.admin && <Link href="/admin/events" aria-current={pathname.startsWith("/admin/") ? "page" : undefined}>운영진</Link>}
       </nav>
       <div className={styles.account}>
         {logoutError && <span className={styles.error} role="alert">{logoutError}</span>}
         {session?.name && <span>{session.name}</span>}
-        <button type="button" onClick={handleLogout} disabled={loggingOut}>로그아웃</button>
+        <Button variant="ghost" size="small" type="button" onClick={handleLogout} disabled={loggingOut}>로그아웃</Button>
       </div>
     </div>
   </header>;

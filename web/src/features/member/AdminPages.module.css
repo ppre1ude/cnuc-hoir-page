@@ -1,9 +1,9 @@
-.page { width: min(100% - 64px, 1120px); margin: 0 auto; padding: 48px 0 88px; }
-.page h1 { margin: 0 0 30px; font-size: clamp(32px, 3vw, 42px); letter-spacing: -.055em; }
+.page { composes: page from "../../components/ui/ui.module.css"; }
+
 .page h2 { margin: 0; font-size: 21px; letter-spacing: -.035em; }
 .page > p { color: var(--choir-muted); line-height: 1.65; }
-.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; align-items: start; }
-.panel { min-width: 0; padding: 26px; border: 1px solid var(--choir-line); }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-8); align-items: start; }
+
 .panelHeader { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 18px; border-bottom: 1px solid var(--choir-line); }
 .list { border-top: 2px solid var(--choir-ink); }
 .row { padding: 22px 0; border-bottom: 1px solid var(--choir-line); }
@@ -14,22 +14,17 @@
 .rowButton span { color: var(--choir-muted); font-size: 13px; white-space: nowrap; }
 .form { display: flex; flex-direction: column; gap: 10px; }
 .form label, .fieldLabel { font-size: 14px; font-weight: 650; }
-.form :is(input:not([type="checkbox"]), select, textarea), .row :is(input, select, textarea) { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid #bbd1c0; background: #fff; color: var(--choir-ink); font: inherit; }
+
 .form textarea, .row textarea { resize: vertical; }
 .fieldGroup { display: grid; gap: 8px; margin-top: 16px; }
 .check { display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
-.button, .secondary, .danger { min-height: 42px; padding: 9px 16px; border: 1px solid var(--choir-deep-green); background: var(--choir-deep-green); color: #fff; font: inherit; font-size: 14px; font-weight: 650; cursor: pointer; }
-.secondary { background: #fff; color: var(--choir-deep-green); }
-.danger { border-color: #b65846; background: #fff; color: #973e30; }
-.button:disabled, .secondary:disabled, .danger:disabled { opacity: .5; cursor: default; }
-.message { padding: 12px 14px; border: 1px solid var(--choir-line); border-radius: 6px; color: var(--choir-deep-green); background: #f4faf5; }
-.error { padding: 12px 14px; border: 1px solid #e5c9c3; border-radius: 6px; color: #973e30; background: #fff8f6; }
+
 .pagination { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 24px; font-size: 14px; }
 .back { display: inline-block; margin-bottom: 26px; color: var(--choir-deep-green); font-size: 14px; text-decoration: none; }
 .back:hover { text-decoration: underline; text-underline-offset: 4px; }
 .code { display: inline-block; margin-top: 10px; color: var(--choir-deep-green); font-size: clamp(24px, 5vw, 38px); letter-spacing: .14em; }
-.linkInput { display: block; width: 100%; min-height: 46px; margin-top: 8px; padding: 10px 12px; border: 1px solid #bbd1c0; color: var(--choir-ink); background: #fff; font: inherit; }
+
 .memberSection { margin-top: 42px; }
 .memberSection h2 { margin-bottom: 16px; }
 .qr { display: block; max-width: 100%; height: auto; margin-top: 18px; }
@@ -42,8 +37,12 @@
 .pollDetails li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--choir-line); font-size: 13px; overflow-wrap: anywhere; }
 .pollDetails li strong { color: var(--choir-deep-green); white-space: nowrap; }
 @media (max-width: 760px) {
-  .page { width: min(100% - 36px, 680px); padding-top: 30px; }
+
   .grid { grid-template-columns: 1fr; }
-  .panel { padding: 20px; }
+
   .rowButton { flex-direction: column; gap: 5px; }
 }
+
+.panel { composes: surface from "../../components/ui/ui.module.css"; }
+.linkInput { margin-top: var(--space-2); }
+@media (max-width: 760px) { .grid { grid-template-columns: minmax(0, 1fr); } }

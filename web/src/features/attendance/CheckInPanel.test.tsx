@@ -96,7 +96,7 @@ test("코드 제출 전 시작된 상태 조회 오류가 출석 성공 안내�
   fireEvent.click(screen.getByRole("button", { name: "출석하기" }));
   await screen.findByText("출석이 완료되었습니다.");
   rejectInitial(new Error("오래된 조회 실패"));
-  await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("출석이 완료되었습니다."));
+  await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("출석이 완료되었습니다."));
 });
 
 test.each([

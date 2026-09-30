@@ -1,5 +1,7 @@
 "use client";
 
+import { Feedback } from "../../../components/ui";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -44,9 +46,9 @@ export default function ActivatePage() {
     </Link>
     <div className={styles.content}>
       <h1>구글 계정 연결</h1>
-      {ready && !hasToken && <p role="alert">유효한 계정 연결 링크가 필요합니다. 운영진에게 요청해 주세요.</p>}
+      {ready && !hasToken && <Feedback tone="error">유효한 계정 연결 링크가 필요합니다. 운영진에게 요청해 주세요.</Feedback>}
       {ready && hasToken && <GoogleButton onCredential={connect} onError={fail} />}
-      {message && <p role="alert">{message}</p>}
+      {message && <Feedback tone="error">{message}</Feedback>}
       <Link className={styles.home} href="/login">로그인으로 돌아가기</Link>
     </div>
   </main>;

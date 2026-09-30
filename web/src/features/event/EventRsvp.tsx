@@ -1,5 +1,7 @@
 "use client";
 
+import { Button, Feedback } from "../../components/ui";
+
 import { useEffect, useState } from "react";
 import { ApiRequestError } from "../../lib/api";
 import { setEventRsvp, type ChoirEvent, type EventRsvpChoice } from "./events";
@@ -50,18 +52,18 @@ export function EventRsvp({ event, memberType, choice, onSaved, compact = false 
   if (!eligible) return compact ? <span className={styles.quickStatus}>대상 아님</span> : null;
   if (compact) return <div className={styles.quickRsvp} aria-label={`${event.title} 참석 응답`}>
     {closed ? <span className={styles.quickStatus}>{choice ? labels[choice] : "미응답"}</span>
-      : (["ATTENDING", "ABSENT"] as const).map((item) => <button type="button" key={item}
+      : (["ATTENDING", "ABSENT"] as const).map((item) => <Button variant="secondary" type="button" key={item}
         aria-label={`${event.title} ${labels[item]}`} aria-pressed={choice === item} disabled={busy}
-        onClick={() => void respond(item)}>{labels[item]}</button>)}
-    {error && <p role="alert">{error}</p>}
+        onClick={() => void respond(item)}>{labels[item]}</Button>)}
+    {error && <Feedback tone="error">{error}</Feedback>}
   </div>;
   return <div className={styles.rsvp} aria-label="참석 응답">
     <strong>참석 의사</strong>
     <span className={styles.rsvpStatus}>{choice ? labels[choice] : "미응답"}</span>
     {!closed && <div className={styles.rsvpButtons}>
-      {(["ATTENDING", "ABSENT"] as const).map((item) => <button type="button" key={item}
-        aria-pressed={choice === item} disabled={busy} onClick={() => void respond(item)}>{labels[item]}</button>)}
+      {(["ATTENDING", "ABSENT"] as const).map((item) => <Button variant="secondary" type="button" key={item}
+        aria-pressed={choice === item} disabled={busy} onClick={() => void respond(item)}>{labels[item]}</Button>)}
     </div>}
-    {error && <p role="alert">{error}</p>}
+    {error && <Feedback tone="error">{error}</Feedback>}
   </div>;
 }

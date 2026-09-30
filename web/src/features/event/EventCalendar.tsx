@@ -1,5 +1,7 @@
 "use client";
 
+import { Button, Feedback, PageHeader } from "../../components/ui";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -145,17 +147,15 @@ export function EventCalendar() {
   const days = Array.from({ length: daysInMonth(month) }, (_, index) => index + 1);
 
   return <main className={styles.dashboard}>
-    <header className={styles.hero}>
-      <h1>일정</h1>
-    </header>
-    {error && <div role="alert" className={styles.error}>{error} <button type="button" onClick={() => setRetry(retry + 1)}>다시 시도</button></div>}
+    <PageHeader title="일정" className={styles.hero} />
+    {error && <div role="alert" className={styles.error}>{error} <Button variant="secondary" type="button" onClick={() => setRetry(retry + 1)}>다시 시도</Button></div>}
     <div className={styles.grid}>
       <section aria-label="행사 달력" className={`${styles.card} ${styles.calendar}`}>
         <div className={styles.calendarHeader}>
           <h2>{month.replace("-", "년 ")}월</h2>
           <div className={styles.monthControls}>
-            <button type="button" onClick={() => changeMonth(-1)} aria-label="이전 달">←</button>
-            <button type="button" onClick={() => changeMonth(1)} aria-label="다음 달">→</button>
+            <Button variant="secondary" type="button" onClick={() => changeMonth(-1)} aria-label="이전 달">←</Button>
+            <Button variant="secondary" type="button" onClick={() => changeMonth(1)} aria-label="다음 달">→</Button>
           </div>
         </div>
         <div className={styles.weekdays}>{["월", "화", "수", "목", "금", "토", "일"].map((day) => <span key={day}>{day}</span>)}</div>
@@ -169,39 +169,39 @@ export function EventCalendar() {
               return first <= key && key <= last;
             });
             const count = eventsOnDay.length;
-            return <button type="button" key={key} className={`${styles.day} ${key === selectedDate ? styles.selectedDay : ""}`}
+            return <Button variant="unstyled" type="button" key={key} className={`${styles.day} ${key === selectedDate ? styles.selectedDay : ""}`}
               onClick={() => { setSelectedDate(key); setSelectedEventId(null); }} aria-pressed={key === selectedDate}
               aria-label={`${day}일${count ? `, 행사 ${count}개` : ""}`}>
               <span className={styles.dayNumber}>{day}</span>
               {count > 0 && <span className={styles.dayEvent}>{eventsOnDay[0].title}</span>}
               {count > 1 && <span className={styles.moreEvents}>+{count - 1}</span>}
               {count > 0 && <i aria-hidden="true" />}
-            </button>;
+            </Button>;
           })}
         </div>
         <div className={styles.dayList}>
           <h3>{Number(selectedDate.slice(-2))}일 일정</h3>
           {dayEvents.length === 0 && <p>일정 없음</p>}
-          {dayEvents.map((event) => <button key={event.id} type="button" className={styles.eventButton}
-            aria-pressed={selected?.id === event.id} onClick={() => setSelectedEventId(event.id)}>{event.title}</button>)}
+          {dayEvents.map((event) => <Button variant="unstyled" key={event.id} type="button" className={styles.eventButton}
+            aria-pressed={selected?.id === event.id} onClick={() => setSelectedEventId(event.id)}>{event.title}</Button>)}
         </div>
       </section>
       <div className={styles.rightColumn}>
       <section aria-label="선택한 행사" className={`${styles.card} ${styles.detail}`}>
         <div className={styles.sectionHeader}><h2>이달의 행사</h2></div>
-        {rsvpError && <p role="alert">{rsvpError} <button type="button" onClick={() => {
+        {rsvpError && <Feedback tone="error">{rsvpError} <Button variant="secondary" type="button" onClick={() => {
           setRsvpError(""); setRsvpRetry((value) => value + 1);
-        }}>다시 시도</button></p>}
+        }}>다시 시도</Button></Feedback>}
         {sortedEvents.length === 0 && <p className={styles.empty}>등록된 행사가 없습니다.</p>}
         {sortedEvents.length > 0 && <div className={styles.eventList}>
           {sortedEvents.map((event) => {
             const date = seoulDateKey(event.startAt);
             return <div key={event.id} className={styles.eventRow}>
-              <button type="button" className={styles.eventSelect} aria-pressed={selected?.id === event.id}
+              <Button variant="unstyled" type="button" className={styles.eventSelect} aria-pressed={selected?.id === event.id}
                 onClick={() => { setSelectedDate(date); setSelectedEventId(event.id); }}>
                 <span className={styles.eventDate}>{date.slice(5).replace("-", ".")}</span>
                 <span className={styles.eventTitle}>{event.title}</span>
-              </button>
+              </Button>
               {rsvpLoadedMonth === month && <EventRsvp key={`${event.id}-${event.startAt}`} compact event={event}
                 memberType={session?.memberType ?? null} choice={rsvpByEvent[event.id] ?? null}
                 onSaved={(choice) => setRsvpByEvent((current) => ({ ...current, [event.id]: choice }))} />}
@@ -216,7 +216,7 @@ export function EventCalendar() {
       </section>
       <section aria-label="최근 공지" className={`${styles.card} ${styles.notices}`}>
         <div className={styles.sectionHeader}><h2>공지</h2><Link href="/notices">전체 보기 <span aria-hidden="true">→</span></Link></div>
-        {noticeError && <p role="alert">{noticeError} <button type="button" onClick={() => { setNoticeError(""); setNoticesLoaded(false); setNoticeRetry(noticeRetry + 1); }}>다시 시도</button></p>}
+        {noticeError && <Feedback tone="error">{noticeError} <Button variant="secondary" type="button" onClick={() => { setNoticeError(""); setNoticesLoaded(false); setNoticeRetry(noticeRetry + 1); }}>다시 시도</Button></Feedback>}
         {!noticeError && !noticesLoaded && <p role="status">공지를 불러오는 중입니다.</p>}
         {!noticeError && noticesLoaded && notices.length === 0 && <p>게시된 공지가 없습니다.</p>}
         {!noticeError && notices.map((notice) => <Link key={notice.id} href="/notices" className={styles.noticeItem}>{notice.title}<span aria-hidden="true">→</span></Link>)}
@@ -224,7 +224,7 @@ export function EventCalendar() {
       </div>
       <section aria-label="내 출석 요약" className={`${styles.card} ${styles.attendance}`}>
         <div className={styles.sectionHeader}><h2>내 출석</h2><Link href="/attendance">전체 보기 <span aria-hidden="true">→</span></Link></div>
-        {attendanceError && <p role="alert">{attendanceError}</p>}
+        {attendanceError && <Feedback tone="error">{attendanceError}</Feedback>}
         {!attendanceError && attendance.length === 0 && <p className={styles.empty}>출석 기록이 없습니다.</p>}
         {!attendanceError && attendance.slice(0, 3).map((item) => <Link key={item.eventId} href={`/events/${item.eventId}`} className={styles.attendanceRow}>
           <span>{item.eventTitle}</span><strong>{attendanceLabel[item.status]}</strong>

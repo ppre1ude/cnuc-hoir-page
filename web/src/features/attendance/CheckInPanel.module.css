@@ -1,12 +1,12 @@
-.panel h1 { margin: 0 0 26px; font-size: clamp(30px, 3vw, 42px); letter-spacing: -.055em; }
+
 .panel > p { color: var(--choir-muted); font-size: 14px; }
 .panel > p strong { color: var(--choir-deep-green); }
-.panel form { display: flex; flex-direction: column; gap: 12px; margin-top: 22px; padding: 28px; border: 1px solid var(--choir-line); border-radius: 12px; }
+
 .panel label { font-size: 14px; font-weight: 650; }
-.panel input { width: 100%; height: 52px; padding: 0 14px; border: 1px solid #bbd1c0; border-radius: 6px; background: #fff; color: var(--choir-ink); font: inherit; font-size: 20px; letter-spacing: .12em; }
-.panel form button { height: 50px; margin-top: 8px; border: 0; border-radius: 6px; background: var(--choir-deep-green); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
-.panel form button:disabled { cursor: default; opacity: .5; }
-.panel > button { padding: 8px 12px; border: 1px solid var(--choir-line); border-radius: 6px; background: #fff; color: var(--choir-deep-green); font: inherit; cursor: pointer; }
+
 .panel a { display: inline-block; margin-top: 20px; color: var(--choir-deep-green); font-weight: 650; text-decoration: none; }
 .panel a:hover { text-decoration: underline; text-underline-offset: 4px; }
-@media (max-width: 760px) { .panel form { padding: 20px; } }
+@media (max-width: 760px) {  }
+
+.form { composes: surface from "../../components/ui/ui.module.css"; display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-6); }
+.form input { min-height: var(--control-large); font-size: 20px; letter-spacing: .12em; }

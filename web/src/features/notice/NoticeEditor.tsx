@@ -1,5 +1,7 @@
 "use client";
 
+import { Button, Input, Select, Textarea, Feedback, PageHeader } from "../../components/ui";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiRequestError } from "../../lib/api";
@@ -139,31 +141,31 @@ export function NoticeEditor() {
 
   const visibleData = !listError && data?.page === page ? data : null;
   return <section className={styles.page}>
-    <h1>공지 관리</h1>
-    {error && <p className={styles.error} role="alert">{error}</p>}
-    {saved && <p className={styles.message} role="status">공지를 저장했습니다.</p>}
-    {listError && <><p className={styles.error} role="alert">{listError}</p><button className={styles.secondary} type="button" onClick={() => { setListError(""); setData(null); setRetry(retry + 1); }}>다시 시도</button></>}
+    <PageHeader title="공지 관리" />
+    {error && <Feedback tone="error">{error}</Feedback>}
+    {saved && <Feedback tone="success">공지를 저장했습니다.</Feedback>}
+    {listError && <><Feedback tone="error">{listError}</Feedback><Button variant="secondary" type="button" onClick={() => { setListError(""); setData(null); setRetry(retry + 1); }}>다시 시도</Button></>}
     {canEdit && <div className={styles.grid}><div className={styles.list}>{visibleData && <>
       {visibleData.items.length === 0 && <p>작성된 공지가 없습니다.</p>}
-      {visibleData.items.map((notice) => <button className={styles.rowButton} type="button" key={notice.id} onClick={() => edit(notice)}>
+      {visibleData.items.map((notice) => <Button variant="unstyled" className={styles.rowButton} type="button" key={notice.id} onClick={() => edit(notice)}>
         <strong>{notice.title}</strong><span>{notice.published ? "게시" : "초안"}</span>
-      </button>)}
+      </Button>)}
       {visibleData.total > visibleData.size && <nav className={styles.pagination} aria-label="공지 관리 페이지">
-        <button className={styles.secondary} type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>이전</button>
+        <Button variant="secondary" type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>이전</Button>
         <span>{page + 1} / {Math.ceil(visibleData.total / visibleData.size)}</span>
-        <button className={styles.secondary} type="button" disabled={(page + 1) * visibleData.size >= visibleData.total} onClick={() => setPage(page + 1)}>다음</button>
+        <Button variant="secondary" type="button" disabled={(page + 1) * visibleData.size >= visibleData.total} onClick={() => setPage(page + 1)}>다음</Button>
       </nav>}
     </>}</div>
       <form className={`${styles.panel} ${styles.form}`} onSubmit={save}>
         <h2>{selected ? "공지 수정" : "공지 작성"}</h2>
         <label htmlFor="notice-title">제목</label>
-        <input id="notice-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={200} required />
+        <Input id="notice-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={200} required />
         <label htmlFor="notice-body">본문</label>
-        <textarea id="notice-body" value={body} onChange={(event) => setBody(event.target.value)} maxLength={10000} required />
-        <label className={styles.check} htmlFor="notice-published"><input id="notice-published" type="checkbox" checked={published} onChange={(event) => setPublished(event.target.checked)} /> 게시</label>
+        <Textarea id="notice-body" value={body} onChange={(event) => setBody(event.target.value)} maxLength={10000} required />
+        <label className={styles.check} htmlFor="notice-published"><Input id="notice-published" type="checkbox" checked={published} onChange={(event) => setPublished(event.target.checked)} /> 게시</label>
         {pollStatus === "loading" && <p role="status">투표 정보를 불러오는 중입니다.</p>}
-        {pollStatus === "error" && <p className={styles.error} role="alert">투표 정보를 불러오지 못했습니다.
-          <button className={styles.secondary} type="button" onClick={() => { setPollStatus("loading"); setPollRetry((value) => value + 1); }}>다시 시도</button></p>}
+        {pollStatus === "error" && <Feedback tone="error">투표 정보를 불러오지 못했습니다.
+          <Button variant="secondary" type="button" onClick={() => { setPollStatus("loading"); setPollRetry((value) => value + 1); }}>다시 시도</Button></Feedback>}
         {adminPoll && <section className={styles.pollDetails} aria-label="투표 결과">
           <h3>{adminPoll.poll.question}</h3>
           <p>마감 {new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", dateStyle: "medium", timeStyle: "short" }).format(new Date(adminPoll.poll.closesAt))}</p>
@@ -176,31 +178,31 @@ export function NoticeEditor() {
           </li>)}</ul>
         </section>}
         {pollStatus === "none" && <>
-          <label className={styles.check} htmlFor="notice-poll"><input id="notice-poll" type="checkbox" checked={includePoll}
+          <label className={styles.check} htmlFor="notice-poll"><Input id="notice-poll" type="checkbox" checked={includePoll}
             onChange={(event) => setIncludePoll(event.target.checked)} /> 투표 추가</label>
           {includePoll && <div className={styles.pollFields}>
             <label htmlFor="poll-question">질문</label>
-            <input id="poll-question" value={pollQuestion} onChange={(event) => setPollQuestion(event.target.value)} maxLength={200} required />
+            <Input id="poll-question" value={pollQuestion} onChange={(event) => setPollQuestion(event.target.value)} maxLength={200} required />
             <label htmlFor="poll-preset">선택지 형식</label>
-            <select id="poll-preset" value={pollPreset}
+            <Select id="poll-preset" value={pollPreset}
               onChange={(event) => { const next = event.target.value as "attendance" | "agree" | "custom";
                 setPollPreset(next);
                 if (next === "agree") { setFirstOption("찬성"); setSecondOption("반대"); }
                 if (next === "attendance") { setFirstOption("참석"); setSecondOption("불참"); } }}>
               <option value="attendance">참석 / 불참</option><option value="agree">찬성 / 반대</option><option value="custom">직접 입력</option>
-            </select>
+            </Select>
             <label htmlFor="poll-first">첫 번째 선택지</label>
-            <input id="poll-first" value={firstOption} onChange={(event) => { setFirstOption(event.target.value); setPollPreset("custom"); }} maxLength={80} required />
+            <Input id="poll-first" value={firstOption} onChange={(event) => { setFirstOption(event.target.value); setPollPreset("custom"); }} maxLength={80} required />
             <label htmlFor="poll-second">두 번째 선택지</label>
-            <input id="poll-second" value={secondOption} onChange={(event) => { setSecondOption(event.target.value); setPollPreset("custom"); }} maxLength={80} required />
+            <Input id="poll-second" value={secondOption} onChange={(event) => { setSecondOption(event.target.value); setPollPreset("custom"); }} maxLength={80} required />
             <label htmlFor="poll-closes">마감 시각 (한국 시간)</label>
-            <input id="poll-closes" type="datetime-local" value={pollClosesAt} onChange={(event) => setPollClosesAt(event.target.value)} required />
+            <Input id="poll-closes" type="datetime-local" value={pollClosesAt} onChange={(event) => setPollClosesAt(event.target.value)} required />
             <p>등록한 투표의 질문과 선택지는 변경할 수 없습니다.</p>
             <p>참석 응답은 행사 출석 기록과 별도로 관리됩니다.</p>
           </div>}
         </>}
-        <div className={styles.actions}><button className={styles.button} type="submit" disabled={busy || !title.trim() || !body.trim()}>저장</button>
-        {selected && <button className={styles.secondary} type="button" onClick={clear}>새 공지</button>}</div>
+        <div className={styles.actions}><Button variant="primary" type="submit" disabled={busy || !title.trim() || !body.trim()}>저장</Button>
+        {selected && <Button variant="secondary" type="button" onClick={clear}>새 공지</Button>}</div>
       </form></div>}
   </section>;
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { Button, Input, Textarea, Feedback } from "../../components/ui";
+
 import { useState, type FormEvent } from "react";
 import { createEventsBatch, seoulDateKey, type EventInput } from "./events";
 import styles from "./EventEditor.module.css";
@@ -65,7 +67,7 @@ export function EventBatchCreator({ onCreated }: Props) {
     <h2>일정 한 번에 등록</h2>
     <form onSubmit={create} className={styles.form}>
       <label htmlFor="batch-month">월</label>
-      <input id="batch-month" type="month" value={month} onChange={(event) => {
+      <Input id="batch-month" type="month" value={month} onChange={(event) => {
         setMonth(event.target.value); setDates([]); setSaved("");
       }} required />
       <div className={styles.batchWeekdays}>{["월", "화", "수", "목", "금", "토", "일"].map((day) => <span key={day}>{day}</span>)}</div>
@@ -73,23 +75,23 @@ export function EventBatchCreator({ onCreated }: Props) {
         {Array.from({ length: mondayOffset(month) }, (_, index) => <span key={`blank-${index}`} />)}
         {days.map((day) => {
           const date = `${month}-${String(day).padStart(2, "0")}`;
-          return <button key={date} type="button" aria-pressed={dates.includes(date)}
-            aria-label={`${day}일`} onClick={() => toggle(date)}>{day}</button>;
+          return <Button variant="secondary" key={date} type="button" aria-pressed={dates.includes(date)}
+            aria-label={`${day}일`} onClick={() => toggle(date)}>{day}</Button>;
         })}
       </div>
       <p className={styles.selectedDates}>선택한 날짜: {dates.length ? dates.map((date) => `${Number(date.slice(-2))}일`).join(", ") : "없음"}</p>
       <div className={styles.batchFields}>
-        <label>제목<input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={200} required /></label>
-        <label>내용 (선택)<textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={10000} rows={3} /></label>
-        <label>공통 시작 시각 (한국 시간)<input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} required /></label>
-        <label>공통 종료 시각 (한국 시간)<input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} required /></label>
+        <label>제목<Input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={200} required /></label>
+        <label>내용 (선택)<Textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={10000} rows={3} /></label>
+        <label>공통 시작 시각 (한국 시간)<Input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} required /></label>
+        <label>공통 종료 시각 (한국 시간)<Input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} required /></label>
       </div>
-      <label className={styles.check}><input type="checkbox" checked={obEligible} onChange={(event) => setObEligible(event.target.checked)} /> OB도 참여 대상</label>
-      {error && <p role="alert">{error}</p>}
-      {saved && <p role="status">{saved}</p>}
-      <div className={styles.actions}><button type="submit" disabled={busy || dates.length === 0 || !title.trim()}>
+      <label className={styles.check}><Input type="checkbox" checked={obEligible} onChange={(event) => setObEligible(event.target.checked)} /> OB도 참여 대상</label>
+      {error && <Feedback tone="error">{error}</Feedback>}
+      {saved && <Feedback>{saved}</Feedback>}
+      <div className={styles.actions}><Button variant="primary" type="submit" disabled={busy || dates.length === 0 || !title.trim()}>
         {busy ? "등록 중..." : `${dates.length}개 일정 등록`}
-      </button></div>
+      </Button></div>
     </form>
   </section>;
 }

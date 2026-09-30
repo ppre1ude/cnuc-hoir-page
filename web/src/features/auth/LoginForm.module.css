@@ -3,10 +3,3 @@
   flex-direction: column;
   gap: 22px;
 }
-
-.error {
-  margin: -5px 0 0;
-  color: #a31b1b;
-  font-size: 14px;
-  line-height: 1.5;
-}

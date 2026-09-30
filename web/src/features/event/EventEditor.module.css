@@ -1,18 +1,15 @@
-.page { max-width: 1200px; margin: auto; padding: 48px clamp(18px, 5vw, 64px) 80px; }
-.page header { margin-bottom: 28px; }
-.page h1 { font-size: 40px; margin: 4px 0 14px; }
-.page a { color: var(--choir-deep-green); text-underline-offset: 4px; }
-.eyebrow { color: var(--choir-deep-green); font-size: 12px; font-weight: 700; letter-spacing: .08em; margin: 0; }
+.page { composes: page from "../../components/ui/ui.module.css"; }
+
+.page a { text-underline-offset: 4px; }
+
 .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
 .singleColumn { grid-template-columns: minmax(0, 1fr); }
-.card { background: white; border: 1px solid var(--choir-line); padding: 28px; min-width: 0; }
+
 .batch { margin-bottom: 20px; }
 .batch .form { max-width: 720px; }
 .batchWeekdays, .batchDays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
 .batchWeekdays { margin-top: 12px; color: var(--choir-muted); font-size: 13px; text-align: center; }
-.batchDays button { min-height: 44px; border: 1px solid var(--choir-line); background: white; color: var(--choir-ink); font: inherit; cursor: pointer; }
-.batchDays button:hover, .batchDays button:focus-visible { border-color: var(--choir-green); }
-.batchDays button[aria-pressed="true"] { border-color: var(--choir-green); background: #edf7ef; color: var(--choir-deep-green); font-weight: 700; }
+
 .selectedDates { margin: 6px 0 12px; color: var(--choir-deep-green); font-size: 14px; }
 .batchFields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; }
 .batchFields label { display: block; }
@@ -23,23 +20,26 @@
 .listHeader label { font-size: 13px; }
 .listHeader input { display: block; margin-top: 5px; }
 .eventRow { display: flex; flex-direction: column; gap: 5px; width: 100%; padding: 14px 4px; border: 0; border-top: 1px solid var(--choir-line); background: transparent; text-align: left; font: inherit; cursor: pointer; }
-.eventRow span { color: #697178; font-size: 13px; }
+.eventRow span { color: var(--color-muted); font-size: 13px; }
 .form { display: flex; flex-direction: column; gap: 8px; }
-.form input:not([type="checkbox"]), .form textarea { font: inherit; border: 1px solid #bbd1c0; padding: 10px 12px; width: 100%; margin-bottom: 8px; }
+
 .form textarea { resize: vertical; }
 .check { display: flex; align-items: center; gap: 8px; }
-.hint { font-size: 13px; color: #697178; margin: 0 0 12px; }
-.actions { display: flex; gap: 8px; }
-.actions button { border: 1px solid var(--choir-deep-green); background: var(--choir-deep-green); color: white; padding: 10px 18px; font: inherit; cursor: pointer; }
-.actions button + button { background: white; color: var(--choir-deep-green); }
-.actions button:disabled { opacity: .55; cursor: default; }
+
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
 .rsvpSummary { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--choir-line); }
 .rsvpSummary h3 { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 0 12px; font-size: 18px; }
-.rsvpSummary button { border: 1px solid var(--choir-line); background: white; color: var(--choir-deep-green); padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+
 .rsvpCounts { color: var(--choir-deep-green); font-weight: 700; }
 .rsvpMembers { max-height: 300px; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
 .rsvpMembers li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--choir-line); }
 .rsvpMembers strong { color: var(--choir-deep-green); }
 .rsvpMembers span { min-width: 0; overflow-wrap: anywhere; font-size: 14px; }
 .rsvpMembers strong { flex-shrink: 0; }
-@media (max-width: 760px) { .page { padding-top: 28px; } .grid { display: flex; flex-direction: column; } .card { width: 100%; padding: 20px; } .batchFields { display: block; } }
+@media (max-width: 760px) {  .grid { display: flex; flex-direction: column; }  .batchFields { display: block; } }
+
+.card { composes: surface from "../../components/ui/ui.module.css"; }
+.form input:not([type="checkbox"]), .form textarea { margin-bottom: var(--space-2); }
+.batchDays button { padding-inline: 0; }
+.eventRow[aria-pressed="true"] { background: var(--color-selected); color: var(--color-primary); }

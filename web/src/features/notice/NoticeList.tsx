@@ -1,5 +1,7 @@
 "use client";
 
+import { Button, Feedback, PageHeader } from "../../components/ui";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiRequestError } from "../../lib/api";
@@ -49,13 +51,13 @@ export function NoticeList() {
 
   const visibleData = !listError && data?.page === page ? data : null;
   return <section className={styles.page}>
-    <header className={styles.header}><h1>공지</h1></header>
-    {listError && <><p role="alert">{listError}</p><button type="button" onClick={() => { setListError(""); setData(null); setRetry(retry + 1); }}>다시 시도</button></>}
-    {detailError && <p role="alert">{detailError}</p>}
+    <PageHeader title="공지" />
+    {listError && <><Feedback tone="error">{listError}</Feedback><Button variant="secondary" type="button" onClick={() => { setListError(""); setData(null); setRetry(retry + 1); }}>다시 시도</Button></>}
+    {detailError && <Feedback tone="error">{detailError}</Feedback>}
     {!visibleData && !listError && <p role="status">공지를 불러오는 중입니다.</p>}
     {visibleData?.items.length === 0 && <p>게시된 공지가 없습니다.</p>}
     <div className={styles.list}>{visibleData?.items.map((notice) => <article key={notice.id} className={styles.row}>
-      <h2><button type="button" onClick={() => open(notice.id)}>{notice.title}</button></h2>
+      <h2><Button variant="secondary" type="button" onClick={() => open(notice.id)}>{notice.title}</Button></h2>
       <p>{notice.author} · {notice.publishedAt && dateTime(notice.publishedAt)}</p>
     </article>)}</div>
     {selected && <article aria-label="공지 본문" className={styles.detail}>
@@ -63,12 +65,12 @@ export function NoticeList() {
       <p className={styles.meta}>{selected.author} · {dateTime(selected.createdAt)}</p>
       <p className={styles.body}>{selected.body}</p>
       <NoticePoll key={selected.id} noticeId={selected.id} />
-      <button type="button" onClick={() => setSelected(null)}>닫기</button>
+      <Button variant="secondary" type="button" onClick={() => setSelected(null)}>닫기</Button>
     </article>}
     {visibleData && visibleData.total > visibleData.size && <nav aria-label="공지 목록 페이지" className={styles.pagination}>
-      <button type="button" disabled={page === 0} onClick={() => { setSelected(null); setDetailError(""); setPage(page - 1); }}>이전</button>
+      <Button variant="secondary" type="button" disabled={page === 0} onClick={() => { setSelected(null); setDetailError(""); setPage(page - 1); }}>이전</Button>
       <span>{page + 1} / {Math.ceil(visibleData.total / visibleData.size)}</span>
-      <button type="button" disabled={(page + 1) * visibleData.size >= visibleData.total} onClick={() => { setSelected(null); setDetailError(""); setPage(page + 1); }}>다음</button>
+      <Button variant="secondary" type="button" disabled={(page + 1) * visibleData.size >= visibleData.total} onClick={() => { setSelected(null); setDetailError(""); setPage(page + 1); }}>다음</Button>
     </nav>}
   </section>;
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { Button, Feedback, PageHeader } from "../../components/ui";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -62,17 +64,17 @@ export function EventPage() {
 
   return <main className={styles.eventPage}>
     <Link className={styles.backLink} href="/dashboard">← 일정</Link>
-    <h1>행사</h1>
-    {error && <p role="alert">{error}</p>}
+    <PageHeader title="행사" />
+    {error && <Feedback tone="error">{error}</Feedback>}
     {!Number.isSafeInteger(Number(id)) || Number(id) < 1 ? <p>행사 주소를 확인해 주세요.</p> :
       event && session ? <div className={styles.eventPageCard}><EventDetail event={event} memberType={session.memberType}
         checkInOpen={attendance?.checkInOpen ?? false} />
         {rsvpLoaded && <EventRsvp key={`${event.id}-${event.startAt}`} event={event} memberType={session.memberType} choice={rsvpChoice} onSaved={setRsvpChoice} />}
-        {rsvpError && <p role="alert">{rsvpError} <button type="button" onClick={() => {
+        {rsvpError && <Feedback tone="error">{rsvpError} <Button variant="secondary" type="button" onClick={() => {
           setRsvpError(""); setRsvpRetry((value) => value + 1);
-        }}>다시 시도</button></p>}
+        }}>다시 시도</Button></Feedback>}
         <p className={styles.eventAttendance}>내 출석: <strong>{attendance ? attendanceLabel[attendance.status] : "확인 중"}</strong></p>
-        {attendanceError && <p role="alert">{attendanceError}</p>}
+        {attendanceError && <Feedback tone="error">{attendanceError}</Feedback>}
         {session.admin && <p><Link href={`/admin/events/${event.id}/attendance`}>운영진 출석 관리</Link></p>}</div>
         : !error && <p role="status">행사를 불러오는 중입니다.</p>}
   </main>;

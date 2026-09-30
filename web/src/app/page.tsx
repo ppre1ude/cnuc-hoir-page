@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { ActionLink, BrandLogo } from "../components/ui";
 import { ActivityGallery } from "@/features/onboarding/ActivityGallery";
 import { activityPhotos } from "@/features/onboarding/activityPhotos";
 import styles from "./page.module.css";
@@ -11,26 +12,18 @@ export default function Home() {
     <main className={styles.page}>
       <header className={styles.header}>
         <Link className={styles.brand} href="/" aria-label="전남대학교 합창단 홈">
-          <Image
-            className={styles.brandLogo}
-            src="/images/choir-logo-horizontal.png"
-            alt=""
-            width={280}
-            height={61}
-            priority
-          />
+          <BrandLogo className={styles.brandLogo} alt="" priority />
         </Link>
-        <Link className={styles.login} href="/login">단원 로그인</Link>
+        <ActionLink variant="secondary" className={styles.login} href="/login">단원 로그인</ActionLink>
       </header>
 
       <section className={styles.hero} aria-labelledby="hero-title">
         <div className={styles.heroContent}>
-          <Image className={styles.heroMark} src="/images/choir-mark.png" alt="" width={168} height={130} priority />
-          <p className={styles.heroName}>전남대학교 합창단</p>
+          <BrandLogo mark className={styles.heroMark} alt="" priority />
           <h1 id="hero-title">합창으로 전하는<br /><strong>울림과 감동</strong>의 이야기</h1>
           <div className={styles.heroActions}>
-            <a className={styles.heroPrimary} href="#activity">공연·활동 보기 <span aria-hidden="true">↗</span></a>
-            <a className={styles.heroSecondary} href="#participate">함께하기 <span aria-hidden="true">↗</span></a>
+            <ActionLink size="large" href="#activity">공연·활동 보기 <span aria-hidden="true">↗</span></ActionLink>
+            <ActionLink size="large" variant="secondary" href="#participate">함께하기 <span aria-hidden="true">↗</span></ActionLink>
           </div>
         </div>
         <Image className={styles.heroPhoto} src="/images/choir-group.jpg"
@@ -53,9 +46,9 @@ export default function Home() {
           <div className={styles.participateGrid}>
             <div>
               <h2 id="participate-title">함께 노래하고 싶다면</h2>
-              <a className={styles.instagramButton} href={instagramUrl} target="_blank" rel="noopener noreferrer">공식 인스타그램 <span aria-hidden="true">↗</span></a>
+              <ActionLink size="large" className={styles.instagramButton} href={instagramUrl} target="_blank" rel="noopener noreferrer">공식 인스타그램 <span aria-hidden="true">↗</span></ActionLink>
             </div>
-            <Image className={styles.participateMark} src="/images/choir-mark.png" alt="" width={350} height={270} />
+            <BrandLogo mark className={styles.participateMark} alt="" />
           </div>
         </div>
       </section>
@@ -63,7 +56,7 @@ export default function Home() {
       <footer className={styles.footer}>
         <div className={styles.container}>
           <div className={styles.footerMain}>
-            <Image className={styles.footerLogo} src="/images/choir-logo-horizontal.png" alt="전남대학교 합창단" width={280} height={61} />
+            <BrandLogo className={styles.footerLogo} />
             <div className={styles.memberLinks}>
               <span>단원 공간</span>
               <Link href="/login">로그인</Link>

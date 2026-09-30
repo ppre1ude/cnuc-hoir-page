@@ -10,7 +10,7 @@
   min-width: 0;
   height: clamp(440px, 43vw, 610px);
   overflow: hidden;
-  background: #e4e9e4;
+  background: var(--color-neutral-background);
 }
 
 .photo:nth-child(even) {

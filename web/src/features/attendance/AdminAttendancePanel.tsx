@@ -1,5 +1,7 @@
 "use client";
 
+import { Button, Input, Feedback, PageHeader } from "../../components/ui";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -88,17 +90,17 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
 
   return <div className={styles.page}>
     <Link className={styles.back} href="/admin/events">← 행사 관리로 돌아가기</Link>
-    <h1>{event?.title ?? "행사"} 출석 관리</h1>
+    <PageHeader title={`${event?.title ?? "행사"} 출석 관리`} />
     <p>출석 창은 열 때부터 10분 동안 유효합니다. 회전하면 이전 QR과 코드는 즉시 사용할 수 없습니다.</p>
-    {message && <p className={styles.error} role="alert">{message} {message.includes("새로고침") &&
-      <button className={styles.secondary} type="button" onClick={() => refresh().then(() => setMessage(""))
-        .catch(() => setMessage("출석 목록을 새로고침하지 못했습니다."))}>목록 다시 불러오기</button>}</p>}
+    {message && <Feedback tone="error">{message} {message.includes("새로고침") &&
+      <Button variant="secondary" type="button" onClick={() => refresh().then(() => setMessage(""))
+        .catch(() => setMessage("출석 목록을 새로고침하지 못했습니다."))}>목록 다시 불러오기</Button>}</Feedback>}
     <div className={styles.grid}>{session && <section className={styles.panel} aria-label="출석 창">
       <div className={styles.panelHeader}><h2>출석 창</h2></div>
       <p>현재 창: {session.open ? `${seoulDateTime(session.expiresAt!)}까지 유효` : "열려 있지 않음"}</p>
-      <div className={styles.actions}>{!session.open && <button className={styles.button} type="button" disabled={busy} onClick={() => action(() => openCheckIn(eventId))}>출석 창 열기</button>}
-      {session.open && <><button className={styles.secondary} type="button" disabled={busy} onClick={() => action(() => rotateCheckIn(eventId, session.sessionId!))}>QR과 코드 재발급</button>
-        <button className={styles.danger} type="button" disabled={busy} onClick={() => action(async () => { await closeCheckIn(eventId); return null; })}>출석 창 닫기</button></>}</div>
+      <div className={styles.actions}>{!session.open && <Button variant="primary" type="button" disabled={busy} onClick={() => action(() => openCheckIn(eventId))}>출석 창 열기</Button>}
+      {session.open && <><Button variant="secondary" type="button" disabled={busy} onClick={() => action(() => rotateCheckIn(eventId, session.sessionId!))}>QR과 코드 재발급</Button>
+        <Button variant="danger" type="button" disabled={busy} onClick={() => action(async () => { await closeCheckIn(eventId); return null; })}>출석 창 닫기</Button></>}</div>
       {issued && session.open && <div>
         <p>입력 코드: <strong className={styles.code}>{issued.code}</strong></p>
         {qrImage && <Image className={styles.qr} src={qrImage} width={280} height={280} unoptimized alt="현장 출석 QR 코드" />}
@@ -110,13 +112,13 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
       {members.length === 0 && <p>출석 대상 단원이 없습니다.</p>}
       {members.map((member) => <div className={styles.row} key={member.memberId}>
         <strong>{member.name}</strong> <span>{member.email}</span> · {attendanceLabel[member.status]}
-        <div className={styles.fieldGroup}><label htmlFor={`reason-${member.memberId}`}>정정 이유</label> <input id={`reason-${member.memberId}`}
+        <div className={styles.fieldGroup}><label htmlFor={`reason-${member.memberId}`}>정정 이유</label> <Input id={`reason-${member.memberId}`}
           value={reasons[member.memberId] ?? ""} maxLength={500}
           onChange={(event) => setReasons((value) => ({ ...value, [member.memberId]: event.target.value }))} /></div>
-        <div className={styles.actions}><button className={styles.button} type="button" disabled={busy || member.status === "CHECKED_IN"}
-          onClick={() => correct(member, "CHECKED_IN")}>출석으로 정정</button>
-        <button className={styles.secondary} type="button" disabled={busy || member.status === "MISSED"}
-          onClick={() => correct(member, "MISSED")}>미출석으로 정정</button></div>
+        <div className={styles.actions}><Button variant="primary" type="button" disabled={busy || member.status === "CHECKED_IN"}
+          onClick={() => correct(member, "CHECKED_IN")}>출석으로 정정</Button>
+        <Button variant="secondary" type="button" disabled={busy || member.status === "MISSED"}
+          onClick={() => correct(member, "MISSED")}>미출석으로 정정</Button></div>
       </div>)}
     </section></div>
   </div>;

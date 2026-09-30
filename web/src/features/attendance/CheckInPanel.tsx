@@ -1,5 +1,7 @@
 "use client";
 
+import { Button, Input, Feedback, PageHeader } from "../../components/ui";
+
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ApiRequestError } from "../../lib/api";
@@ -113,18 +115,18 @@ export function CheckInPanel({ eventId }: { eventId: number }) {
   }
 
   return <section aria-label="현장 출석" className={styles.panel}>
-    <h1>현장 출석</h1>
+    <PageHeader title="현장 출석" />
     {status && <p>현재 상태: <strong>{attendanceLabel[status.status]}</strong></p>}
-    <form onSubmit={submit}>
+    <form className={styles.form} onSubmit={submit}>
       <label htmlFor="check-in-code">운영진이 알려준 출석 코드</label>
-      <input id="check-in-code" value={code} maxLength={8} autoComplete="off"
+      <Input id="check-in-code" value={code} maxLength={8} autoComplete="off"
         onChange={(event) => setCode(event.target.value)} disabled={busy || completed || status?.status === "CHECKED_IN"} />
-      <button type="submit" disabled={busy || completed || !code.trim() || status?.status === "CHECKED_IN"}>
+      <Button variant="primary" type="submit" disabled={busy || completed || !code.trim() || status?.status === "CHECKED_IN"}>
         {busy ? "확인 중..." : "출석하기"}
-      </button>
+      </Button>
     </form>
-    {message && <p role="alert">{message}</p>}
-    {statusRefreshFailed && <button type="button" onClick={retryStatus}>상태 다시 확인</button>}
+    {message && <Feedback tone={completed && !statusRefreshFailed ? "success" : "error"}>{message}</Feedback>}
+    {statusRefreshFailed && <Button variant="secondary" type="button" onClick={retryStatus}>상태 다시 확인</Button>}
     <p><Link href={`/events/${eventId}`}>행사로 돌아가기</Link></p>
   </section>;
 }

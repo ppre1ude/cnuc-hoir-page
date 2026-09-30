@@ -1,5 +1,7 @@
 "use client";
 
+import { Button, Input, Select, Feedback } from "../../components/ui";
+
 import { useEffect, useState, type FormEvent } from "react";
 import { ApiRequestError } from "../../lib/api";
 import { addAllowlist, getAllowlist, removeAllowlist, type AllowlistPage } from "./adminMembers";
@@ -62,29 +64,29 @@ export function AllowlistManager() {
     <div className={styles.grid}>
       <form className={`${styles.panel} ${styles.form}`} onSubmit={add}>
         <label htmlFor="allowlist-email">자동 승인 이메일</label>
-        <input id="allowlist-email" name="email" type="email" maxLength={254} required />
+        <Input id="allowlist-email" name="email" type="email" maxLength={254} required />
         <label htmlFor="allowlist-name">이름 (선택)</label>
-        <input id="allowlist-name" name="name" maxLength={100} />
+        <Input id="allowlist-name" name="name" maxLength={100} />
         <label htmlFor="allowlist-type">단원 구분</label>
-        <select id="allowlist-type" name="memberType" defaultValue="ACTIVE">
+        <Select id="allowlist-type" name="memberType" defaultValue="ACTIVE">
           <option value="ACTIVE">활동 단원</option><option value="OB">OB</option>
-        </select>
-        <button className={styles.button} type="submit" disabled={busy}>명단에 추가</button>
+        </Select>
+        <Button variant="primary" type="submit" disabled={busy}>명단에 추가</Button>
       </form>
       <div className={styles.panel}>
         {data?.items.length === 0 && <p>등록된 이메일이 없습니다.</p>}
         <div className={styles.list}>{data?.items.map((item) => <article className={styles.row} key={item.id}>
           <h2>{item.name || item.email}</h2>
           <p>{item.email} · {item.memberType === "OB" ? "OB" : "활동 단원"}</p>
-          <button className={styles.danger} type="button" disabled={busy} onClick={() => remove(item.id)}>명단에서 삭제</button>
+          <Button variant="danger" type="button" disabled={busy} onClick={() => remove(item.id)}>명단에서 삭제</Button>
         </article>)}</div>
         {data && data.total > data.size && <nav className={styles.pagination} aria-label="자동 승인 명단 페이지">
-          <button className={styles.secondary} type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>이전</button>
+          <Button variant="secondary" type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>이전</Button>
           <span>{page + 1} / {Math.ceil(data.total / data.size)}</span>
-          <button className={styles.secondary} type="button" disabled={(page + 1) * data.size >= data.total} onClick={() => setPage(page + 1)}>다음</button>
+          <Button variant="secondary" type="button" disabled={(page + 1) * data.size >= data.total} onClick={() => setPage(page + 1)}>다음</Button>
         </nav>}
       </div>
     </div>
-    {error && <p className={styles.error} role="alert">{error}</p>}
+    {error && <Feedback tone="error">{error}</Feedback>}
   </section>;
 }

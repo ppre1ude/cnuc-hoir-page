@@ -1,5 +1,7 @@
 "use client";
 
+import { Feedback } from "../../components/ui";
+
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiRequestError } from "../../lib/api";
@@ -25,6 +27,6 @@ export function LoginForm() {
 
   return <div className={styles.form}>
     <GoogleButton onCredential={signIn} onError={fail} />
-    {error && <p className={styles.error} role="alert">{error}</p>}
+    {error && <Feedback tone="error">{error}</Feedback>}
   </div>;
 }

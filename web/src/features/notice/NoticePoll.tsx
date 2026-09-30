@@ -1,5 +1,7 @@
 "use client";
 
+import { Button, Input, Feedback } from "../../components/ui";
+
 import { useEffect, useState } from "react";
 import { ApiRequestError } from "../../lib/api";
 import { getNoticePoll, voteNoticePoll, type PollView } from "./notices";
@@ -54,7 +56,7 @@ export function NoticePoll({ noticeId }: { noticeId: number }) {
 
   if (missing) return null;
   if (!poll && !error) return <p role="status">투표를 불러오는 중입니다.</p>;
-  if (!poll) return <div role="alert">{error} <button type="button" onClick={() => { setError(""); setRetry((value) => value + 1); }}>다시 시도</button></div>;
+  if (!poll) return <div role="alert">{error} <Button variant="secondary" type="button" onClick={() => { setError(""); setRetry((value) => value + 1); }}>다시 시도</Button></div>;
 
   const total = poll.firstCount + poll.secondCount;
   return <form className={styles.poll} onSubmit={submit}>
@@ -65,7 +67,7 @@ export function NoticePoll({ noticeId }: { noticeId: number }) {
       {[{ value: 1, label: poll.firstOption, count: poll.firstCount },
         { value: 2, label: poll.secondOption, count: poll.secondCount }].map((option) =>
         <label key={option.value} className={`${styles.option} ${choice === option.value ? styles.selected : ""}`}>
-          <input type="radio" name={`poll-${noticeId}`} value={option.value} checked={choice === option.value}
+          <Input type="radio" name={`poll-${noticeId}`} value={option.value} checked={choice === option.value}
             onChange={() => setChoice(option.value)} />
           <span className={styles.label}>{option.label}</span>
           <span className={styles.count}>{option.count}명</span>
@@ -73,9 +75,9 @@ export function NoticePoll({ noticeId }: { noticeId: number }) {
         </label>)}
     </fieldset>
     {poll.myChoice !== null && <p className={styles.mine}>내 선택: {poll.myChoice === 1 ? poll.firstOption : poll.secondOption}</p>}
-    {error && <p role="alert" className={styles.error}>{error}</p>}
-    {!poll.closed && <button className={styles.submit} type="submit" disabled={choice === null || busy || choice === poll.myChoice}>
+    {error && <Feedback tone="error">{error}</Feedback>}
+    {!poll.closed && <Button variant="primary" type="submit" disabled={choice === null || busy || choice === poll.myChoice}>
       {poll.myChoice === null ? "투표하기" : "선택 변경"}
-    </button>}
+    </Button>}
   </form>;
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { Button, Feedback } from "../../../components/ui";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -37,9 +39,9 @@ export default function ApplicationStatusPage() {
     <div className={styles.content}>
       <h1>{session ? title : "계정 확인 중"}</h1>
       {session && <p className={styles.status}>{session.name}님의 계정 상태입니다.</p>}
-      {session?.status === "APPROVAL_PENDING" && <button type="button" onClick={() => window.location.reload()}>상태 다시 확인</button>}
-      {session && <button type="button" onClick={signOut}>로그아웃</button>}
-      {error && <p role="alert" className={styles.error}>{error}</p>}
+      {session?.status === "APPROVAL_PENDING" && <Button variant="secondary" type="button" onClick={() => window.location.reload()}>상태 다시 확인</Button>}
+      {session && <Button variant="secondary" type="button" onClick={signOut}>로그아웃</Button>}
+      {error && <Feedback tone="error">{error}</Feedback>}
     </div>
   </main>;
 }

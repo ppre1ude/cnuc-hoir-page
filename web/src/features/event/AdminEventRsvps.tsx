@@ -1,5 +1,7 @@
 "use client";
 
+import { Button, Feedback } from "../../components/ui";
+
 import { useEffect, useState } from "react";
 import { getAdminEventRsvps, type AdminEventRsvps as Rsvps } from "./events";
 import styles from "./EventEditor.module.css";
@@ -17,10 +19,10 @@ export function AdminEventRsvps({ eventId }: { eventId: number }) {
   }, [eventId, retry]);
 
   return <div className={styles.rsvpSummary}>
-    <h3>참석 응답 <button type="button" disabled={!data && !error} onClick={() => {
+    <h3>참석 응답 <Button variant="secondary" type="button" disabled={!data && !error} onClick={() => {
       setData(null); setError(""); setRetry((value) => value + 1);
-    }}>새로고침</button></h3>
-    {error && <p role="alert">{error} <button type="button" onClick={() => { setError(""); setRetry((value) => value + 1); }}>다시 시도</button></p>}
+    }}>새로고침</Button></h3>
+    {error && <Feedback tone="error">{error} <Button variant="secondary" type="button" onClick={() => { setError(""); setRetry((value) => value + 1); }}>다시 시도</Button></Feedback>}
     {!data && !error && <p role="status">응답을 불러오는 중입니다.</p>}
     {data && <>
       <p className={styles.rsvpCounts}>참석 {data.attending} · 불참 {data.absent} · 미응답 {data.unanswered}</p>

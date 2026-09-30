@@ -1,5 +1,7 @@
 "use client";
 
+import { Button, Input, Textarea, Feedback, PageHeader, ActionLink } from "../../components/ui";
+
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -116,35 +118,35 @@ export function EventEditor() {
     setRetry((value) => value + 1);
   }
   return <div className={styles.page}>
-    <header><p className={styles.eyebrow}>운영진</p><h1>행사 관리</h1><Link href="/dashboard">회원 달력으로 돌아가기</Link></header>
-    {listError && <p role="alert">{listError} <button type="button" onClick={() => { setListError(""); setRetry(retry + 1); }}>다시 시도</button></p>}
+    <PageHeader title="행사 관리" actions={<ActionLink variant="secondary" href="/dashboard">회원 달력으로 돌아가기</ActionLink>} />
+    {listError && <Feedback tone="error">{listError} <Button variant="secondary" type="button" onClick={() => { setListError(""); setRetry(retry + 1); }}>다시 시도</Button></Feedback>}
     {saved && <p role="status">행사를 저장했습니다.</p>}
     {authorized && <EventBatchCreator onCreated={refreshList} />}
     {authorized && <div className={`${styles.grid} ${!selected ? styles.singleColumn : ""}`}>
       <section className={styles.card}>
         <div className={styles.listHeader}><h2>{month.replace("-", "년 ")}월 행사</h2>
-          <label>조회 월 <input type="month" value={month} onChange={(change) => { currentMonth.current = change.target.value; setMonth(change.target.value); setLoadedMonth(""); }} /></label>
+          <label>조회 월 <Input type="month" value={month} onChange={(change) => { currentMonth.current = change.target.value; setMonth(change.target.value); setLoadedMonth(""); }} /></label>
         </div>
         {!visible && !listError && <p role="status">행사를 불러오는 중입니다.</p>}
         {visible?.length === 0 && <p>이번 달 등록된 행사가 없습니다.</p>}
-        {visible?.map((event) => <button type="button" key={event.id} className={styles.eventRow} onClick={() => edit(event)}>
+        {visible?.map((event) => <Button variant="unstyled" type="button" key={event.id} className={styles.eventRow} aria-pressed={selected?.id === event.id} onClick={() => edit(event)}>
           <strong>{event.title}</strong><span>{seoulDateTime(event.startAt)}</span>
-        </button>)}
+        </Button>)}
       </section>
       {selected && <section className={styles.card}>
         <h2>행사 수정</h2>
         {selected && <p><Link href={`/admin/events/${selected.id}/attendance`}>이 행사 출석 관리</Link></p>}
-        {error && <p role="alert">{error}</p>}
+        {error && <Feedback tone="error">{error}</Feedback>}
         <form onSubmit={save} className={styles.form}>
-          <label htmlFor="event-title">제목</label><input id="event-title" value={title} onChange={(change) => setTitle(change.target.value)} maxLength={200} required />
-          <label htmlFor="event-description">내용 (선택)</label><textarea id="event-description" value={description} onChange={(change) => setDescription(change.target.value)} maxLength={10000} rows={7} />
-          <label htmlFor="event-start">시작 시각 (한국 시간)</label><input id="event-start" type="datetime-local" value={startAt} onChange={(change) => setStartAt(change.target.value)} required />
-          <label htmlFor="event-end">종료 시각 (한국 시간)</label><input id="event-end" type="datetime-local" value={endAt} onChange={(change) => setEndAt(change.target.value)} required />
-          <label className={styles.check}><input type="checkbox" checked={obEligible} onChange={(change) => setObEligible(change.target.checked)} /> OB도 출석 대상</label>
-          <label className={styles.check}><input type="checkbox" checked={publicVisible} onChange={(change) => setPublicVisible(change.target.checked)} /> 향후 공개 아카이브 대상</label>
+          <label htmlFor="event-title">제목</label><Input id="event-title" value={title} onChange={(change) => setTitle(change.target.value)} maxLength={200} required />
+          <label htmlFor="event-description">내용 (선택)</label><Textarea id="event-description" value={description} onChange={(change) => setDescription(change.target.value)} maxLength={10000} rows={7} />
+          <label htmlFor="event-start">시작 시각 (한국 시간)</label><Input id="event-start" type="datetime-local" value={startAt} onChange={(change) => setStartAt(change.target.value)} required />
+          <label htmlFor="event-end">종료 시각 (한국 시간)</label><Input id="event-end" type="datetime-local" value={endAt} onChange={(change) => setEndAt(change.target.value)} required />
+          <label className={styles.check}><Input type="checkbox" checked={obEligible} onChange={(change) => setObEligible(change.target.checked)} /> OB도 출석 대상</label>
+          <label className={styles.check}><Input type="checkbox" checked={publicVisible} onChange={(change) => setPublicVisible(change.target.checked)} /> 향후 공개 아카이브 대상</label>
           <p className={styles.hint}>공개 대상으로 표시해도 현재는 외부에 행사를 노출하지 않습니다.</p>
-          <div className={styles.actions}><button type="submit" disabled={busy || !title.trim()}>{busy ? "저장 중..." : "저장"}</button>
-            <button type="button" onClick={clear}>닫기</button></div>
+          <div className={styles.actions}><Button variant="primary" type="submit" disabled={busy || !title.trim()}>{busy ? "저장 중..." : "저장"}</Button>
+            <Button variant="secondary" type="button" onClick={clear}>닫기</Button></div>
         </form>
         <AdminEventRsvps key={selected.id} eventId={selected.id} />
       </section>}

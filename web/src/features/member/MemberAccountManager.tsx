@@ -1,5 +1,7 @@
 "use client";
 
+import { Button, Input, Select, Feedback, PageHeader } from "../../components/ui";
+
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ApiRequestError } from "../../lib/api";
@@ -94,20 +96,20 @@ export function MemberAccountManager() {
     ? `${window.location.origin}/activate#token=${issued.token}` : "";
 
   return <section className={styles.page}>
-    <h1>단원 계정</h1>
+    <PageHeader title="단원 계정" />
     <div className={styles.grid}>
       <section className={styles.panel} aria-labelledby="invite-title">
         <div className={styles.panelHeader}><h2 id="invite-title">계정 초대</h2></div>
         <form className={styles.form} onSubmit={create}>
           <label htmlFor="invite-name">이름</label>
-          <input id="invite-name" name="name" maxLength={100} required />
+          <Input id="invite-name" name="name" maxLength={100} required />
           <label htmlFor="invite-email">구글 계정 이메일</label>
-          <input id="invite-email" name="email" type="email" maxLength={254} required />
+          <Input id="invite-email" name="email" type="email" maxLength={254} required />
           <label htmlFor="invite-type">단원 구분</label>
-          <select id="invite-type" name="memberType" defaultValue="ACTIVE">
+          <Select id="invite-type" name="memberType" defaultValue="ACTIVE">
             <option value="ACTIVE">활동 단원</option><option value="OB">OB</option>
-          </select>
-          <button className={styles.button} type="submit" disabled={busy}>1회용 링크 발급</button>
+          </Select>
+          <Button variant="primary" type="submit" disabled={busy}>1회용 링크 발급</Button>
         </form>
       </section>
       <section className={styles.panel} aria-labelledby="link-title">
@@ -115,26 +117,26 @@ export function MemberAccountManager() {
         {link ? <>
           <p>이 링크는 한 번만 표시됩니다. 24시간 안에 해당 단원에게 비공개로 전달해 주세요.</p>
           <label className={styles.fieldLabel} htmlFor="issued-link">구글 계정 연결 링크</label>
-          <input id="issued-link" className={styles.linkInput} value={link} readOnly onFocus={(event) => event.currentTarget.select()} />
-          <div className={styles.actions}><button className={styles.secondary} type="button"
-            onClick={() => navigator.clipboard.writeText(link).catch(() => setError("복사하지 못했습니다. 링크를 직접 선택해 주세요."))}>링크 복사</button></div>
+          <Input id="issued-link" className={styles.linkInput} value={link} readOnly onFocus={(event) => event.currentTarget.select()} />
+          <div className={styles.actions}><Button variant="secondary" type="button"
+            onClick={() => navigator.clipboard.writeText(link).catch(() => setError("복사하지 못했습니다. 링크를 직접 선택해 주세요."))}>링크 복사</Button></div>
         </> : <p>계정 연결 링크를 발급하면 여기 표시됩니다.</p>}
       </section>
     </div>
-    {error && <p className={styles.error} role="alert">{error}</p>}
+    {error && <Feedback tone="error">{error}</Feedback>}
     <AllowlistManager />
     <OperatorPreapprovalManager />
     <section aria-labelledby="members-title" className={styles.memberSection}>
       <h2 id="members-title">계정 목록</h2>
       {!data && !error && <p role="status">계정 목록을 불러오는 중입니다.</p>}
-      {!data && error && <button className={styles.secondary} type="button" onClick={() => { setError(""); setRefresh((value) => value + 1); }}>다시 시도</button>}
+      {!data && error && <Button variant="secondary" type="button" onClick={() => { setError(""); setRefresh((value) => value + 1); }}>다시 시도</Button>}
       {data?.items.length === 0 && <p>등록된 계정이 없습니다.</p>}
       <div className={styles.list}>{data?.items.map((item) => <MemberRow key={item.id} item={item} busy={busy}
         currentMemberId={currentMemberId} onRenew={() => renew(item.id)} onRevoke={(reason) => revoke(item.id, reason)} />)}</div>
       {data && data.total > data.size && <nav className={styles.pagination} aria-label="계정 목록 페이지">
-        <button className={styles.secondary} type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>이전</button>
+        <Button variant="secondary" type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>이전</Button>
         <span>{page + 1} / {Math.ceil(data.total / data.size)}</span>
-        <button className={styles.secondary} type="button" disabled={(page + 1) * data.size >= data.total} onClick={() => setPage(page + 1)}>다음</button>
+        <Button variant="secondary" type="button" disabled={(page + 1) * data.size >= data.total} onClick={() => setPage(page + 1)}>다음</Button>
       </nav>}
     </section>
   </section>;
@@ -153,16 +155,16 @@ function MemberRow({ item, busy, currentMemberId, onRenew, onRevoke }: {
     <h2>{item.name}</h2>
     <p>{item.email} · {type} · {status}{item.admin ? " · 운영진" : ""}</p>
     {(item.status === "REVOKED" || !item.googleLinked && (item.status === "INVITED" || item.status === "APPROVED")) && <div className={styles.actions}>
-      <button className={styles.secondary} type="button" disabled={busy} onClick={onRenew}>
+      <Button variant="secondary" type="button" disabled={busy} onClick={onRenew}>
         {item.status === "INVITED" ? "초대 링크 다시 발급" : item.status === "REVOKED" ? "다시 초대" : "계정 연결 링크 발급"}
-      </button>
+      </Button>
     </div>}
     {(item.status === "APPROVED" || item.status === "INVITED")
       && currentMemberId !== null && item.id !== currentMemberId && <div className={styles.fieldGroup}>
       <label htmlFor={`revoke-${item.id}`}>접근 해제 이유</label>
-      <input id={`revoke-${item.id}`} value={reason} maxLength={500} onChange={(event) => setReason(event.target.value)} />
-      <div className={styles.actions}><button className={styles.danger} type="button" disabled={busy || !reason.trim()}
-        onClick={() => onRevoke(reason.trim())}>접근 해제</button></div>
+      <Input id={`revoke-${item.id}`} value={reason} maxLength={500} onChange={(event) => setReason(event.target.value)} />
+      <div className={styles.actions}><Button variant="danger" type="button" disabled={busy || !reason.trim()}
+        onClick={() => onRevoke(reason.trim())}>접근 해제</Button></div>
     </div>}
   </article>;
 }

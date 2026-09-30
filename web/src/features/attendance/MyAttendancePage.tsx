@@ -1,5 +1,7 @@
 "use client";
 
+import { Feedback, PageHeader, StatusBadge } from "../../components/ui";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { attendanceLabel, getMyAttendance, type AttendanceState } from "./attendance";
@@ -15,11 +17,11 @@ export function MyAttendancePage() {
     return () => { alive = false; };
   }, []);
   return <main className={styles.page}>
-    <h1>내 출석 기록</h1>
-    {error && <p role="alert">{error}</p>}
+    <PageHeader title="내 출석 기록" />
+    {error && <Feedback tone="error">{error}</Feedback>}
     {items.length === 0 && !error && <p className={styles.empty}>출석 기록이 없습니다.</p>}
     <ul className={styles.list}>{items.map((item) => <li key={item.eventId}>
-      <Link href={`/events/${item.eventId}`}>{item.eventTitle}<span>{attendanceLabel[item.status]}</span></Link>
+      <Link href={`/events/${item.eventId}`}>{item.eventTitle}<StatusBadge tone={item.status === "CHECKED_IN" ? "positive" : item.status === "MISSED" ? "negative" : "neutral"}>{attendanceLabel[item.status]}</StatusBadge></Link>
     </li>)}</ul>
   </main>;
 }
