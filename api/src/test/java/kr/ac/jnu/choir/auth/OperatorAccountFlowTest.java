@@ -6,12 +6,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
+import java.sql.Timestamp;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.UUID;
 import kr.ac.jnu.choir.auth.GoogleIdentityVerifier.GoogleIdentity;
 import kr.ac.jnu.choir.member.AccountStatus;
 import kr.ac.jnu.choir.member.Member;
 import kr.ac.jnu.choir.member.MemberRepository;
+import kr.ac.jnu.choir.member.MemberType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +51,50 @@ class OperatorAccountFlowTest {
     MockMvc mvc;
 
     @BeforeEach void setup() { mvc = MockMvcBuilders.webAppContextSetup(context).addFilters(security).build(); }
+
+    @Test void verifiedGmailConnectsOnlyBootstrapInvitedAdminWithoutLink() throws Exception {
+        String email = "first-admin-" + UUID.randomUUID() + "@gmail.com";
+        String subject = "subject-" + UUID.randomUUID();
+        Member invited = members.save(Member.invited(email, "첫 운영진", MemberType.ACTIVE, Clock.systemUTC()));
+        jdbc.update("UPDATE member SET admin = TRUE WHERE id = ?", invited.getId());
+        jdbc.update("""
+                INSERT INTO admin_action_log
+                    (actor_member_id, target_member_id, action, previous_status, new_status, reason, acted_at)
+                VALUES (?, ?, 'BOOTSTRAP_INVITE', 'INVITED', 'INVITED', '최초 운영진 초대', ?)
+                """, invited.getId(), invited.getId(), Timestamp.from(Instant.now()));
+        jdbc.update("""
+                INSERT INTO auth_token (member_id, purpose, token_hash, expires_at, created_at)
+                VALUES (?, 'ACCOUNT_SETUP', ?, ?, ?)
+                """, invited.getId(), "0".repeat(64), Timestamp.from(Instant.now().plusSeconds(3600)),
+                Timestamp.from(Instant.now()));
+
+        MockHttpSession loginSession = new MockHttpSession();
+        assertThat(login(loginSession, "bootstrap-credential", subject, email, "첫 운영진", true))
+                .contains("\"status\":\"APPROVED\"")
+                .contains("\"admin\":true");
+        Member linked = members.findById(invited.getId()).orElseThrow();
+        assertThat(linked.getGoogleSubject()).isEqualTo(subject);
+        assertThat(linked.isAdmin()).isTrue();
+        assertThat(jdbc.queryForObject("""
+                SELECT COUNT(*) FROM auth_token WHERE member_id = ? AND used_at IS NULL
+                """, Integer.class, invited.getId())).isZero();
+        assertThat(mvc.perform(get("/api/v1/admin/members").session(loginSession))
+                .andReturn().getResponse().getStatus()).isEqualTo(200);
+
+        String otherEmail = "other-admin-" + UUID.randomUUID() + "@gmail.com";
+        Member other = members.save(Member.invited(otherEmail, "다른 운영진", MemberType.ACTIVE, Clock.systemUTC()));
+        jdbc.update("UPDATE member SET admin = TRUE WHERE id = ?", other.getId());
+        MockHttpSession otherSession = new MockHttpSession();
+        String credential = "other-admin-credential";
+        when(google.verify(credential)).thenReturn(new GoogleIdentity("subject-" + UUID.randomUUID(),
+                otherEmail, "다른 운영진", true, nonce(otherSession)));
+        var response = mvc.perform(post("/api/v1/auth/google").session(otherSession)
+                .header("X-CSRF-TOKEN", csrf(otherSession)).contentType("application/json")
+                .content("{\"credential\":\"" + credential + "\"}"))
+                .andReturn().getResponse();
+        assertThat(response.getStatus()).isEqualTo(409);
+        assertThat(response.getContentAsString()).contains("ACCOUNT_LINK_REQUIRED");
+    }
 
     @Test void invitationConnectsGoogleOnceAndRevocationBlocksLogin() throws Exception {
         int attemptsBeforeConnection = attempts("CONNECT_IP");

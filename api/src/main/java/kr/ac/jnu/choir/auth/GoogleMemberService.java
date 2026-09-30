@@ -1,5 +1,6 @@
 package kr.ac.jnu.choir.auth;
 
+import java.sql.Timestamp;
 import java.time.Clock;
 import kr.ac.jnu.choir.auth.GoogleIdentityVerifier.GoogleIdentity;
 import kr.ac.jnu.choir.common.AdminActionLog;
@@ -43,7 +44,10 @@ public class GoogleMemberService {
         existing = members.findByGoogleSubjectForUpdate(identity.subject()).orElse(null);
         if (existing != null) return existingLogin(existing, identity);
         existing = members.findByEmailForUpdate(identity.email()).orElse(null);
-        if (existing != null) throw linkRequired();
+        if (existing != null) {
+            if (isUnlinkedBootstrapAdmin(existing, identity)) return connectBootstrapAdmin(existing, identity);
+            throw linkRequired();
+        }
         Member member = members.saveAndFlush(Member.googleApplicant(identity.email(), identity.name(),
                 identity.subject(), clock));
         if (identity.authoritativeEmail()) approveFromAllowlist(member);
@@ -58,6 +62,31 @@ public class GoogleMemberService {
             approveFromAllowlist(existing);
         }
         return existing;
+    }
+
+    private boolean isUnlinkedBootstrapAdmin(Member member, GoogleIdentity identity) {
+        if (!identity.authoritativeEmail() || !member.isAdmin()
+                || member.getStatus() != AccountStatus.INVITED || member.getGoogleSubject() != null) {
+            return false;
+        }
+        return Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS (
+                    SELECT 1 FROM admin_action_log
+                    WHERE target_member_id = ? AND action = 'BOOTSTRAP_INVITE'
+                )
+                """, Boolean.class, member.getId()));
+    }
+
+    private Member connectBootstrapAdmin(Member member, GoogleIdentity identity) {
+        jdbc.update("""
+                UPDATE auth_token SET used_at = ?
+                WHERE member_id = ? AND purpose = 'ACCOUNT_SETUP' AND used_at IS NULL
+                """, Timestamp.from(clock.instant()), member.getId());
+        AccountStatus before = member.getStatus();
+        member.connectGoogle(identity.subject(), clock);
+        logs.save(new AdminActionLog(member, member, "BOOTSTRAP_GOOGLE_LINK", before,
+                member.getStatus(), "확인된 구글 계정으로 최초 운영진 연결", clock.instant()));
+        return member;
     }
 
     @Transactional
