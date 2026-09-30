@@ -14,7 +14,13 @@ export function AllowlistManager() {
 
   useEffect(() => {
     let alive = true;
-    getAllowlist(page).then((value) => { if (alive) setData(value); })
+    getAllowlist(page).then((value) => {
+      if (!alive) return;
+      if (page > 0 && value.items.length === 0 && value.total <= page * value.size) {
+        setData(null);
+        setPage(Math.max(0, Math.ceil(value.total / value.size) - 1));
+      } else setData(value);
+    })
       .catch(() => { if (alive) setError("자동 승인 명단을 불러오지 못했습니다."); });
     return () => { alive = false; };
   }, [page, revision]);

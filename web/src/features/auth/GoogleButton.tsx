@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Script from "next/script";
 import { getGoogleNonce } from "./session";
 
@@ -25,7 +25,7 @@ export function GoogleButton({ onCredential, onError }: {
   const [loaded, setLoaded] = useState(false);
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
-  const ready = useCallback(async () => {
+  async function ready() {
     if (!clientId || !window.google || !target.current) return;
     const { nonce } = await getGoogleNonce();
     if (!target.current) return;
@@ -48,7 +48,7 @@ export function GoogleButton({ onCredential, onError }: {
       type: "standard", theme: "outline", size: "large", width: 320, text: "signin_with",
     });
     setLoaded(true);
-  }, [clientId, onCredential, onError]);
+  }
 
   if (!clientId) return <p role="alert">구글 로그인 설정이 필요합니다. 운영진에게 알려 주세요.</p>;
   return <>
