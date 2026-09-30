@@ -10,6 +10,7 @@ import kr.ac.jnu.choir.member.AccountStatus;
 import kr.ac.jnu.choir.member.Member;
 import kr.ac.jnu.choir.member.MemberAllowlistRepository;
 import kr.ac.jnu.choir.member.MemberRepository;
+import kr.ac.jnu.choir.member.OperatorPreapprovalService;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -19,15 +20,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class GoogleMemberService {
     private final MemberRepository members;
     private final MemberAllowlistRepository allowlist;
+    private final OperatorPreapprovalService operatorPreapprovals;
     private final AdminActionLogRepository logs;
     private final AuthTokenService tokens;
     private final JdbcTemplate jdbc;
     private final Clock clock;
 
     public GoogleMemberService(MemberRepository members, MemberAllowlistRepository allowlist,
+            OperatorPreapprovalService operatorPreapprovals,
             AdminActionLogRepository logs, AuthTokenService tokens, JdbcTemplate jdbc, Clock clock) {
         this.members = members;
         this.allowlist = allowlist;
+        this.operatorPreapprovals = operatorPreapprovals;
         this.logs = logs;
         this.tokens = tokens;
         this.jdbc = jdbc;
@@ -50,16 +54,16 @@ public class GoogleMemberService {
         }
         Member member = members.saveAndFlush(Member.googleApplicant(identity.email(), identity.name(),
                 identity.subject(), clock));
-        if (identity.authoritativeEmail()) approveFromAllowlist(member);
+        if (identity.authoritativeEmail() && !operatorPreapprovals.grantIfListed(member)) approveFromAllowlist(member);
         return member;
     }
 
     private Member existingLogin(Member existing, GoogleIdentity identity) {
         if (existing.getStatus() == AccountStatus.REVOKED) throw blocked();
         if (existing.getStatus() == AccountStatus.INVITED) throw linkRequired();
-        if (existing.getStatus() == AccountStatus.APPROVAL_PENDING
-                && existing.getEmail().equals(identity.email()) && identity.authoritativeEmail()) {
-            approveFromAllowlist(existing);
+        if (existing.getEmail().equals(identity.email()) && identity.authoritativeEmail()) {
+            if (operatorPreapprovals.grantIfListed(existing)) return existing;
+            if (existing.getStatus() == AccountStatus.APPROVAL_PENDING) approveFromAllowlist(existing);
         }
         return existing;
     }

@@ -83,3 +83,34 @@ export function addAllowlist(input: { email: string; memberType: "ACTIVE" | "OB"
 export function removeAllowlist(id: number): Promise<void> {
   return apiRequest<void>(`/admin/allowlist/${id}`, { method: "DELETE" });
 }
+
+export type OperatorPreapprovalItem = {
+  id: number;
+  email: string;
+  memberType: "ACTIVE" | "OB";
+  createdAt: string;
+};
+
+export type OperatorPreapprovalPage = {
+  items: OperatorPreapprovalItem[];
+  page: number;
+  size: number;
+  total: number;
+};
+
+export function getOperatorPreapprovals(page = 0): Promise<OperatorPreapprovalPage> {
+  return apiRequest<OperatorPreapprovalPage>(`/admin/operator-preapprovals?page=${page}&size=20`);
+}
+
+export function addOperatorPreapproval(input: {
+  email: string;
+  memberType: "ACTIVE" | "OB";
+}): Promise<OperatorPreapprovalItem> {
+  return apiRequest<OperatorPreapprovalItem>("/admin/operator-preapprovals", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
+  });
+}
+
+export function removeOperatorPreapproval(id: number): Promise<void> {
+  return apiRequest<void>(`/admin/operator-preapprovals/${id}`, { method: "DELETE" });
+}

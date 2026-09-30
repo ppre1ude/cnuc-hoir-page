@@ -188,6 +188,93 @@ class OperatorAccountFlowTest {
         assertThat(members.findByEmailIgnoreCase(gmail).orElseThrow().getStatus()).isEqualTo(AccountStatus.APPROVED);
     }
 
+    @Test void preapprovedOperatorGetsAdminOnFirstVerifiedGoogleLogin() throws Exception {
+        Member admin = admin();
+        MockHttpSession adminSession = sessionFor(admin);
+        String csrf = csrf(adminSession);
+        String email = "chair-" + UUID.randomUUID() + "@gmail.com";
+        String body = mvc.perform(post("/api/v1/admin/operator-preapprovals").session(adminSession)
+                .header("X-CSRF-TOKEN", csrf).contentType("application/json")
+                .content("{\"email\":\"" + email + "\",\"memberType\":\"ACTIVE\"}"))
+                .andReturn().getResponse().getContentAsString();
+        long entryId = mapper.readTree(body).get("id").asLong();
+        assertThat(members.findByEmailIgnoreCase(email)).isEmpty();
+
+        MockHttpSession chairSession = new MockHttpSession();
+        String subject = "subject-" + UUID.randomUUID();
+        assertThat(login(chairSession, "chair-credential", subject, email, "회장", true))
+                .contains("\"status\":\"APPROVED\"")
+                .contains("\"admin\":true");
+        Member chair = members.findByEmailIgnoreCase(email).orElseThrow();
+        assertThat(chair.getGoogleSubject()).isEqualTo(subject);
+        assertThat(chair.getMemberType()).isEqualTo(MemberType.ACTIVE);
+        assertThat(chair.isAdmin()).isTrue();
+        assertThat(mvc.perform(get("/api/v1/admin/members").session(chairSession))
+                .andReturn().getResponse().getStatus()).isEqualTo(200);
+        assertThat(jdbc.queryForObject("""
+                SELECT COUNT(*) FROM admin_action_log
+                WHERE target_member_id = ? AND action = 'OPERATOR_PREAPPROVAL'
+                """, Integer.class, chair.getId())).isEqualTo(1);
+        assertThat(mvc.perform(delete("/api/v1/admin/operator-preapprovals/" + entryId)
+                .session(adminSession).header("X-CSRF-TOKEN", csrf))
+                .andReturn().getResponse().getStatus()).isEqualTo(204);
+        assertThat(members.findById(chair.getId()).orElseThrow().isAdmin()).isTrue();
+        assertThat(mvc.perform(post("/api/v1/admin/members/" + chair.getId() + "/revoke")
+                .session(adminSession).header("X-CSRF-TOKEN", csrf).contentType("application/json")
+                .content("{\"reason\":\"운영진 명단 변경\"}"))
+                .andReturn().getResponse().getStatus()).isEqualTo(204);
+        MockHttpSession revokedSession = new MockHttpSession();
+        assertThat(loginStatus(revokedSession, "chair-credential", subject, email, "회장", true)).isEqualTo(403);
+        assertThat(members.findById(chair.getId()).orElseThrow().isAdmin()).isFalse();
+    }
+
+    @Test void preapprovalRequiresAdminAndAuthoritativeEmail() throws Exception {
+        Member admin = admin();
+        MockHttpSession adminSession = sessionFor(admin);
+        String csrf = csrf(adminSession);
+        String email = "outside-" + UUID.randomUUID() + "@example.org";
+        String requestBody = "{\"email\":\"" + email + "\",\"memberType\":\"OB\"}";
+        MockHttpSession stranger = new MockHttpSession();
+        assertThat(mvc.perform(post("/api/v1/admin/operator-preapprovals").session(stranger)
+                .header("X-CSRF-TOKEN", csrf(stranger)).contentType("application/json")
+                .content(requestBody)).andReturn().getResponse().getStatus()).isEqualTo(401);
+        assertThat(mvc.perform(post("/api/v1/admin/operator-preapprovals").session(adminSession)
+                .header("X-CSRF-TOKEN", csrf).contentType("application/json")
+                .content(requestBody)).andReturn().getResponse().getStatus()).isEqualTo(200);
+        MockHttpSession memberSession = new MockHttpSession();
+        String subject = "subject-" + UUID.randomUUID();
+        assertThat(login(memberSession, "outside-credential", subject, email, "외부 계정", false))
+                .contains("\"status\":\"APPROVAL_PENDING\"")
+                .contains("\"admin\":false");
+        assertThat(mvc.perform(get("/api/v1/admin/members").session(memberSession))
+                .andReturn().getResponse().getStatus()).isEqualTo(403);
+        MockHttpSession retry = new MockHttpSession();
+        assertThat(login(retry, "outside-credential", subject, email, "외부 계정", false))
+                .contains("\"status\":\"APPROVAL_PENDING\"");
+        assertThat(members.findByEmailIgnoreCase(email).orElseThrow().isAdmin()).isFalse();
+    }
+
+    @Test void deletedPreapprovalDoesNotGrantAdminAndOrdinaryAllowlistStaysNonAdmin() throws Exception {
+        Member admin = admin();
+        MockHttpSession adminSession = sessionFor(admin);
+        String csrf = csrf(adminSession);
+        String email = "member-" + UUID.randomUUID() + "@gmail.com";
+        String body = mvc.perform(post("/api/v1/admin/operator-preapprovals").session(adminSession)
+                .header("X-CSRF-TOKEN", csrf).contentType("application/json")
+                .content("{\"email\":\"" + email + "\",\"memberType\":\"ACTIVE\"}"))
+                .andReturn().getResponse().getContentAsString();
+        long id = mapper.readTree(body).get("id").asLong();
+        assertThat(mvc.perform(delete("/api/v1/admin/operator-preapprovals/" + id)
+                .session(adminSession).header("X-CSRF-TOKEN", csrf))
+                .andReturn().getResponse().getStatus()).isEqualTo(204);
+        addAllowlist(adminSession, csrf, email);
+        MockHttpSession memberSession = new MockHttpSession();
+        assertThat(login(memberSession, "ordinary-credential", "subject-" + UUID.randomUUID(),
+                email, "단원", true))
+                .contains("\"status\":\"APPROVED\"")
+                .contains("\"admin\":false");
+    }
+
     private long addAllowlist(MockHttpSession session, String csrf, String email) throws Exception {
         String body = mvc.perform(post("/api/v1/admin/allowlist").session(session)
                 .header("X-CSRF-TOKEN", csrf).contentType("application/json")
@@ -208,6 +295,15 @@ class OperatorAccountFlowTest {
                 .header("X-CSRF-TOKEN", csrf(session)).contentType("application/json")
                 .content("{\"credential\":\"" + credential + "\"}"))
                 .andReturn().getResponse().getContentAsString();
+    }
+
+    private int loginStatus(MockHttpSession session, String credential, String subject, String email,
+            String name, boolean authoritative) throws Exception {
+        when(google.verify(credential)).thenReturn(new GoogleIdentity(subject, email, name, authoritative, nonce(session)));
+        return mvc.perform(post("/api/v1/auth/google").session(session)
+                .header("X-CSRF-TOKEN", csrf(session)).contentType("application/json")
+                .content("{\"credential\":\"" + credential + "\"}"))
+                .andReturn().getResponse().getStatus();
     }
 
     private Member admin() {

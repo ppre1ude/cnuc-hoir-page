@@ -178,6 +178,17 @@ public class Member {
         updatedAt = clock.instant();
     }
 
+    public void approveAsAdmin(MemberType type, Clock clock) {
+        if (googleSubject == null || (status != AccountStatus.APPROVAL_PENDING && status != AccountStatus.APPROVED)) {
+            throw new IllegalStateException("운영진 권한을 부여할 수 없는 계정입니다.");
+        }
+        status = AccountStatus.APPROVED;
+        memberType = type;
+        admin = true;
+        authVersion++;
+        updatedAt = clock.instant();
+    }
+
     public void reject(Clock clock) {
         status = AccountStatus.REJECTED;
         authVersion++;

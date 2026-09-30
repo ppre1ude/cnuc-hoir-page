@@ -8,6 +8,7 @@ import { getMembers, inviteMember, reissueAccountSetup, revokeMember,
   type IssuedInvitation, type MemberItem, type MemberPage } from "./adminMembers";
 import styles from "./AdminPages.module.css";
 import { AllowlistManager } from "./AllowlistManager";
+import { OperatorPreapprovalManager } from "./OperatorPreapprovalManager";
 
 export function MemberAccountManager() {
   const router = useRouter();
@@ -17,11 +18,13 @@ export function MemberAccountManager() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [issued, setIssued] = useState<IssuedInvitation | null>(null);
+  const [currentMemberId, setCurrentMemberId] = useState<number | null>(null);
 
   useEffect(() => {
     let alive = true;
     getSession().then((session) => {
       if (!session.admin || session.status !== "APPROVED") throw new Error("ADMIN_REQUIRED");
+      if (alive) setCurrentMemberId(session.id);
       return getMembers(page);
     }).then((result) => { if (alive) setData(result); }).catch((caught) => {
       if (!alive) return;
@@ -120,13 +123,14 @@ export function MemberAccountManager() {
     </div>
     {error && <p className={styles.error} role="alert">{error}</p>}
     <AllowlistManager />
+    <OperatorPreapprovalManager />
     <section aria-labelledby="members-title" className={styles.memberSection}>
       <h2 id="members-title">계정 목록</h2>
       {!data && !error && <p role="status">계정 목록을 불러오는 중입니다.</p>}
       {!data && error && <button className={styles.secondary} type="button" onClick={() => { setError(""); setRefresh((value) => value + 1); }}>다시 시도</button>}
       {data?.items.length === 0 && <p>등록된 계정이 없습니다.</p>}
       <div className={styles.list}>{data?.items.map((item) => <MemberRow key={item.id} item={item} busy={busy}
-        onRenew={() => renew(item.id)} onRevoke={(reason) => revoke(item.id, reason)} />)}</div>
+        currentMemberId={currentMemberId} onRenew={() => renew(item.id)} onRevoke={(reason) => revoke(item.id, reason)} />)}</div>
       {data && data.total > data.size && <nav className={styles.pagination} aria-label="계정 목록 페이지">
         <button className={styles.secondary} type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>이전</button>
         <span>{page + 1} / {Math.ceil(data.total / data.size)}</span>
@@ -136,8 +140,9 @@ export function MemberAccountManager() {
   </section>;
 }
 
-function MemberRow({ item, busy, onRenew, onRevoke }: {
-  item: MemberItem; busy: boolean; onRenew: () => void; onRevoke: (reason: string) => void;
+function MemberRow({ item, busy, currentMemberId, onRenew, onRevoke }: {
+  item: MemberItem; busy: boolean; currentMemberId: number | null;
+  onRenew: () => void; onRevoke: (reason: string) => void;
 }) {
   const [reason, setReason] = useState("");
   const status = item.status === "INVITED" ? "초대 대기" : item.status === "APPROVED" ? "사용 중"
@@ -152,7 +157,8 @@ function MemberRow({ item, busy, onRenew, onRevoke }: {
         {item.status === "INVITED" ? "초대 링크 다시 발급" : item.status === "REVOKED" ? "다시 초대" : "계정 연결 링크 발급"}
       </button>
     </div>}
-    {(item.status === "APPROVED" || item.status === "INVITED") && !item.admin && <div className={styles.fieldGroup}>
+    {(item.status === "APPROVED" || item.status === "INVITED")
+      && currentMemberId !== null && item.id !== currentMemberId && <div className={styles.fieldGroup}>
       <label htmlFor={`revoke-${item.id}`}>접근 해제 이유</label>
       <input id={`revoke-${item.id}`} value={reason} maxLength={500} onChange={(event) => setReason(event.target.value)} />
       <div className={styles.actions}><button className={styles.danger} type="button" disabled={busy || !reason.trim()}
