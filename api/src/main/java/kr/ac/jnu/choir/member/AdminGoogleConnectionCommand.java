@@ -12,7 +12,7 @@ import java.util.Base64;
 import java.util.HexFormat;
 import java.util.Locale;
 
-/** DB 관리자가 기존 운영진의 구글 계정 연결 토큰을 발급하는 명령입니다. */
+/** DB 관리자가 구글 계정이 연결되지 않은 운영진의 일회용 연결 토큰을 재발급하는 명령입니다. */
 public final class AdminGoogleConnectionCommand {
     private AdminGoogleConnectionCommand() {}
 
@@ -51,12 +51,17 @@ public final class AdminGoogleConnectionCommand {
             connection.setAutoCommit(false);
             try {
                 long memberId;
+                String status;
                 try (var query = connection.prepareStatement("SELECT id, status, admin, google_subject FROM member WHERE lower(email) = ? FOR UPDATE")) {
                     query.setString(1, normalized);
                     try (var result = query.executeQuery()) {
-                        if (!result.next() || !result.getBoolean("admin") || !"APPROVED".equals(result.getString("status"))
+                        if (!result.next()) {
+                            throw new IllegalStateException("구글 계정 연결이 필요한 운영진 계정이 아닙니다.");
+                        }
+                        status = result.getString("status");
+                        if (!result.getBoolean("admin") || !("INVITED".equals(status) || "APPROVED".equals(status))
                                 || result.getString("google_subject") != null) {
-                            throw new IllegalStateException("구글 계정 연결이 필요한 승인된 운영진 계정이 아닙니다.");
+                            throw new IllegalStateException("구글 계정 연결이 필요한 운영진 계정이 아닙니다.");
                         }
                         memberId = result.getLong("id");
                     }
@@ -73,10 +78,14 @@ public final class AdminGoogleConnectionCommand {
                     insert.setTimestamp(4, Timestamp.from(now));
                     if (insert.executeUpdate() != 1) throw new IllegalStateException("연결 토큰을 저장하지 못했습니다.");
                 }
-                try (var audit = connection.prepareStatement("INSERT INTO admin_action_log (actor_member_id, target_member_id, action, previous_status, new_status, reason, acted_at) VALUES (?, ?, 'GOOGLE_LINK', 'APPROVED', 'APPROVED', '기존 운영진 구글 계정 연결', ?)")) {
+                try (var audit = connection.prepareStatement("INSERT INTO admin_action_log (actor_member_id, target_member_id, action, previous_status, new_status, reason, acted_at) VALUES (?, ?, ?, ?, ?, ?, ?)")) {
                     audit.setLong(1, memberId);
                     audit.setLong(2, memberId);
-                    audit.setTimestamp(3, Timestamp.from(now));
+                    audit.setString(3, "INVITED".equals(status) ? "REISSUE_SETUP" : "GOOGLE_LINK");
+                    audit.setString(4, status);
+                    audit.setString(5, status);
+                    audit.setString(6, "INVITED".equals(status) ? "최초 운영진 연결 링크 재발급" : "기존 운영진 구글 계정 연결");
+                    audit.setTimestamp(7, Timestamp.from(now));
                     if (audit.executeUpdate() != 1) throw new IllegalStateException("감사 기록을 저장하지 못했습니다.");
                 }
                 connection.commit();

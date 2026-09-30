@@ -9,10 +9,12 @@
 1. 운영진이 명단을 확인하고 첫 운영진의 이름·로그인 이메일·단원 구분을 확정합니다.
 2. Google Cloud에서 웹 애플리케이션용 OAuth 클라이언트 ID를 만들고 승인된 자바스크립트 출처에 실제 웹 HTTPS 출처를 등록합니다. 공개 클라이언트 ID는 Render Blueprint의 `GOOGLE_CLIENT_ID`와 Vercel 웹의 `NEXT_PUBLIC_GOOGLE_CLIENT_ID`에 같은 값으로 설정합니다. API·PostgreSQL 비밀값과 웹 HTTPS 주소를 준비하고 `.\deployment\check-launch-config.ps1 -PublicOrigin https://확정한-도메인`을 실행합니다. 배포 뒤 `-CheckLive`로 공개 화면과 `/api/v1/auth/csrf`를 확인합니다.
 3. Supabase Data API를 사용하지 않으므로 배포 전에 프로젝트의 Data API를 끄고, 공개 스키마 테이블에 대한 외부 접근이 차단됐는지 확인합니다. 운영 DB 변경 전에 일관된 백업을 남기고, 격리 환경에서 복구와 Flyway 마이그레이션, 회원·행사·출석·감사 기록 조회를 확인합니다. 이미 적용된 마이그레이션 파일은 수정하지 않습니다.
-4. 운영진 계정이 없다면 DB 접속 권한을 가진 배포 담당자가 API 프로젝트에서 `gradlew.bat bootstrapAdminInvite --args="<JDBC URL> <DB 사용자> <이메일> <이름> ACTIVE"`를 실행합니다. 이미 비밀번호 방식의 운영진 계정이 있다면 `gradlew.bat linkExistingAdminGoogle --args="<JDBC URL> <DB 사용자> <운영진 이메일>"`로 해당 계정의 구글 연결 토큰을 발급합니다. DB 비밀번호는 콘솔 또는 일시적인 `CHOIR_BOOTSTRAP_DB_PASSWORD`로 공급합니다. 출력된 1회용 토큰을 실제 HTTPS 주소의 `/activate#token=<토큰>`에 붙여 운영진에게 비공개로 전달합니다. 공유 로그나 작업 티켓에 토큰을 남기지 않습니다.
+4. 운영진 계정이 없다면 DB 접속 권한을 가진 배포 담당자가 API 프로젝트에서 `gradlew.bat bootstrapAdminInvite --args="<JDBC URL> <DB 사용자> <이메일> <이름> ACTIVE"`를 실행합니다. 초대된 최초 운영진이 링크를 분실했거나 기존 승인 운영진에게 구글 계정을 연결해야 한다면 `gradlew.bat linkExistingAdminGoogle --args="<JDBC URL> <DB 사용자> <운영진 이메일>"`로 새 연결 토큰을 발급합니다. 이 명령은 이전 미사용 링크를 무효화하며, 이미 구글 계정이 연결된 운영진에게는 사용할 수 없습니다. DB 비밀번호는 콘솔 또는 일시적인 `CHOIR_BOOTSTRAP_DB_PASSWORD`로 공급합니다. 출력된 1회용 토큰을 실제 HTTPS 주소의 `/activate#token=<토큰>`에 붙여 운영진에게 비공개로 전달합니다. 공유 로그나 작업 티켓에 토큰을 남기지 않습니다.
 5. 첫 운영진이 24시간 안에 링크에서 초대 이메일과 같은 구글 계정을 연결합니다. 이후 `/admin/members`에서 명단과 대조한 이메일을 자동 승인 명단에 추가하거나, 기존 계정에 개인별 연결 링크를 발급합니다.
 6. 처음 구글 로그인한 이메일이 자동 승인 명단에 있고 구글이 주소의 현재 소유를 보증하면 활동 단원 또는 OB로 바로 승인됩니다. 그 외에는 승인 대기 상태가 되고 운영진이 명단과 대조해 승인·반려합니다. 기존 계정은 이메일만 같다는 이유로 연결되지 않으며 1회용 링크가 필요합니다. 링크는 한 번만 표시되고 한 번만 사용할 수 있습니다. 만료 또는 분실 시 운영진이 새 링크를 발급하며 이전 링크는 무효가 됩니다.
 7. 실제 접속 경로에서 TLS, `Secure` 세션 쿠키, CSRF, 권한 경계, 프록시 전달 IP 위조 차단과 공용망 출석 시도 제한을 확인합니다. 소수 단원으로 공지·투표·행사·QR·코드 출석과 정정을 시범 수행합니다.
+
+Windows PowerShell에서 운영진 연결 링크를 재발급할 때는 `deployment/reissue-admin-google-link.ps1`을 사용합니다. 이 스크립트는 DB 비밀번호를 보안 입력받고 새 링크를 클립보드에 복사하며, 토큰을 터미널에 출력하지 않습니다.
 
 각 단계의 담당자와 날짜, 결과를 운영 기록에 남깁니다. 구글 클라이언트 ID가 실제 배포 환경에 설정되기 전에는 구글 로그인 운영 검증이 완료되지 않습니다.
 
