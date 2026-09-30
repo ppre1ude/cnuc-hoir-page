@@ -4,8 +4,8 @@
 
 ## 설정 순서
 
-1. Supabase에서 새 프로젝트를 만듭니다. 프로젝트의 **Session pooler** 연결 정보를 확인합니다. Render의 IPv4 환경에서는 직접 연결 주소 대신 Session pooler를 사용합니다. DB 비밀번호는 비밀 저장소에서만 관리합니다.
-2. Render에서 GitHub 저장소를 연결하고 저장소 루트의 `render.yaml`로 **New Blueprint**를 만듭니다. 구성에는 `api/` Docker 빌드와 Free 웹 서비스가 정의되어 있습니다. 생성 화면에서 `DB_URL`, `DB_USER`, `DB_PASSWORD`를 입력합니다. `DB_URL`은 Session pooler 주소와 포트 5432를 사용한 `jdbc:postgresql://호스트:5432/postgres?sslmode=require` 형식입니다. 사용자 이름은 Supabase 연결 정보에 표시된 값을 그대로 사용합니다. Render가 제공하는 `PORT`에서 API가 수신합니다.
+1. Supabase에서 새 프로젝트를 만들고 지역은 **Singapore**로 선택합니다. 프로젝트의 **Session pooler** 연결 정보를 확인합니다. Render의 IPv4 환경에서는 직접 연결 주소 대신 Session pooler를 사용합니다. DB 비밀번호는 비밀 저장소에서만 관리합니다.
+2. Render에서 GitHub 저장소를 연결하고 저장소 루트의 `render.yaml`로 **New Blueprint**를 만듭니다. 구성에는 `api/` Docker 빌드와 Singapore 지역의 Free 웹 서비스가 정의되어 있습니다. 생성 화면에서 `DB_URL`, `DB_USER`, `DB_PASSWORD`를 입력합니다. `DB_URL`은 Session pooler 주소와 포트 5432를 사용한 `jdbc:postgresql://호스트:5432/postgres?sslmode=require` 형식입니다. 사용자 이름은 Supabase 연결 정보에 표시된 값을 그대로 사용합니다. Render가 제공하는 `PORT`에서 API가 수신합니다.
 3. Render 배포가 끝나면 `https://발급된-Render-주소/api/v1/auth/csrf`가 정상 응답하는지 확인합니다. 이때 Flyway가 새 PostgreSQL 데이터베이스에 스키마를 만듭니다.
 4. Vercel의 `web/` 프로젝트에 `CHOIR_API_ORIGIN`을 경로 없는 Render HTTPS 출처로 설정하고 다시 배포합니다. 브라우저 요청은 웹의 `/api/v1/*`을 거쳐 API로 전달됩니다. DB 연결값을 Vercel에 넣지 않습니다.
 5. [운영 절차](../docs/operations.md)에 따라 첫 운영진을 초대하고 로그인·공지 투표·행사·출석을 실제 HTTPS 주소에서 검증합니다. 실제 단원 명단을 넣기 전에 백업과 복구 방법을 확인합니다.

@@ -3,6 +3,7 @@ services:
     name: cnuc-hoir-api
     runtime: docker
     plan: free
+    region: singapore
     dockerfilePath: ./api/Dockerfile
     dockerContext: ./api
     buildFilter:
