@@ -2,7 +2,6 @@
 .dashboard a { color: inherit; text-decoration: none; }
 .hero { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; margin-bottom: 36px; padding-bottom: 25px; border-bottom: 2px solid var(--choir-ink); }
 .hero h1 { margin: 0; font-size: clamp(30px, 3vw, 42px); font-weight: 750; letter-spacing: -.055em; }
-.hero span { color: var(--choir-muted); font-size: 14px; }
 .grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(330px, 1fr); align-items: start; gap: 0 34px; }
 .card { min-width: 0; background: #fff; }
 .calendar { grid-column: 1; grid-row: 1; padding: 0; }
@@ -13,7 +12,6 @@
 .card h2 { margin: 0; font-size: 21px; font-weight: 700; letter-spacing: -.045em; }
 .calendarHeader, .sectionHeader { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .sectionHeader { margin-bottom: 18px; }
-.sectionHeader > span { color: var(--choir-muted); font-size: 13px; }
 .sectionHeader a { color: var(--choir-deep-green); font-size: 13px; font-weight: 650; white-space: nowrap; }
 .sectionHeader a:hover, .eventDetail a:hover { text-decoration: underline; text-underline-offset: 4px; }
 .monthControls { display: flex; gap: 6px; }
@@ -82,6 +80,5 @@
   .eventPageCard { padding: 20px; }
 }
 @media (max-width: 420px) {
-  .hero span { font-size: 12px; }
   .day { min-height: 50px; }
 }

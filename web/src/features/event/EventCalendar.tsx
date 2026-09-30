@@ -128,7 +128,6 @@ export function EventCalendar() {
   return <main className={styles.dashboard}>
     <header className={styles.hero}>
       <h1>일정</h1>
-      <span>{month.replace("-", ". ")} · 행사 {monthEvents.length}건</span>
     </header>
     {error && <div role="alert" className={styles.error}>{error} <button type="button" onClick={() => setRetry(retry + 1)}>다시 시도</button></div>}
     <div className={styles.grid}>
@@ -170,7 +169,7 @@ export function EventCalendar() {
       </section>
       <div className={styles.rightColumn}>
       <section aria-label="선택한 행사" className={`${styles.card} ${styles.detail}`}>
-        <div className={styles.sectionHeader}><h2>이달의 행사</h2><span>{monthEvents.length}건</span></div>
+        <div className={styles.sectionHeader}><h2>이달의 행사</h2></div>
         {sortedEvents.length === 0 && <p className={styles.empty}>등록된 행사가 없습니다.</p>}
         {sortedEvents.length > 0 && <div className={styles.eventList}>
           {sortedEvents.map((event) => {
