@@ -24,12 +24,12 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.mysql.MySQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @SpringBootTest
 @Testcontainers
 class MemberApprovalTest {
-    @Container static final MySQLContainer database = new MySQLContainer("mysql:8.4");
+    @Container static final PostgreSQLContainer database = new PostgreSQLContainer("postgres:17-alpine");
     @DynamicPropertySource static void properties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", database::getJdbcUrl);
         registry.add("spring.datasource.username", database::getUsername);
@@ -141,8 +141,8 @@ class MemberApprovalTest {
                 active.getId())).isEqualTo("APPROVED");
         assertThat(jdbc.queryForObject("SELECT new_status FROM admin_action_log WHERE target_member_id = ?", String.class,
                 active.getId())).isEqualTo("REVOKED");
-        assertThat(jdbc.queryForObject("SELECT acted_at IS NOT NULL FROM admin_action_log WHERE target_member_id = ?", Integer.class,
-                active.getId())).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT acted_at IS NOT NULL FROM admin_action_log WHERE target_member_id = ?", Boolean.class,
+                active.getId())).isTrue();
         assertThat(mvc.perform(get("/api/v1/auth/me").session(oldSession)).andReturn().getResponse().getStatus()).isEqualTo(401);
     }
 

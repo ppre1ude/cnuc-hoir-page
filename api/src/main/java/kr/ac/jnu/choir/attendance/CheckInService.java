@@ -45,9 +45,9 @@ public class CheckInService {
         String qrToken = newQrToken();
         String code = newCode();
         Instant expiresAt = now.plus(Duration.ofMinutes(10));
-        jdbc.update("INSERT INTO check_in_session (event_id,opened_at,expires_at,qr_token_hash,code_hash) "
-                + "VALUES (?,?,?,?,?)", eventId, time(now), time(expiresAt), hash(qrToken), hash(code));
-        Long id = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+        Long id = jdbc.queryForObject("INSERT INTO check_in_session (event_id,opened_at,expires_at,qr_token_hash,code_hash) "
+                + "VALUES (?,?,?,?,?) RETURNING id", Long.class,
+                eventId, time(now), time(expiresAt), hash(qrToken), hash(code));
         jdbc.update("INSERT INTO attendance_eligibility_snapshot (check_in_session_id,member_id,snapshotted_at) "
                 + "SELECT ?,m.id,? FROM member m WHERE m.status = 'APPROVED' "
                 + "AND (m.member_type = 'ACTIVE' OR (? AND m.member_type = 'OB'))",

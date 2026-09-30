@@ -53,14 +53,12 @@ public final class AdminBootstrapInvitationCommand {
         Instant now = Instant.now();
         try (var connection = DriverManager.getConnection(url, user, password)) {
             connection.setAutoCommit(false);
-            boolean locked = false;
             try {
-                try (var lock = connection.prepareStatement("SELECT GET_LOCK('choir_first_admin', 10)");
+                try (var lock = connection.prepareStatement("SELECT pg_try_advisory_xact_lock(1280199248, 1)");
                         var result = lock.executeQuery()) {
                     result.next();
-                    locked = result.getInt(1) == 1;
+                    if (!result.getBoolean(1)) throw new IllegalStateException("운영진 지정 잠금을 얻지 못했습니다.");
                 }
-                if (!locked) throw new IllegalStateException("운영진 지정 잠금을 얻지 못했습니다.");
                 try (var count = connection.prepareStatement("SELECT COUNT(*) FROM member WHERE admin = TRUE");
                         var result = count.executeQuery()) {
                     result.next();
@@ -108,12 +106,6 @@ public final class AdminBootstrapInvitationCommand {
             } catch (Exception failure) {
                 connection.rollback();
                 throw failure;
-            } finally {
-                if (locked) {
-                    try (var unlock = connection.prepareStatement("SELECT RELEASE_LOCK('choir_first_admin')")) {
-                        unlock.executeQuery().close();
-                    }
-                }
             }
         }
     }
