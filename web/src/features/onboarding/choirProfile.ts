@@ -1,5 +1,6 @@
 export type ChoirMilestone = {
   id: string;
+  year: number;
   date: string;
   title: string;
   venue?: string;
@@ -10,19 +11,22 @@ export type ChoirMilestone = {
 export const choirMilestones: ChoirMilestone[] = [
   {
     id: "central-club-2026",
-    date: "2026년 2학기",
+    year: 2026,
+    date: "2학기",
     title: "전남대학교 중앙동아리 승격",
     featured: true,
   },
   {
     id: "concert-2025",
-    date: "2025. 09. 12",
+    year: 2025,
+    date: "09. 12",
     title: "정기연주회 개최",
     venue: "전남대학교 예술대학 3호관 예향홀",
   },
   {
     id: "founding-2024",
-    date: "2024. 12",
+    year: 2024,
+    date: "12월",
     title: "창단식",
   },
 ];
