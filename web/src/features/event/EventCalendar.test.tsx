@@ -4,6 +4,8 @@ import { EventCalendar } from "./EventCalendar";
 
 const getSession = vi.fn();
 const getEvents = vi.fn();
+const getMyEventRsvps = vi.fn();
+const setEventRsvp = vi.fn();
 const getNotices = vi.fn();
 const getEventAttendance = vi.fn();
 const getMyAttendance = vi.fn();
@@ -12,6 +14,8 @@ vi.mock("../auth/session", () => ({ getSession: () => getSession() }));
 vi.mock("./events", async (importOriginal) => ({
   ...await importOriginal<typeof import("./events")>(),
   getEvents: (...args: unknown[]) => getEvents(...args),
+  getMyEventRsvps: (...args: unknown[]) => getMyEventRsvps(...args),
+  setEventRsvp: (...args: unknown[]) => setEventRsvp(...args),
 }));
 vi.mock("../notice/notices", () => ({ getNotices: (...args: unknown[]) => getNotices(...args) }));
 vi.mock("../attendance/attendance", async (importOriginal) => ({
@@ -26,7 +30,7 @@ describe("일정 중심 회원 화면", () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date("2026-09-27T03:00:00Z"));
     getSession.mockReset();
-    getEvents.mockReset();
+    getEvents.mockReset(); getMyEventRsvps.mockReset(); setEventRsvp.mockReset();
     getNotices.mockReset();
     getEventAttendance.mockReset();
     getMyAttendance.mockReset();
@@ -38,6 +42,8 @@ describe("일정 중심 회원 화면", () => {
     ]);
     getNotices.mockResolvedValue({ items: [{ id: 9, title: "공연 안내", publishedAt: "2026-09-20T00:00:00Z" }], page: 0, size: 20, total: 1 });
     getMyAttendance.mockResolvedValue([]);
+    getMyEventRsvps.mockResolvedValue([]);
+    setEventRsvp.mockImplementation(async (id: number, choice: string) => ({ eventId: id, choice }));
     getEventAttendance.mockImplementation(async (id: number) => ({
       eventId: id, eventTitle: "행사", status: "NOT_OPEN", checkInOpen: id === 2,
     }));
@@ -76,6 +82,16 @@ describe("일정 중심 회원 화면", () => {
     fireEvent.click(screen.getByRole("button", { name: /30일/ }));
     expect(await screen.findByRole("heading", { name: "가을 공연" })).toBeInTheDocument();
     expect(await screen.findByRole("link", { name: "현장 출석하기" })).toHaveAttribute("href", "/events/2/check-in");
+  });
+
+  it("월간 행사 목록에서 상세를 열지 않고 참석 의사를 바꾼다", async () => {
+    getSession.mockResolvedValue({ status: "APPROVED", memberType: "ACTIVE", name: "단원" });
+    render(<EventCalendar />);
+    fireEvent.click(await screen.findByRole("button", { name: "가을 공연 참석" }));
+    await waitFor(() => expect(setEventRsvp).toHaveBeenCalledWith(2, "ATTENDING"));
+    expect(await screen.findByRole("button", { name: "가을 공연 참석" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "가을 공연 불참" }));
+    await waitFor(() => expect(setEventRsvp).toHaveBeenCalledWith(2, "ABSENT"));
   });
 
   it("승인 대기 계정은 회원 자료를 요청하지 않고 신청 상태로 이동한다", async () => {

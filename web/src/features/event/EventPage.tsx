@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ApiRequestError } from "../../lib/api";
 import { getSession, type MemberSession } from "../auth/session";
-import { getEvent, type ChoirEvent } from "./events";
+import { getEvent, getMyEventRsvp, type ChoirEvent, type EventRsvpChoice } from "./events";
 import { EventDetail } from "./EventDetail";
+import { EventRsvp } from "./EventRsvp";
 import { attendanceLabel, getEventAttendance, type AttendanceState } from "../attendance/attendance";
 import styles from "./EventCalendar.module.css";
 
@@ -18,6 +19,10 @@ export function EventPage() {
   const [error, setError] = useState("");
   const [attendance, setAttendance] = useState<AttendanceState | null>(null);
   const [attendanceError, setAttendanceError] = useState("");
+  const [rsvpChoice, setRsvpChoice] = useState<EventRsvpChoice | null>(null);
+  const [rsvpLoaded, setRsvpLoaded] = useState(false);
+  const [rsvpError, setRsvpError] = useState("");
+  const [rsvpRetry, setRsvpRetry] = useState(0);
 
   useEffect(() => {
     const eventId = Number(id);
@@ -46,6 +51,15 @@ export function EventPage() {
     return () => { alive = false; if (timer !== undefined) window.clearInterval(timer); };
   }, [id, router]);
 
+  useEffect(() => {
+    if (!event || session?.status !== "APPROVED") return;
+    let alive = true;
+    getMyEventRsvp(event.id).then((response) => {
+      if (alive) { setRsvpChoice(response.choice); setRsvpLoaded(true); setRsvpError(""); }
+    }).catch(() => { if (alive) setRsvpError("참석 응답을 불러오지 못했습니다."); });
+    return () => { alive = false; };
+  }, [event, session?.status, rsvpRetry]);
+
   return <main className={styles.eventPage}>
     <Link className={styles.backLink} href="/dashboard">← 일정</Link>
     <h1>행사</h1>
@@ -53,6 +67,10 @@ export function EventPage() {
     {!Number.isSafeInteger(Number(id)) || Number(id) < 1 ? <p>행사 주소를 확인해 주세요.</p> :
       event && session ? <div className={styles.eventPageCard}><EventDetail event={event} memberType={session.memberType}
         checkInOpen={attendance?.checkInOpen ?? false} />
+        {rsvpLoaded && <EventRsvp key={`${event.id}-${event.startAt}`} event={event} memberType={session.memberType} choice={rsvpChoice} onSaved={setRsvpChoice} />}
+        {rsvpError && <p role="alert">{rsvpError} <button type="button" onClick={() => {
+          setRsvpError(""); setRsvpRetry((value) => value + 1);
+        }}>다시 시도</button></p>}
         <p className={styles.eventAttendance}>내 출석: <strong>{attendance ? attendanceLabel[attendance.status] : "확인 중"}</strong></p>
         {attendanceError && <p role="alert">{attendanceError}</p>}
         {session.admin && <p><Link href={`/admin/events/${event.id}/attendance`}>운영진 출석 관리</Link></p>}</div>

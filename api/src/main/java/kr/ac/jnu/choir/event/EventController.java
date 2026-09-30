@@ -25,10 +25,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class EventController {
     private final SessionMemberService sessions;
     private final EventService events;
+    private final EventRsvpService rsvps;
 
-    public EventController(SessionMemberService sessions, EventService events) {
+    public EventController(SessionMemberService sessions, EventService events, EventRsvpService rsvps) {
         this.sessions = sessions;
         this.events = events;
+        this.rsvps = rsvps;
     }
 
     @GetMapping("/events")
@@ -56,6 +58,29 @@ public class EventController {
         return ResponseEntity.status(HttpStatus.CREATED).body(events.createBatch(body.events()).stream().map(this::item).toList());
     }
 
+    @GetMapping("/events/rsvps/me")
+    public List<EventRsvpService.MyRsvp> myRsvps(HttpServletRequest request, @RequestParam Instant from,
+            @RequestParam Instant to) {
+        return rsvps.mine(sessions.requireApproved(request), from, to);
+    }
+
+    @GetMapping("/events/{id}/rsvp")
+    public EventRsvpService.MyRsvp myRsvp(HttpServletRequest request, @PathVariable long id) {
+        return rsvps.mine(sessions.requireApproved(request), id);
+    }
+
+    @PutMapping("/events/{id}/rsvp")
+    public EventRsvpService.MyRsvp respond(HttpServletRequest request, @PathVariable long id,
+            @Valid @RequestBody RsvpInput body) {
+        return rsvps.respond(sessions.requireApproved(request), id, body.choice());
+    }
+
+    @GetMapping("/admin/events/{id}/rsvps")
+    public EventRsvpService.AdminRsvps adminRsvps(HttpServletRequest request, @PathVariable long id) {
+        sessions.requireAdmin(request);
+        return rsvps.adminView(id);
+    }
+
     @PutMapping("/admin/events/{id}")
     public EventItem update(HttpServletRequest request, @PathVariable long id, @Valid @RequestBody EventInput body) {
         sessions.requireAdmin(request);
@@ -72,6 +97,7 @@ public class EventController {
             @NotNull @Size(max = 10000) String description, @NotNull Instant startAt, @NotNull Instant endAt,
             @NotNull Boolean obEligible, @NotNull Boolean publicVisible) {}
     public record EventBatchInput(@NotEmpty @Size(max = 31) List<@NotNull @Valid EventInput> events) {}
+    public record RsvpInput(@NotNull EventRsvpService.Choice choice) {}
     public record EventItem(Long id, String title, String description, Instant startAt, Instant endAt,
             boolean obEligible, boolean publicVisible, Instant createdAt, Instant updatedAt) {}
 }

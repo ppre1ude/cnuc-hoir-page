@@ -13,6 +13,16 @@ export type ChoirEvent = {
 };
 
 export type EventInput = Pick<ChoirEvent, "title" | "description" | "startAt" | "endAt" | "obEligible" | "publicVisible">;
+export type EventRsvpChoice = "ATTENDING" | "ABSENT";
+export type MyEventRsvp = { eventId: number; choice: EventRsvpChoice | null };
+export type AdminEventRsvps = {
+  eventId: number;
+  attending: number;
+  absent: number;
+  unanswered: number;
+  members: { memberId: number; name: string; email: string; choice: EventRsvpChoice | null }[];
+};
+
 export function monthBounds(month: string) {
   const [year, number] = month.split("-").map(Number);
   const from = new Date(`${month}-01T00:00:00+09:00`).toISOString();
@@ -54,6 +64,24 @@ export function createEventsBatch(events: EventInput[]): Promise<ChoirEvent[]> {
   return apiRequest<ChoirEvent[]>("/admin/events/batch", {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ events }),
   });
+}
+
+export function getMyEventRsvps(from: string, to: string): Promise<MyEventRsvp[]> {
+  return apiRequest<MyEventRsvp[]>(`/events/rsvps/me?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+}
+
+export function getMyEventRsvp(id: number): Promise<MyEventRsvp> {
+  return apiRequest<MyEventRsvp>(`/events/${id}/rsvp`);
+}
+
+export function setEventRsvp(id: number, choice: EventRsvpChoice): Promise<MyEventRsvp> {
+  return apiRequest<MyEventRsvp>(`/events/${id}/rsvp`, {
+    method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ choice }),
+  });
+}
+
+export function getAdminEventRsvps(id: number): Promise<AdminEventRsvps> {
+  return apiRequest<AdminEventRsvps>(`/admin/events/${id}/rsvps`);
 }
 
 export function updateEvent(id: number, input: EventInput): Promise<ChoirEvent> {

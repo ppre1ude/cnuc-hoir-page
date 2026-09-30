@@ -32,12 +32,27 @@
 .dayList p { margin: 0; color: var(--choir-muted); font-size: 13px; }
 .eventButton { padding: 7px 12px; border: 1px solid var(--choir-line); background: #fff; color: var(--choir-deep-green); font: inherit; font-size: 13px; cursor: pointer; }
 .eventButton[aria-pressed="true"] { border-color: var(--choir-green); background: #edf7ef; }
-.eventList { max-height: 260px; overflow-y: auto; }
-.eventRow { display: flex; align-items: center; width: 100%; gap: 12px; padding: 15px 6px; border: 0; border-top: 1px solid var(--choir-line); background: transparent; color: var(--choir-ink); font: inherit; text-align: left; cursor: pointer; }
-.eventRow:hover, .eventRow[aria-pressed="true"] { background: #f2f8f3; }
+.eventList { max-height: 520px; overflow-y: auto; }
+.eventRow { display: flex; align-items: center; width: 100%; gap: 8px; padding: 12px 6px; border-top: 1px solid var(--choir-line); background: transparent; color: var(--choir-ink); }
+.eventRow:hover { background: #f2f8f3; }
+.eventSelect { display: flex; align-items: center; flex: 1; min-width: 0; gap: 12px; padding: 3px 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.eventSelect:focus-visible { outline: 2px solid var(--choir-green); }
 .eventDate { flex: none; width: 48px; color: var(--choir-deep-green); font-size: 13px; font-weight: 700; }
 .eventTitle { flex: 1; min-width: 0; overflow: hidden; font-size: 14px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.eventRow > span:last-child { color: #849589; }
+.quickRsvp { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; flex: none; width: 88px; min-width: 0; gap: 4px; }
+.quickRsvp button { min-width: 40px; padding: 6px 3px; border: 1px solid var(--choir-line); background: white; color: var(--choir-deep-green); font: inherit; font-size: 12px; cursor: pointer; }
+.quickRsvp button[aria-pressed="true"] { border-color: var(--choir-deep-green); background: var(--choir-deep-green); color: white; }
+.quickRsvp button:disabled { opacity: .55; cursor: default; }
+.quickRsvp p[role="alert"] { flex-basis: 100%; margin: 4px 0 0; color: #8b4033; font-size: 12px; overflow-wrap: anywhere; }
+.quickStatus { color: var(--choir-muted); font-size: 12px; white-space: nowrap; }
+.rsvp { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--choir-line); font-size: 14px; }
+.rsvp > strong { color: var(--choir-ink); }
+.rsvpStatus { color: var(--choir-deep-green); font-weight: 700; }
+.rsvpButtons { display: flex; width: 100%; gap: 8px; }
+.rsvpButtons button { flex: 1; padding: 10px; border: 1px solid var(--choir-green); background: white; color: var(--choir-deep-green); font: inherit; font-weight: 650; cursor: pointer; }
+.rsvpButtons button[aria-pressed="true"] { background: var(--choir-deep-green); color: white; }
+.rsvpButtons button:disabled { opacity: .55; cursor: default; }
+.rsvp p[role="alert"] { width: 100%; margin: 0; color: #8b4033; }
 .selectedEvent { margin-top: 14px; padding: 20px 0 0; border-top: 1px solid var(--choir-line); }
 .eventDetail h2 { font-size: 21px; }
 .eventTime { margin: 11px 0 0; color: var(--choir-muted); font-size: 13px; line-height: 1.6; }

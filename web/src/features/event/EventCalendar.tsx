@@ -6,8 +6,9 @@ import { useRouter } from "next/navigation";
 import { ApiRequestError } from "../../lib/api";
 import { getSession, type MemberSession } from "../auth/session";
 import { getNotices, type Notice } from "../notice/notices";
-import { type ChoirEvent, getEvents, monthBounds, seoulDateKey } from "./events";
+import { type ChoirEvent, type EventRsvpChoice, getEvents, getMyEventRsvps, monthBounds, seoulDateKey } from "./events";
 import { EventDetail } from "./EventDetail";
+import { EventRsvp } from "./EventRsvp";
 import { attendanceLabel, getEventAttendance, getMyAttendance, type AttendanceState } from "../attendance/attendance";
 import styles from "./EventCalendar.module.css";
 
@@ -38,6 +39,10 @@ export function EventCalendar() {
   const [attendance, setAttendance] = useState<AttendanceState[]>([]);
   const [selectedAttendance, setSelectedAttendance] = useState<AttendanceState | null>(null);
   const [attendanceError, setAttendanceError] = useState("");
+  const [rsvpByEvent, setRsvpByEvent] = useState<Record<number, EventRsvpChoice>>({});
+  const [rsvpLoadedMonth, setRsvpLoadedMonth] = useState("");
+  const [rsvpError, setRsvpError] = useState("");
+  const [rsvpRetry, setRsvpRetry] = useState(0);
   const [noticesLoaded, setNoticesLoaded] = useState(false);
   const [noticeError, setNoticeError] = useState("");
   const [noticeRetry, setNoticeRetry] = useState(0);
@@ -64,6 +69,19 @@ export function EventCalendar() {
     });
     return () => { alive = false; };
   }, [month, retry, router]);
+
+  useEffect(() => {
+    if (session?.status !== "APPROVED") return;
+    let alive = true;
+    const { from, to } = monthBounds(month);
+    getMyEventRsvps(from, to).then((items) => {
+      if (!alive) return;
+      setRsvpByEvent(Object.fromEntries(items.filter((item) => item.choice !== null)
+        .map((item) => [item.eventId, item.choice as EventRsvpChoice])));
+      setRsvpLoadedMonth(month); setRsvpError("");
+    }).catch(() => { if (alive) { setRsvpLoadedMonth(""); setRsvpError("참석 응답을 불러오지 못했습니다."); } });
+    return () => { alive = false; };
+  }, [month, session?.status, rsvpRetry]);
 
   useEffect(() => {
     if (session?.status !== "APPROVED") return;
@@ -98,6 +116,7 @@ export function EventCalendar() {
     setSelectedDate(`${next}-01`);
     setSelectedEventId(null);
     setLoadedMonth("");
+    setRsvpLoadedMonth("");
     setError("");
   }
 
@@ -170,21 +189,30 @@ export function EventCalendar() {
       <div className={styles.rightColumn}>
       <section aria-label="선택한 행사" className={`${styles.card} ${styles.detail}`}>
         <div className={styles.sectionHeader}><h2>이달의 행사</h2></div>
+        {rsvpError && <p role="alert">{rsvpError} <button type="button" onClick={() => {
+          setRsvpError(""); setRsvpRetry((value) => value + 1);
+        }}>다시 시도</button></p>}
         {sortedEvents.length === 0 && <p className={styles.empty}>등록된 행사가 없습니다.</p>}
         {sortedEvents.length > 0 && <div className={styles.eventList}>
           {sortedEvents.map((event) => {
             const date = seoulDateKey(event.startAt);
-            return <button key={event.id} type="button" className={styles.eventRow}
-              aria-pressed={selected?.id === event.id}
-              onClick={() => { setSelectedDate(date); setSelectedEventId(event.id); }}>
-              <span className={styles.eventDate}>{date.slice(5).replace("-", ".")}</span>
-              <span className={styles.eventTitle}>{event.title}</span>
-              <span aria-hidden="true">↗</span>
-            </button>;
+            return <div key={event.id} className={styles.eventRow}>
+              <button type="button" className={styles.eventSelect} aria-pressed={selected?.id === event.id}
+                onClick={() => { setSelectedDate(date); setSelectedEventId(event.id); }}>
+                <span className={styles.eventDate}>{date.slice(5).replace("-", ".")}</span>
+                <span className={styles.eventTitle}>{event.title}</span>
+              </button>
+              {rsvpLoadedMonth === month && <EventRsvp key={`${event.id}-${event.startAt}`} compact event={event}
+                memberType={session?.memberType ?? null} choice={rsvpByEvent[event.id] ?? null}
+                onSaved={(choice) => setRsvpByEvent((current) => ({ ...current, [event.id]: choice }))} />}
+            </div>;
           })}
         </div>}
         {selected && <div className={styles.selectedEvent}><EventDetail event={selected} memberType={session?.memberType ?? null}
-          checkInOpen={selectedAttendance?.eventId === selected.id && selectedAttendance.checkInOpen} link /></div>}
+          checkInOpen={selectedAttendance?.eventId === selected.id && selectedAttendance.checkInOpen} link />
+          {rsvpLoadedMonth === month && <EventRsvp key={`${selected.id}-${selected.startAt}`} event={selected} memberType={session?.memberType ?? null}
+            choice={rsvpByEvent[selected.id] ?? null} onSaved={(choice) => setRsvpByEvent((current) => ({ ...current, [selected.id]: choice }))} />}
+        </div>}
       </section>
       <section aria-label="최근 공지" className={`${styles.card} ${styles.notices}`}>
         <div className={styles.sectionHeader}><h2>공지</h2><Link href="/notices">전체 보기 <span aria-hidden="true">→</span></Link></div>

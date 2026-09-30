@@ -33,4 +33,13 @@
 .actions button { border: 1px solid var(--choir-deep-green); background: var(--choir-deep-green); color: white; padding: 10px 18px; font: inherit; cursor: pointer; }
 .actions button + button { background: white; color: var(--choir-deep-green); }
 .actions button:disabled { opacity: .55; cursor: default; }
+.rsvpSummary { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--choir-line); }
+.rsvpSummary h3 { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 0 12px; font-size: 18px; }
+.rsvpSummary button { border: 1px solid var(--choir-line); background: white; color: var(--choir-deep-green); padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+.rsvpCounts { color: var(--choir-deep-green); font-weight: 700; }
+.rsvpMembers { max-height: 300px; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
+.rsvpMembers li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--choir-line); }
+.rsvpMembers strong { color: var(--choir-deep-green); }
+.rsvpMembers span { min-width: 0; overflow-wrap: anywhere; font-size: 14px; }
+.rsvpMembers strong { flex-shrink: 0; }
 @media (max-width: 760px) { .page { padding-top: 28px; } .grid { display: flex; flex-direction: column; } .card { width: 100%; padding: 20px; } .batchFields { display: block; } }

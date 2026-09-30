@@ -8,6 +8,7 @@ import { getSession } from "../auth/session";
 import { createEvent, getEvents, monthBounds, seoulDateKey, seoulDateTime, type ChoirEvent, updateEvent } from "./events";
 import styles from "./EventEditor.module.css";
 import { EventBatchCreator } from "./EventBatchCreator";
+import { AdminEventRsvps } from "./AdminEventRsvps";
 
 function localInput(value: string) {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -145,6 +146,7 @@ export function EventEditor() {
           <div className={styles.actions}><button type="submit" disabled={busy || !title.trim()}>{busy ? "저장 중..." : "저장"}</button>
             <button type="button" onClick={clear}>닫기</button></div>
         </form>
+        <AdminEventRsvps key={selected.id} eventId={selected.id} />
       </section>}
     </div>}
   </div>;

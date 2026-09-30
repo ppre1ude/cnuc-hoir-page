@@ -43,6 +43,7 @@ class EventVisibilityTest {
 
     @BeforeEach void setup() {
         mvc = MockMvcBuilders.webAppContextSetup(context).addFilters(security).build();
+        jdbc.update("DELETE FROM event_rsvp");
         jdbc.update("DELETE FROM event");
     }
 
@@ -157,4 +158,39 @@ class EventVisibilityTest {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM event", Long.class)).isEqualTo(2);
     }
 
+    @Test void rsvpCanChangeBeforeStartButCannotChangeAfterStartOrByIneligibleMember() throws Exception {
+        Member admin = member(true, "ACTIVE");
+        Member active = member(false, "ACTIVE");
+        Member ob = member(false, "OB");
+        long future = create(admin, input("연습", "2099-10-04T10:00:00Z", "2099-10-04T12:00:00Z", false, false));
+        long past = create(admin, input("지난 연습", "2020-10-04T10:00:00Z", "2020-10-04T12:00:00Z", true, false));
+        MockHttpSession responder = session(active);
+        String attend = "{\"choice\":\"ATTENDING\"}";
+        String absent = "{\"choice\":\"ABSENT\"}";
+        assertThat(mvc.perform(put("/api/v1/events/" + future + "/rsvp").session(responder)
+                .header("X-CSRF-TOKEN", csrf(responder)).contentType("application/json").content(attend))
+                .andReturn().getResponse().getStatus()).isEqualTo(200);
+        assertThat(mvc.perform(put("/api/v1/events/" + future + "/rsvp").session(responder)
+                .header("X-CSRF-TOKEN", csrf(responder)).contentType("application/json").content(absent))
+                .andReturn().getResponse().getStatus()).isEqualTo(200);
+        String mine = mvc.perform(get("/api/v1/events/" + future + "/rsvp").session(responder))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(mine).contains("\"choice\":\"ABSENT\"");
+        String monthly = mvc.perform(get("/api/v1/events/rsvps/me?from=2099-10-01T00:00:00Z&to=2099-11-01T00:00:00Z")
+                .session(responder)).andReturn().getResponse().getContentAsString();
+        assertThat(monthly).contains("\"eventId\":" + future, "\"choice\":\"ABSENT\"");
+        MockHttpSession obSession = session(ob);
+        assertThat(mvc.perform(put("/api/v1/events/" + future + "/rsvp").session(obSession)
+                .header("X-CSRF-TOKEN", csrf(obSession)).contentType("application/json").content(attend))
+                .andReturn().getResponse().getStatus()).isEqualTo(403);
+        assertThat(mvc.perform(put("/api/v1/events/" + past + "/rsvp").session(responder)
+                .header("X-CSRF-TOKEN", csrf(responder)).contentType("application/json").content(attend))
+                .andReturn().getResponse().getStatus()).isEqualTo(409);
+        String roster = mvc.perform(get("/api/v1/admin/events/" + future + "/rsvps").session(session(admin)))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(roster).contains("\"absent\":1", "\"name\":\"단원\"", active.getEmail());
+        assertThat(mvc.perform(get("/api/v1/admin/events/" + future + "/rsvps").session(responder))
+                .andReturn().getResponse().getStatus()).isEqualTo(403);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM attendance", Long.class)).isZero();
+    }
 }
