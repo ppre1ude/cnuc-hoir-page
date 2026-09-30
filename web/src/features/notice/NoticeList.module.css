@@ -1,7 +1,6 @@
 .page { width: min(100% - 64px, 1000px); margin: 0 auto; padding: 42px 0 88px; }
 .header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 30px; }
 .header h1 { margin: 0; font-size: clamp(30px, 3vw, 42px); letter-spacing: -.055em; }
-.header span { color: var(--choir-muted); font-size: 14px; }
 .list { border-top: 2px solid var(--choir-ink); }
 .row { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 82px; padding: 18px 4px; border-bottom: 1px solid var(--choir-line); }
 .row h2 { min-width: 0; margin: 0; font-size: 17px; font-weight: 650; }

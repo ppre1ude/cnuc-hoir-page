@@ -49,7 +49,7 @@ export function NoticeList() {
 
   const visibleData = !listError && data?.page === page ? data : null;
   return <section className={styles.page}>
-    <header className={styles.header}><h1>공지</h1><span>{visibleData?.total ?? 0}건</span></header>
+    <header className={styles.header}><h1>공지</h1></header>
     {listError && <><p role="alert">{listError}</p><button type="button" onClick={() => { setListError(""); setData(null); setRetry(retry + 1); }}>다시 시도</button></>}
     {detailError && <p role="alert">{detailError}</p>}
     {!visibleData && !listError && <p role="status">공지를 불러오는 중입니다.</p>}
