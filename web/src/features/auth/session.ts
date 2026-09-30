@@ -8,6 +8,10 @@ export type MemberSession = {
   admin: boolean;
 };
 
+export function getGoogleNonce(): Promise<{ nonce: string }> {
+  return apiRequest<{ nonce: string }>("/auth/google/nonce");
+}
+
 export function loginWithGoogle(credential: string): Promise<MemberSession> {
   return apiRequest<MemberSession>("/auth/google", {
     method: "POST",

@@ -31,7 +31,8 @@ class GoogleIdentityVerifierTest {
         Jwt wrongIssuer = Jwt.withTokenValue("test").header("alg", "RS256")
                 .issuer("https://other.example.org").subject("google-subject")
                 .audience(List.of(CLIENT)).claim("email", "person@gmail.com")
-                .claim("email_verified", true).issuedAt(Instant.now().minusSeconds(30))
+                .claim("email_verified", true).claim("nonce", "test-nonce")
+                .issuedAt(Instant.now().minusSeconds(30))
                 .expiresAt(Instant.now().plusSeconds(300)).build();
         assertThatThrownBy(() -> GoogleIdentityVerifier.extract(wrongIssuer, CLIENT))
                 .isInstanceOf(ApiException.class);
@@ -41,7 +42,7 @@ class GoogleIdentityVerifierTest {
         var builder = Jwt.withTokenValue("test").header("alg", "RS256")
                 .issuer("https://accounts.google.com").subject("google-subject")
                 .audience(List.of(audience)).claim("email", email).claim("email_verified", verified)
-                .claim("name", "단원").issuedAt(Instant.now().minusSeconds(30))
+                .claim("name", "단원").claim("nonce", "test-nonce").issuedAt(Instant.now().minusSeconds(30))
                 .expiresAt(Instant.now().plusSeconds(300));
         if (hostedDomain != null) builder.claim("hd", hostedDomain);
         return builder.build();

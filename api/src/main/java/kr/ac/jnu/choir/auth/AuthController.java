@@ -20,14 +20,17 @@ public class AuthController {
     private final LoginAttemptLimiter limiter;
     private final GoogleIdentityVerifier google;
     private final GoogleMemberService googleMembers;
+    private final GoogleLoginNonceService nonces;
     private final ClientIpResolver clientIps;
 
     public AuthController(SessionMemberService sessions, LoginAttemptLimiter limiter,
-            GoogleIdentityVerifier google, GoogleMemberService googleMembers, ClientIpResolver clientIps) {
+            GoogleIdentityVerifier google, GoogleMemberService googleMembers,
+            GoogleLoginNonceService nonces, ClientIpResolver clientIps) {
         this.sessions = sessions;
         this.limiter = limiter;
         this.google = google;
         this.googleMembers = googleMembers;
+        this.nonces = nonces;
         this.clientIps = clientIps;
     }
 
@@ -36,11 +39,18 @@ public class AuthController {
         return new CsrfResponse(token.getToken());
     }
 
+    @GetMapping("/google/nonce")
+    public NonceResponse nonce(HttpServletRequest request) {
+        return new NonceResponse(nonces.issue(request));
+    }
+
     @PostMapping("/google")
     public MeResponse login(@Valid @RequestBody GoogleRequest body, HttpServletRequest request) {
         String ip = clientIps.resolve(request);
         limiter.reserve("GOOGLE_IP", ip, 50);
-        Member member = googleMembers.login(google.verify(body.credential()));
+        var identity = google.verify(body.credential());
+        nonces.consume(request, identity.nonce());
+        Member member = googleMembers.login(identity);
         establishSession(request, member);
         return response(member);
     }
@@ -61,7 +71,9 @@ public class AuthController {
     @PostMapping("/account-setup/confirm")
     public MeResponse completeSetup(@Valid @RequestBody CompleteSetupRequest body, HttpServletRequest request) {
         limiter.reserve("CONNECT_IP", clientIps.resolve(request), 20);
-        Member member = googleMembers.connect(body.token(), google.verify(body.credential()));
+        var identity = google.verify(body.credential());
+        nonces.consume(request, identity.nonce());
+        Member member = googleMembers.connect(body.token(), identity);
         establishSession(request, member);
         return response(member);
     }
@@ -79,6 +91,7 @@ public class AuthController {
     }
 
     public record CsrfResponse(String token) {}
+    public record NonceResponse(String nonce) {}
     public record GoogleRequest(@NotBlank String credential) {}
     public record CompleteSetupRequest(@NotBlank String token, @NotBlank String credential) {}
     public record MeResponse(Long id, String name, String status, String memberType, boolean admin) {}

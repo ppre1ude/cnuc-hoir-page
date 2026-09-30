@@ -40,18 +40,24 @@ class SessionSecurityTest {
         MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).addFilters(security).build();
         MockHttpSession session = new MockHttpSession();
         String credential = "credential-" + UUID.randomUUID();
-        when(google.verify(credential)).thenReturn(new GoogleIdentity("sub-" + UUID.randomUUID(),
-                "pending-" + UUID.randomUUID() + "@example.org", "단원", false));
+        String subject = "sub-" + UUID.randomUUID();
+        String email = "pending-" + UUID.randomUUID() + "@example.org";
         assertThat(mvc.perform(post("/api/v1/auth/google").session(session)
                 .contentType("application/json").content("{\"credential\":\"" + credential + "\"}"))
                 .andReturn().getResponse().getStatus()).isEqualTo(403);
         String csrf = csrf(mvc, session);
+        String nonce = nonce(mvc, session);
+        when(google.verify(credential)).thenReturn(new GoogleIdentity(subject, email, "단원", false, nonce));
         assertThat(mvc.perform(post("/api/v1/auth/google").session(session)
                 .header("X-CSRF-TOKEN", csrf).contentType("application/json")
                 .content("{\"credential\":\"" + credential + "\"}"))
                 .andReturn().getResponse().getStatus()).isEqualTo(200);
         assertThat(mvc.perform(get("/api/v1/auth/me").session(session))
                 .andReturn().getResponse().getStatus()).isEqualTo(200);
+        assertThat(mvc.perform(post("/api/v1/auth/google").session(session)
+                .header("X-CSRF-TOKEN", csrf).contentType("application/json")
+                .content("{\"credential\":\"" + credential + "\"}"))
+                .andReturn().getResponse().getStatus()).isEqualTo(401);
         assertThat(mvc.perform(post("/api/v1/auth/login").session(session)
                 .header("X-CSRF-TOKEN", csrf).contentType("application/json")
                 .content("{\"email\":\"old@example.org\",\"password\":\"secret\"}"))
@@ -77,5 +83,11 @@ class SessionSecurityTest {
         String response = mvc.perform(get("/api/v1/auth/csrf").session(session))
                 .andReturn().getResponse().getContentAsString();
         return response.split("\"token\":\"", 2)[1].split("\"", 2)[0];
+    }
+
+    private String nonce(MockMvc mvc, MockHttpSession session) throws Exception {
+        String response = mvc.perform(get("/api/v1/auth/google/nonce").session(session))
+                .andReturn().getResponse().getContentAsString();
+        return response.split("\"nonce\":\"", 2)[1].split("\"", 2)[0];
     }
 }

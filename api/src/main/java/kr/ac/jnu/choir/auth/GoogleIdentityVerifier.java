@@ -40,10 +40,12 @@ public class GoogleIdentityVerifier {
         String issuer = jwt.getIssuer() == null ? "" : jwt.getIssuer().toString();
         String subject = jwt.getSubject();
         String email = jwt.getClaimAsString("email");
+        String nonce = jwt.getClaimAsString("nonce");
         if (!(issuer.equals("https://accounts.google.com") || issuer.equals("accounts.google.com"))
                 || jwt.getAudience() == null || !jwt.getAudience().contains(clientId)
                 || jwt.getAudience().size() != 1 || subject == null || subject.isBlank() || subject.length() > 255
-                || email == null || email.isBlank() || !Boolean.TRUE.equals(jwt.getClaim("email_verified"))) {
+                || email == null || email.isBlank() || nonce == null || nonce.isBlank()
+                || !Boolean.TRUE.equals(jwt.getClaim("email_verified"))) {
             throw invalid();
         }
         String normalized = email.strip().toLowerCase(Locale.ROOT);
@@ -56,12 +58,12 @@ public class GoogleIdentityVerifier {
         if (name == null || name.isBlank()) name = normalized.substring(0, normalized.indexOf('@'));
         name = name.strip();
         if (name.length() > 100) name = name.substring(0, 100);
-        return new GoogleIdentity(subject, normalized, name, authoritative);
+        return new GoogleIdentity(subject, normalized, name, authoritative, nonce);
     }
 
     private static ApiException invalid() {
         return new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_GOOGLE_CREDENTIAL", "구글 인증을 확인하지 못했습니다.");
     }
 
-    public record GoogleIdentity(String subject, String email, String name, boolean authoritativeEmail) {}
+    public record GoogleIdentity(String subject, String email, String name, boolean authoritativeEmail, String nonce) {}
 }

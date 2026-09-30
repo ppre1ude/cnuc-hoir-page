@@ -61,21 +61,24 @@ class OperatorAccountFlowTest {
         long memberId = mapper.readTree(response).get("memberId").asLong();
         String token = mapper.readTree(response).get("token").asText();
         assertThat(members.findById(memberId).orElseThrow().getStatus()).isEqualTo(AccountStatus.INVITED);
-        when(google.verify("invited-credential")).thenReturn(new GoogleIdentity("subject-" + UUID.randomUUID(),
-                email, "단원", false));
+        String subject = "subject-" + UUID.randomUUID();
 
         MockHttpSession memberSession = new MockHttpSession();
         String memberCsrf = csrf(memberSession);
+        when(google.verify("invited-credential")).thenReturn(new GoogleIdentity(subject,
+                email, "단원", false, nonce(memberSession)));
         assertThat(mvc.perform(post("/api/v1/auth/account-setup/confirm").session(memberSession)
                 .header("X-CSRF-TOKEN", memberCsrf).contentType("application/json")
                 .content("{\"token\":\"" + token + "\",\"credential\":\"invited-credential\"}"))
                 .andReturn().getResponse().getStatus()).isEqualTo(200);
         assertThat(mvc.perform(get("/api/v1/auth/me").session(memberSession))
                 .andReturn().getResponse().getStatus()).isEqualTo(200);
-        assertThat(mvc.perform(post("/api/v1/auth/account-setup/confirm").session(new MockHttpSession())
-                .contentType("application/json")
+        when(google.verify("invited-credential")).thenReturn(new GoogleIdentity(subject,
+                email, "단원", false, nonce(memberSession)));
+        assertThat(mvc.perform(post("/api/v1/auth/account-setup/confirm").session(memberSession)
+                .header("X-CSRF-TOKEN", memberCsrf).contentType("application/json")
                 .content("{\"token\":\"" + token + "\",\"credential\":\"invited-credential\"}"))
-                .andReturn().getResponse().getStatus()).isEqualTo(403);
+                .andReturn().getResponse().getStatus()).isEqualTo(409);
         assertThat(members.findById(memberId).orElseThrow().getGoogleSubject()).isNotBlank();
 
         String revocation = mvc.perform(post("/api/v1/admin/members/" + memberId + "/revoke")
@@ -85,6 +88,8 @@ class OperatorAccountFlowTest {
         assertThat(mvc.perform(get("/api/v1/auth/me").session(memberSession))
                 .andReturn().getResponse().getStatus()).isEqualTo(401);
         MockHttpSession retry = new MockHttpSession();
+        when(google.verify("invited-credential")).thenReturn(new GoogleIdentity(subject,
+                email, "단원", false, nonce(retry)));
         assertThat(mvc.perform(post("/api/v1/auth/google").session(retry)
                 .header("X-CSRF-TOKEN", csrf(retry)).contentType("application/json")
                 .content("{\"credential\":\"invited-credential\"}"))
@@ -99,16 +104,16 @@ class OperatorAccountFlowTest {
         String external = "member-" + UUID.randomUUID() + "@example.org";
         long gmailEntry = addAllowlist(adminSession, adminCsrf, gmail);
         addAllowlist(adminSession, adminCsrf, external);
-        when(google.verify("gmail-credential")).thenReturn(new GoogleIdentity("sub-" + UUID.randomUUID(),
-                gmail, "자동 승인", true));
-        when(google.verify("external-credential")).thenReturn(new GoogleIdentity("sub-" + UUID.randomUUID(),
-                external, "승인 대기", false));
+        String gmailSubject = "sub-" + UUID.randomUUID();
+        String externalSubject = "sub-" + UUID.randomUUID();
 
         MockHttpSession gmailSession = new MockHttpSession();
-        assertThat(login(gmailSession, "gmail-credential")).contains("\"status\":\"APPROVED\"");
+        assertThat(login(gmailSession, "gmail-credential", gmailSubject, gmail, "자동 승인", true))
+                .contains("\"status\":\"APPROVED\"");
         assertThat(members.findByEmailIgnoreCase(gmail).orElseThrow().getMemberType().name()).isEqualTo("ACTIVE");
         MockHttpSession externalSession = new MockHttpSession();
-        assertThat(login(externalSession, "external-credential")).contains("\"status\":\"APPROVAL_PENDING\"");
+        assertThat(login(externalSession, "external-credential", externalSubject, external, "승인 대기", false))
+                .contains("\"status\":\"APPROVAL_PENDING\"");
         assertThat(mvc.perform(get("/api/v1/auth/me").session(externalSession))
                 .andReturn().getResponse().getStatus()).isEqualTo(200);
         var forbidden = mvc.perform(get("/api/v1/events").session(externalSession)).andReturn().getResponse();
@@ -123,7 +128,8 @@ class OperatorAccountFlowTest {
         assertThat(mvc.perform(get("/api/v1/auth/me").session(externalSession))
                 .andReturn().getResponse().getStatus()).isEqualTo(401);
         MockHttpSession approvedSession = new MockHttpSession();
-        assertThat(login(approvedSession, "external-credential")).contains("\"status\":\"APPROVED\"");
+        assertThat(login(approvedSession, "external-credential", externalSubject, external, "승인 대기", false))
+                .contains("\"status\":\"APPROVED\"");
 
         assertThat(mvc.perform(delete("/api/v1/admin/allowlist/" + gmailEntry)
                 .session(adminSession).header("X-CSRF-TOKEN", adminCsrf))
@@ -139,7 +145,9 @@ class OperatorAccountFlowTest {
         return mapper.readTree(body).get("id").asLong();
     }
 
-    private String login(MockHttpSession session, String credential) throws Exception {
+    private String login(MockHttpSession session, String credential, String subject, String email,
+            String name, boolean authoritative) throws Exception {
+        when(google.verify(credential)).thenReturn(new GoogleIdentity(subject, email, name, authoritative, nonce(session)));
         return mvc.perform(post("/api/v1/auth/google").session(session)
                 .header("X-CSRF-TOKEN", csrf(session)).contentType("application/json")
                 .content("{\"credential\":\"" + credential + "\"}"))
@@ -164,5 +172,11 @@ class OperatorAccountFlowTest {
         String response = mvc.perform(get("/api/v1/auth/csrf").session(session))
                 .andReturn().getResponse().getContentAsString();
         return mapper.readTree(response).get("token").asText();
+    }
+
+    private String nonce(MockHttpSession session) throws Exception {
+        String response = mvc.perform(get("/api/v1/auth/google/nonce").session(session))
+                .andReturn().getResponse().getContentAsString();
+        return mapper.readTree(response).get("nonce").asText();
     }
 }

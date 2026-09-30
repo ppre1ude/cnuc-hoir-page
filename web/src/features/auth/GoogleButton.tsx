@@ -2,11 +2,12 @@
 
 import { useCallback, useRef, useState } from "react";
 import Script from "next/script";
+import { getGoogleNonce } from "./session";
 
 type GoogleCredential = { credential: string };
 type GoogleAccounts = {
   id: {
-    initialize: (options: { client_id: string; callback: (response: GoogleCredential) => void }) => void;
+    initialize: (options: { client_id: string; nonce: string; callback: (response: GoogleCredential) => void }) => void;
     renderButton: (element: HTMLElement, options: { type: "standard"; theme: "outline"; size: "large"; width: number; text: "signin_with" }) => void;
   };
 };
@@ -24,17 +25,23 @@ export function GoogleButton({ onCredential, onError }: {
   const [loaded, setLoaded] = useState(false);
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
-  const ready = useCallback(() => {
+  const ready = useCallback(async () => {
     if (!clientId || !window.google || !target.current) return;
+    const { nonce } = await getGoogleNonce();
+    if (!target.current) return;
     target.current.replaceChildren();
     window.google.accounts.id.initialize({
       client_id: clientId,
+      nonce,
       callback: (response) => {
         if (busy.current || !response.credential) return;
         busy.current = true;
         void onCredential(response.credential).catch(() => {
           onError("구글 로그인을 완료하지 못했습니다. 다시 시도해 주세요.");
-        }).finally(() => { busy.current = false; });
+        }).finally(() => {
+          busy.current = false;
+          void ready().catch(() => onError("구글 로그인 요청을 준비하지 못했습니다."));
+        });
       },
     });
     window.google.accounts.id.renderButton(target.current, {
@@ -45,7 +52,8 @@ export function GoogleButton({ onCredential, onError }: {
 
   if (!clientId) return <p role="alert">구글 로그인 설정이 필요합니다. 운영진에게 알려 주세요.</p>;
   return <>
-    <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" onReady={ready}
+    <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive"
+      onReady={() => { void ready().catch(() => onError("구글 로그인 요청을 준비하지 못했습니다.")); }}
       onError={() => onError("구글 로그인 화면을 불러오지 못했습니다.")} />
     <div ref={target} aria-label="구글 로그인" />
     {!loaded && <p role="status">구글 로그인 준비 중...</p>}
