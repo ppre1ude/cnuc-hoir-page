@@ -1,26 +1,20 @@
 package kr.ac.jnu.choir.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneOffset;
-import kr.ac.jnu.choir.member.Member;
-import kr.ac.jnu.choir.member.MemberRepository;
+import java.util.UUID;
+import kr.ac.jnu.choir.auth.GoogleIdentityVerifier.GoogleIdentity;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.mock.web.MockHttpSession;
-import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.web.FilterChainProxy;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -30,7 +24,6 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @SpringBootTest
 @Testcontainers
-@Import(SessionSecurityTest.MemberProbe.class)
 class SessionSecurityTest {
     @Container static final PostgreSQLContainer database = new PostgreSQLContainer("postgres:17-alpine");
     @DynamicPropertySource static void properties(DynamicPropertyRegistry registry) {
@@ -41,121 +34,48 @@ class SessionSecurityTest {
     }
     @Autowired WebApplicationContext context;
     @Autowired FilterChainProxy security;
-    @Autowired MemberRepository members;
-    @Autowired JdbcTemplate jdbc;
+    @MockitoBean GoogleIdentityVerifier google;
 
-    @RestController
-    static class MemberProbe {
-        @GetMapping("/api/v1/member/probe") String probe() { return "확인"; }
-    }
-
-    @Test void loginAndAccess() throws Exception {
+    @Test void googleLoginRequiresCsrfAndPasswordEndpointIsClosed() throws Exception {
         MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).addFilters(security).build();
-        assertThat(mvc.perform(get("/api/v1/auth/me")).andReturn().getResponse().getStatus()).isEqualTo(401);
-        Member member = members.save(new Member("session@example.org", "단원",
-                PasswordEncoderFactories.createDelegatingPasswordEncoder().encode("correct-horse-battery"), Clock.systemUTC()));
-        var csrfResponse = mvc.perform(get("/api/v1/auth/csrf")).andReturn();
-        String token = csrfResponse.getResponse().getContentAsString().split("\"token\":\"", 2)[1].split("\"", 2)[0];
-        MockHttpSession session = (MockHttpSession) csrfResponse.getRequest().getSession(false);
-        var login = mvc.perform(post("/api/v1/auth/login").session(session).header("X-CSRF-TOKEN", token)
-                .contentType("application/json").content("{\"email\":\"session@example.org\",\"password\":\"correct-horse-battery\"}"))
-                .andReturn();
-        assertThat(login.getResponse().getStatus()).isEqualTo(401);
-        assertThat(mvc.perform(get("/api/v1/auth/me").session(session)).andReturn().getResponse().getStatus()).isEqualTo(401);
-        jdbc.update("UPDATE member SET status = 'APPROVED', member_type = 'ACTIVE' WHERE id = ?", member.getId());
-        assertThat(mvc.perform(post("/api/v1/auth/login").session(session).header("X-CSRF-TOKEN", token)
-                .contentType("application/json").content("{\"email\":\"session@example.org\",\"password\":\"correct-horse-battery\"}"))
-                .andReturn().getResponse().getStatus()).isEqualTo(204);
-        assertThat(mvc.perform(get("/api/v1/auth/me").session(session)).andReturn().getResponse().getStatus()).isEqualTo(200);
-        assertThat(mvc.perform(get("/api/v1/member/probe").session(session)).andReturn().getResponse().getStatus()).isEqualTo(200);
-        jdbc.update("UPDATE member SET auth_version = auth_version + 1 WHERE id = ?", member.getId());
-        assertThat(mvc.perform(get("/api/v1/auth/me").session(session)).andReturn().getResponse().getStatus()).isEqualTo(401);
-        jdbc.update("UPDATE member SET status = 'REVOKED' WHERE id = ?", member.getId());
-        var freshCsrf = mvc.perform(get("/api/v1/auth/csrf")).andReturn();
-        String freshToken = freshCsrf.getResponse().getContentAsString().split("\"token\":\"", 2)[1].split("\"", 2)[0];
-        MockHttpSession freshSession = (MockHttpSession) freshCsrf.getRequest().getSession(false);
-        assertThat(mvc.perform(post("/api/v1/auth/login").session(freshSession).header("X-CSRF-TOKEN", freshToken)
-                .contentType("application/json")
-                .content("{\"email\":\"session@example.org\",\"password\":\"correct-horse-battery\"}"))
+        MockHttpSession session = new MockHttpSession();
+        String credential = "credential-" + UUID.randomUUID();
+        when(google.verify(credential)).thenReturn(new GoogleIdentity("sub-" + UUID.randomUUID(),
+                "pending-" + UUID.randomUUID() + "@example.org", "단원", false));
+        assertThat(mvc.perform(post("/api/v1/auth/google").session(session)
+                .contentType("application/json").content("{\"credential\":\"" + credential + "\"}"))
+                .andReturn().getResponse().getStatus()).isEqualTo(403);
+        String csrf = csrf(mvc, session);
+        assertThat(mvc.perform(post("/api/v1/auth/google").session(session)
+                .header("X-CSRF-TOKEN", csrf).contentType("application/json")
+                .content("{\"credential\":\"" + credential + "\"}"))
+                .andReturn().getResponse().getStatus()).isEqualTo(200);
+        assertThat(mvc.perform(get("/api/v1/auth/me").session(session))
+                .andReturn().getResponse().getStatus()).isEqualTo(200);
+        assertThat(mvc.perform(post("/api/v1/auth/login").session(session)
+                .header("X-CSRF-TOKEN", csrf).contentType("application/json")
+                .content("{\"email\":\"old@example.org\",\"password\":\"secret\"}"))
+                .andReturn().getResponse().getStatus()).isNotEqualTo(200);
+        assertThat(mvc.perform(post("/api/v1/auth/logout").session(session)
+                .header("X-CSRF-TOKEN", csrf)).andReturn().getResponse().getStatus()).isEqualTo(204);
+        assertThat(mvc.perform(get("/api/v1/auth/me").session(session))
                 .andReturn().getResponse().getStatus()).isEqualTo(401);
     }
 
-    @Test void limitsFailedLoginByEmailAndIp() throws Exception {
+    @Test void rejectsUntrustedProxyChainBeforeGoogleVerification() throws Exception {
         MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).addFilters(security).build();
-        var csrfResponse = mvc.perform(get("/api/v1/auth/csrf")).andReturn();
-        String csrf = csrfResponse.getResponse().getContentAsString().split("\"token\":\"", 2)[1].split("\"", 2)[0];
-        MockHttpSession session = (MockHttpSession) csrfResponse.getRequest().getSession(false);
-        for (int attempt = 0; attempt < 5; attempt++) {
-            assertThat(mvc.perform(post("/api/v1/auth/login").session(session).header("X-CSRF-TOKEN", csrf)
-                    .remoteAddress("203.0.113.41").header("X-Forwarded-For", "198.51.100." + attempt)
-                    .contentType("application/json")
-                    .content("{\"email\":\"missing" + attempt + "@example.org\",\"password\":\"incorrect-password\"}"))
-                    .andReturn().getResponse().getStatus()).isEqualTo(401);
-        }
-        assertThat(mvc.perform(post("/api/v1/auth/login").session(session).header("X-CSRF-TOKEN", csrf)
-                .remoteAddress("203.0.113.41").header("X-Forwarded-For", "198.51.100.99")
-                .contentType("application/json")
-                .content("{\"email\":\"missing-final@example.org\",\"password\":\"incorrect-password\"}"))
-                .andReturn().getResponse().getStatus()).isEqualTo(429);
+        MockHttpSession session = new MockHttpSession();
+        String csrf = csrf(mvc, session);
+        assertThat(mvc.perform(post("/api/v1/auth/google").session(session)
+                .header("X-CSRF-TOKEN", csrf).remoteAddress("10.0.0.9")
+                .header("X-Forwarded-For", "not-an-ip")
+                .contentType("application/json").content("{\"credential\":\"invalid\"}"))
+                .andReturn().getResponse().getStatus()).isEqualTo(400);
     }
 
-    @Test void separateClientsBehindTrustedProxyHaveSeparateLimits() throws Exception {
-        MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).addFilters(security).build();
-        var csrfResponse = mvc.perform(get("/api/v1/auth/csrf")).andReturn();
-        String csrf = csrfResponse.getResponse().getContentAsString().split("\"token\":\"", 2)[1].split("\"", 2)[0];
-        MockHttpSession session = (MockHttpSession) csrfResponse.getRequest().getSession(false);
-        for (int attempt = 0; attempt < 5; attempt++) {
-            assertThat(mvc.perform(post("/api/v1/auth/login").session(session).header("X-CSRF-TOKEN", csrf)
-                    .remoteAddress("10.0.0.8").header("X-Forwarded-For", "198.51.100.11")
-                    .contentType("application/json")
-                    .content("{\"email\":\"first" + attempt + "@example.org\",\"password\":\"incorrect-password\"}"))
-                    .andReturn().getResponse().getStatus()).isEqualTo(401);
-        }
-        assertThat(mvc.perform(post("/api/v1/auth/login").session(session).header("X-CSRF-TOKEN", csrf)
-                .remoteAddress("10.0.0.8").header("X-Forwarded-For", "198.51.100.12")
-                .contentType("application/json")
-                .content("{\"email\":\"second@example.org\",\"password\":\"incorrect-password\"}"))
-                .andReturn().getResponse().getStatus()).isEqualTo(401);
-        assertThat(mvc.perform(post("/api/v1/auth/login").session(session).header("X-CSRF-TOKEN", csrf)
-                .remoteAddress("10.0.0.8").header("X-Forwarded-For", "198.51.100.11")
-                .contentType("application/json")
-                .content("{\"email\":\"blocked@example.org\",\"password\":\"incorrect-password\"}"))
-                .andReturn().getResponse().getStatus()).isEqualTo(429);
-    }
-
-    @Test void invalidTrustedProxyChainIsRejectedBeforeRateLimit() throws Exception {
-        MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).addFilters(security).build();
-        var csrfResponse = mvc.perform(get("/api/v1/auth/csrf")).andReturn();
-        String csrf = csrfResponse.getResponse().getContentAsString().split("\"token\":\"", 2)[1].split("\"", 2)[0];
-        MockHttpSession session = (MockHttpSession) csrfResponse.getRequest().getSession(false);
-        for (int attempt = 0; attempt < 6; attempt++) {
-            assertThat(mvc.perform(post("/api/v1/auth/login").session(session).header("X-CSRF-TOKEN", csrf)
-                    .remoteAddress("10.0.0.9").header("X-Forwarded-For", "not-an-ip")
-                    .contentType("application/json")
-                    .content("{\"email\":\"invalid" + attempt + "@example.org\",\"password\":\"incorrect-password\"}"))
-                    .andReturn().getResponse().getStatus()).isEqualTo(400);
-        }
-        assertThat(mvc.perform(post("/api/v1/auth/login").session(session).header("X-CSRF-TOKEN", csrf)
-                .remoteAddress("10.0.0.9").header("X-Forwarded-For", "198.51.100.31")
-                .contentType("application/json")
-                .content("{\"email\":\"valid-chain@example.org\",\"password\":\"incorrect-password\"}"))
-                .andReturn().getResponse().getStatus()).isEqualTo(401);
-    }
-
-    @Test void logoutInvalidatesSession() throws Exception {
-        MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).addFilters(security).build();
-        Member member = members.save(new Member("logout@example.org", "단원",
-                PasswordEncoderFactories.createDelegatingPasswordEncoder().encode("correct-horse-battery"), Clock.systemUTC()));
-        jdbc.update("UPDATE member SET status = 'APPROVED', member_type = 'ACTIVE' WHERE id = ?", member.getId());
-        var csrfResponse = mvc.perform(get("/api/v1/auth/csrf")).andReturn();
-        String csrf = csrfResponse.getResponse().getContentAsString().split("\"token\":\"", 2)[1].split("\"", 2)[0];
-        MockHttpSession session = (MockHttpSession) csrfResponse.getRequest().getSession(false);
-        assertThat(mvc.perform(post("/api/v1/auth/login").session(session).header("X-CSRF-TOKEN", csrf)
-                .contentType("application/json")
-                .content("{\"email\":\"logout@example.org\",\"password\":\"correct-horse-battery\"}"))
-                .andReturn().getResponse().getStatus()).isEqualTo(204);
-        assertThat(mvc.perform(post("/api/v1/auth/logout").session(session).header("X-CSRF-TOKEN", csrf))
-                .andReturn().getResponse().getStatus()).isEqualTo(204);
-        assertThat(mvc.perform(get("/api/v1/auth/me").session(session)).andReturn().getResponse().getStatus()).isEqualTo(401);
+    private String csrf(MockMvc mvc, MockHttpSession session) throws Exception {
+        String response = mvc.perform(get("/api/v1/auth/csrf").session(session))
+                .andReturn().getResponse().getContentAsString();
+        return response.split("\"token\":\"", 2)[1].split("\"", 2)[0];
     }
 }

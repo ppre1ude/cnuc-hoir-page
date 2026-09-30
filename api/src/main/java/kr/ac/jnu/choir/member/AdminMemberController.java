@@ -48,7 +48,7 @@ public class AdminMemberController {
         Page<Member> result = members.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size));
         return new MemberPage(result.getContent().stream().map(member -> new MemberItem(member.getId(),
                 member.getName(), member.getEmail(), member.getStatus(), member.getMemberType(),
-                member.isAdmin(), member.getCreatedAt())).toList(), page, size, result.getTotalElements());
+                member.isAdmin(), member.getGoogleSubject() != null, member.getCreatedAt())).toList(), page, size, result.getTotalElements());
     }
 
     @PostMapping("/members/invitations")
@@ -104,7 +104,7 @@ public class AdminMemberController {
             @NotBlank @Size(max = 100) String name, @NotNull MemberType memberType) {}
     public record ReasonRequest(@NotBlank @Size(max = 500) String reason) {}
     public record MemberItem(Long id, String name, String email, AccountStatus status,
-            MemberType memberType, boolean admin, Instant createdAt) {}
+            MemberType memberType, boolean admin, boolean googleLinked, Instant createdAt) {}
     public record MemberPage(List<MemberItem> items, int page, int size, long total) {}
     public record ApplicationItem(Long id, String name, String email, AccountStatus status, Instant createdAt) {}
     public record ApplicationPage(List<ApplicationItem> items, int page, int size, long total) {}

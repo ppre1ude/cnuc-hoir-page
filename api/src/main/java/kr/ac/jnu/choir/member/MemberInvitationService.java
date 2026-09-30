@@ -54,6 +54,9 @@ public class MemberInvitationService {
                 && target.getStatus() != AccountStatus.REVOKED) {
             throw new ApiException(HttpStatus.CONFLICT, "INVALID_MEMBER_STATE", "초대 링크를 발급할 수 없는 계정입니다.");
         }
+        if (target.getStatus() != AccountStatus.REVOKED && target.getGoogleSubject() != null) {
+            throw new ApiException(HttpStatus.CONFLICT, "GOOGLE_ALREADY_LINKED", "이미 구글 계정이 연결되어 있습니다.");
+        }
         AccountStatus before = target.getStatus();
         if (before == AccountStatus.REVOKED) target.reinvite(clock);
         String token = tokens.issueAccountSetup(target.getId());

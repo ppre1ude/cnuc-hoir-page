@@ -13,6 +13,12 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     Optional<Member> findByEmailIgnoreCase(String email);
 
+    Optional<Member> findByGoogleSubject(String googleSubject);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select m from Member m where m.googleSubject = :subject")
+    Optional<Member> findByGoogleSubjectForUpdate(@Param("subject") String subject);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select m from Member m where lower(m.email) = lower(:email)")
     Optional<Member> findByEmailForUpdate(@Param("email") String email);

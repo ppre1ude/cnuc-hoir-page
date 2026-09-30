@@ -23,6 +23,9 @@ public class Member {
     @Column(nullable = false, length = 320, unique = true)
     private String email;
 
+    @Column(name = "google_subject", length = 255, unique = true)
+    private String googleSubject;
+
     @Column(nullable = false, length = 100)
     private String name;
 
@@ -75,12 +78,40 @@ public class Member {
         return member;
     }
 
+    public static Member googleApplicant(String email, String name, String subject, Clock clock) {
+        Member member = new Member();
+        member.email = email.strip().toLowerCase(Locale.ROOT);
+        member.name = name.strip();
+        member.googleSubject = subject;
+        member.status = AccountStatus.APPROVAL_PENDING;
+        member.emailVerifiedAt = clock.instant();
+        member.createdAt = member.emailVerifiedAt;
+        member.updatedAt = member.createdAt;
+        return member;
+    }
+
     public Long getId() {
         return id;
     }
 
     public String getEmail() {
         return email;
+    }
+
+    public String getGoogleSubject() {
+        return googleSubject;
+    }
+
+    public void connectGoogle(String subject, Clock clock) {
+        if (googleSubject != null && !googleSubject.equals(subject)) {
+            throw new IllegalStateException("다른 구글 계정이 연결되어 있습니다.");
+        }
+        googleSubject = subject;
+        passwordHash = null;
+        emailVerifiedAt = clock.instant();
+        if (status == AccountStatus.INVITED) status = AccountStatus.APPROVED;
+        authVersion++;
+        updatedAt = clock.instant();
     }
 
     public String getName() {
@@ -128,21 +159,13 @@ public class Member {
         updatedAt = emailVerifiedAt;
     }
 
-    public void resetPassword(String hash, Clock clock) {
-        passwordHash = hash;
-        if (status == AccountStatus.INVITED) {
-            status = AccountStatus.APPROVED;
-        }
-        authVersion++;
-        updatedAt = clock.instant();
-    }
-
     public void reinvite(Clock clock) {
         if (status != AccountStatus.REVOKED) {
             throw new IllegalStateException("접근 해제된 계정만 다시 초대할 수 있습니다.");
         }
         status = AccountStatus.INVITED;
         passwordHash = null;
+        googleSubject = null;
         admin = false;
         authVersion++;
         updatedAt = clock.instant();
