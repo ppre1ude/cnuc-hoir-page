@@ -13,5 +13,7 @@
 .form button:disabled { opacity: .6; cursor: wait; }
 .status { padding: 18px 0; border-top: 1px solid #dfe8e0; border-bottom: 1px solid #dfe8e0; }
 .error { color: #a31b1b; }
+.content button { min-height: 46px; margin: 16px 12px 0 0; padding: 10px 16px; border: 1px solid #006b34; background: #fff; color: #006b34; font: inherit; font-weight: 700; cursor: pointer; }
+.content button:first-of-type { background: #006b34; color: #fff; }
 .page :is(a, button, input):focus-visible { outline: 2px solid #006b34; outline-offset: 3px; }
 @media (max-width: 760px) { .page { padding-top: 26px; } .content { margin-top: 82px; } }

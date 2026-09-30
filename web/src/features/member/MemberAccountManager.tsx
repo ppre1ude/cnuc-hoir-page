@@ -7,6 +7,7 @@ import { getSession } from "../auth/session";
 import { getMembers, inviteMember, reissueAccountSetup, revokeMember,
   type IssuedInvitation, type MemberItem, type MemberPage } from "./adminMembers";
 import styles from "./AdminPages.module.css";
+import { AllowlistManager } from "./AllowlistManager";
 
 export function MemberAccountManager() {
   const router = useRouter();
@@ -97,7 +98,7 @@ export function MemberAccountManager() {
         <form className={styles.form} onSubmit={create}>
           <label htmlFor="invite-name">이름</label>
           <input id="invite-name" name="name" maxLength={100} required />
-          <label htmlFor="invite-email">로그인 이메일</label>
+          <label htmlFor="invite-email">구글 계정 이메일</label>
           <input id="invite-email" name="email" type="email" maxLength={254} required />
           <label htmlFor="invite-type">단원 구분</label>
           <select id="invite-type" name="memberType" defaultValue="ACTIVE">
@@ -110,14 +111,15 @@ export function MemberAccountManager() {
         <div className={styles.panelHeader}><h2 id="link-title">발급된 링크</h2></div>
         {link ? <>
           <p>이 링크는 한 번만 표시됩니다. 24시간 안에 해당 단원에게 비공개로 전달해 주세요.</p>
-          <label className={styles.fieldLabel} htmlFor="issued-link">계정 설정 링크</label>
+          <label className={styles.fieldLabel} htmlFor="issued-link">구글 계정 연결 링크</label>
           <input id="issued-link" className={styles.linkInput} value={link} readOnly onFocus={(event) => event.currentTarget.select()} />
           <div className={styles.actions}><button className={styles.secondary} type="button"
             onClick={() => navigator.clipboard.writeText(link).catch(() => setError("복사하지 못했습니다. 링크를 직접 선택해 주세요."))}>링크 복사</button></div>
-        </> : <p>초대 또는 재설정 링크를 발급하면 여기 표시됩니다.</p>}
+        </> : <p>계정 연결 링크를 발급하면 여기 표시됩니다.</p>}
       </section>
     </div>
     {error && <p className={styles.error} role="alert">{error}</p>}
+    <AllowlistManager />
     <section aria-labelledby="members-title" className={styles.memberSection}>
       <h2 id="members-title">계정 목록</h2>
       {!data && !error && <p role="status">계정 목록을 불러오는 중입니다.</p>}
@@ -145,9 +147,9 @@ function MemberRow({ item, busy, onRenew, onRevoke }: {
   return <article className={styles.row}>
     <h2>{item.name}</h2>
     <p>{item.email} · {type} · {status}{item.admin ? " · 운영진" : ""}</p>
-    {(item.status === "INVITED" || item.status === "APPROVED" || item.status === "REVOKED") && <div className={styles.actions}>
+    {(item.status === "REVOKED" || !item.googleLinked && (item.status === "INVITED" || item.status === "APPROVED")) && <div className={styles.actions}>
       <button className={styles.secondary} type="button" disabled={busy} onClick={onRenew}>
-        {item.status === "INVITED" ? "초대 링크 다시 발급" : item.status === "REVOKED" ? "다시 초대" : "비밀번호 재설정 링크 발급"}
+        {item.status === "INVITED" ? "초대 링크 다시 발급" : item.status === "REVOKED" ? "다시 초대" : "계정 연결 링크 발급"}
       </button>
     </div>}
     {(item.status === "APPROVED" || item.status === "INVITED") && !item.admin && <div className={styles.fieldGroup}>

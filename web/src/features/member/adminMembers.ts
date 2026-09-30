@@ -39,6 +39,7 @@ export type MemberItem = {
   status: "INVITED" | "EMAIL_PENDING" | "APPROVAL_PENDING" | "APPROVED" | "REJECTED" | "REVOKED";
   memberType: "ACTIVE" | "OB" | null;
   admin: boolean;
+  googleLinked: boolean;
   createdAt: string;
 };
 
@@ -57,4 +58,28 @@ export function inviteMember(input: { name: string; email: string; memberType: "
 
 export function reissueAccountSetup(id: number): Promise<IssuedInvitation> {
   return apiRequest<IssuedInvitation>(`/admin/members/${id}/account-setup`, { method: "POST" });
+}
+
+export type AllowlistItem = {
+  id: number;
+  email: string;
+  memberType: "ACTIVE" | "OB";
+  name: string | null;
+  createdAt: string;
+};
+
+export type AllowlistPage = { items: AllowlistItem[]; page: number; size: number; total: number };
+
+export function getAllowlist(page = 0): Promise<AllowlistPage> {
+  return apiRequest<AllowlistPage>(`/admin/allowlist?page=${page}&size=20`);
+}
+
+export function addAllowlist(input: { email: string; memberType: "ACTIVE" | "OB"; name?: string }): Promise<AllowlistItem> {
+  return apiRequest<AllowlistItem>("/admin/allowlist", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
+  });
+}
+
+export function removeAllowlist(id: number): Promise<void> {
+  return apiRequest<void>(`/admin/allowlist/${id}`, { method: "DELETE" });
 }

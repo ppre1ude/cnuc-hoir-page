@@ -1,24 +1,27 @@
 import { StrictMode } from "react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { cleanup, render, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import ApplicationStatusPage from "./page";
 
-const mocks = vi.hoisted(() => ({ replace: vi.fn(), logout: vi.fn() }));
+const mocks = vi.hoisted(() => ({ replace: vi.fn(), logout: vi.fn(), getSession: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: mocks.replace }) }));
-vi.mock("../../../features/auth/session", () => ({ logout: mocks.logout }));
+vi.mock("../../../features/auth/session", () => ({ logout: mocks.logout, getSession: mocks.getSession }));
 
-beforeEach(() => { mocks.logout.mockReset(); mocks.replace.mockReset(); });
+beforeEach(() => { mocks.logout.mockReset(); mocks.replace.mockReset(); mocks.getSession.mockReset(); });
 afterEach(() => { cleanup(); });
 
-test("남은 세션을 한 번 로그아웃하고 로그인 화면으로 이동합니다", async () => {
-  mocks.logout.mockResolvedValue(undefined);
+test("승인 대기 상태를 표시하고 세션을 유지합니다", async () => {
+  mocks.getSession.mockResolvedValue({ id: 1, name: "신청자", status: "APPROVAL_PENDING" });
   render(<StrictMode><ApplicationStatusPage /></StrictMode>);
-  await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/login"));
-  expect(mocks.logout).toHaveBeenCalledTimes(1);
+  expect(await screen.findByText("가입 승인 대기 중입니다")).toBeInTheDocument();
+  expect(mocks.logout).not.toHaveBeenCalled();
 });
 
-test("로그아웃 요청이 실패해도 로그인 화면으로 이동합니다", async () => {
-  mocks.logout.mockRejectedValue(new Error("로그아웃 실패"));
+test("직접 로그아웃하면 로그인 화면으로 이동합니다", async () => {
+  mocks.getSession.mockResolvedValue({ id: 1, name: "신청자", status: "REJECTED" });
+  mocks.logout.mockResolvedValue(undefined);
   render(<ApplicationStatusPage />);
+  await userEvent.click(await screen.findByRole("button", { name: "로그아웃" }));
   await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/login"));
 });
