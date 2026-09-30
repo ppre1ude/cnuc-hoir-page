@@ -77,7 +77,7 @@ public class GoogleMemberService {
     }
 
     private void approveFromAllowlist(Member member) {
-        allowlist.findByEmail(member.getEmail()).ifPresent(entry -> {
+        allowlist.findByEmailIgnoreCase(member.getEmail()).ifPresent(entry -> {
             AccountStatus before = member.getStatus();
             member.approve(entry.getMemberType(), clock);
             logs.save(new AdminActionLog(entry.getCreatedBy(), member, "ALLOWLIST_APPROVE", before,

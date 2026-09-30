@@ -52,6 +52,7 @@ public class AuthController {
         nonces.consume(request, identity.nonce());
         Member member = googleMembers.login(identity);
         establishSession(request, member);
+        limiter.release("GOOGLE_IP", ip);
         return response(member);
     }
 
@@ -70,11 +71,13 @@ public class AuthController {
 
     @PostMapping("/account-setup/confirm")
     public MeResponse completeSetup(@Valid @RequestBody CompleteSetupRequest body, HttpServletRequest request) {
-        limiter.reserve("CONNECT_IP", clientIps.resolve(request), 20);
+        String ip = clientIps.resolve(request);
+        limiter.reserve("CONNECT_IP", ip, 20);
         var identity = google.verify(body.credential());
         nonces.consume(request, identity.nonce());
         Member member = googleMembers.connect(body.token(), identity);
         establishSession(request, member);
+        limiter.release("CONNECT_IP", ip);
         return response(member);
     }
 

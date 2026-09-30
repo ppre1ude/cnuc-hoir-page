@@ -36,7 +36,7 @@ public class MemberAllowlistService {
     public MemberAllowlist add(long actorId, String email, MemberType type, String name) {
         Member actor = requireAdmin(actorId);
         String normalized = email.strip().toLowerCase(Locale.ROOT);
-        if (allowlist.findByEmail(normalized).isPresent()) throw duplicate();
+        if (allowlist.findByEmailIgnoreCase(normalized).isPresent()) throw duplicate();
         String displayName = name == null || name.isBlank() ? null : name.strip();
         MemberAllowlist entry;
         try {

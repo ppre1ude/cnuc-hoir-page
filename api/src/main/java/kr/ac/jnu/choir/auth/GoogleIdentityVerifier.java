@@ -1,24 +1,42 @@
 package kr.ac.jnu.choir.auth;
 
+import java.time.Duration;
 import java.util.Locale;
 import kr.ac.jnu.choir.common.ApiException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 @Service
 public class GoogleIdentityVerifier {
     private final String clientId;
     private final NimbusJwtDecoder decoder;
 
+    @Autowired
     public GoogleIdentityVerifier(@Value("${choir.google.client-id:}") String clientId) {
+        this(clientId, createDecoder());
+    }
+
+    GoogleIdentityVerifier(String clientId, NimbusJwtDecoder decoder) {
         this.clientId = clientId;
-        this.decoder = NimbusJwtDecoder.withJwkSetUri("https://www.googleapis.com/oauth2/v3/certs").build();
+        this.decoder = decoder;
         this.decoder.setJwtValidator(JwtValidators.createDefault());
+    }
+
+    private static NimbusJwtDecoder createDecoder() {
+        var requests = new SimpleClientHttpRequestFactory();
+        requests.setConnectTimeout(Duration.ofSeconds(3));
+        requests.setReadTimeout(Duration.ofSeconds(5));
+        return NimbusJwtDecoder.withJwkSetUri("https://www.googleapis.com/oauth2/v3/certs")
+                .restOperations(new RestTemplate(requests)).build();
     }
 
     public GoogleIdentity verify(String credential) {
@@ -30,8 +48,11 @@ public class GoogleIdentityVerifier {
         Jwt jwt;
         try {
             jwt = decoder.decode(credential);
-        } catch (JwtException exception) {
+        } catch (BadJwtException exception) {
             throw invalid();
+        } catch (JwtException exception) {
+            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "GOOGLE_AUTH_UNAVAILABLE",
+                    "구글 인증을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.");
         }
         return extract(jwt, clientId);
     }

@@ -2,12 +2,18 @@ package kr.ac.jnu.choir.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.util.List;
 import kr.ac.jnu.choir.common.ApiException;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtException;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 
 class GoogleIdentityVerifierTest {
     private static final String CLIENT = "choir-client.apps.googleusercontent.com";
@@ -36,6 +42,24 @@ class GoogleIdentityVerifierTest {
                 .expiresAt(Instant.now().plusSeconds(300)).build();
         assertThatThrownBy(() -> GoogleIdentityVerifier.extract(wrongIssuer, CLIENT))
                 .isInstanceOf(ApiException.class);
+    }
+
+    @Test void distinguishesInvalidCredentialsFromGoogleKeyServiceFailure() {
+        NimbusJwtDecoder decoder = mock(NimbusJwtDecoder.class);
+        GoogleIdentityVerifier verifier = new GoogleIdentityVerifier(CLIENT, decoder);
+        when(decoder.decode("invalid")).thenThrow(new BadJwtException("invalid"));
+        when(decoder.decode("unavailable")).thenThrow(new JwtException("key service unavailable"));
+
+        assertThatThrownBy(() -> verifier.verify("invalid"))
+                .isInstanceOfSatisfying(ApiException.class, error -> {
+                    assertThat(error.getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED);
+                    assertThat(error.getCode()).isEqualTo("INVALID_GOOGLE_CREDENTIAL");
+                });
+        assertThatThrownBy(() -> verifier.verify("unavailable"))
+                .isInstanceOfSatisfying(ApiException.class, error -> {
+                    assertThat(error.getStatus()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+                    assertThat(error.getCode()).isEqualTo("GOOGLE_AUTH_UNAVAILABLE");
+                });
     }
 
     private Jwt token(String email, String audience, String hostedDomain, boolean verified) {

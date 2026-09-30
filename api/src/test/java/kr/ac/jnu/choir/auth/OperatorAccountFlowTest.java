@@ -50,6 +50,7 @@ class OperatorAccountFlowTest {
     @BeforeEach void setup() { mvc = MockMvcBuilders.webAppContextSetup(context).addFilters(security).build(); }
 
     @Test void invitationConnectsGoogleOnceAndRevocationBlocksLogin() throws Exception {
+        int attemptsBeforeConnection = attempts("CONNECT_IP");
         Member admin = admin();
         MockHttpSession adminSession = sessionFor(admin);
         String adminCsrf = csrf(adminSession);
@@ -71,6 +72,7 @@ class OperatorAccountFlowTest {
                 .header("X-CSRF-TOKEN", memberCsrf).contentType("application/json")
                 .content("{\"token\":\"" + token + "\",\"credential\":\"invited-credential\"}"))
                 .andReturn().getResponse().getStatus()).isEqualTo(200);
+        assertThat(attempts("CONNECT_IP")).isEqualTo(attemptsBeforeConnection);
         assertThat(mvc.perform(get("/api/v1/auth/me").session(memberSession))
                 .andReturn().getResponse().getStatus()).isEqualTo(200);
         when(google.verify("invited-credential")).thenReturn(new GoogleIdentity(subject,
@@ -97,6 +99,7 @@ class OperatorAccountFlowTest {
     }
 
     @Test void allowlistAutoApprovesGmailAndExternalEmailWaitsForAdmin() throws Exception {
+        int attemptsBeforeLogin = attempts("GOOGLE_IP");
         Member admin = admin();
         MockHttpSession adminSession = sessionFor(admin);
         String adminCsrf = csrf(adminSession);
@@ -110,6 +113,7 @@ class OperatorAccountFlowTest {
         MockHttpSession gmailSession = new MockHttpSession();
         assertThat(login(gmailSession, "gmail-credential", gmailSubject, gmail, "자동 승인", true))
                 .contains("\"status\":\"APPROVED\"");
+        assertThat(attempts("GOOGLE_IP")).isEqualTo(attemptsBeforeLogin);
         assertThat(members.findByEmailIgnoreCase(gmail).orElseThrow().getMemberType().name()).isEqualTo("ACTIVE");
         MockHttpSession externalSession = new MockHttpSession();
         assertThat(login(externalSession, "external-credential", externalSubject, external, "승인 대기", false))
@@ -143,6 +147,11 @@ class OperatorAccountFlowTest {
                 .content("{\"email\":\"" + email + "\",\"memberType\":\"ACTIVE\"}"))
                 .andReturn().getResponse().getContentAsString();
         return mapper.readTree(body).get("id").asLong();
+    }
+
+    private int attempts(String kind) {
+        return jdbc.queryForObject("SELECT COALESCE(SUM(attempt_count), 0) FROM auth_attempt WHERE kind = ?",
+                Integer.class, kind);
     }
 
     private String login(MockHttpSession session, String credential, String subject, String email,
