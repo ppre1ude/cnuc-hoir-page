@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotEmpty;
 import java.time.Instant;
 import java.util.List;
 import kr.ac.jnu.choir.auth.SessionMemberService;
@@ -49,6 +50,12 @@ public class EventController {
                 body.startAt(), body.endAt(), body.obEligible(), body.publicVisible())));
     }
 
+    @PostMapping("/admin/events/batch")
+    public ResponseEntity<List<EventItem>> createBatch(HttpServletRequest request, @Valid @RequestBody EventBatchInput body) {
+        sessions.requireAdmin(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(events.createBatch(body.events()).stream().map(this::item).toList());
+    }
+
     @PutMapping("/admin/events/{id}")
     public EventItem update(HttpServletRequest request, @PathVariable long id, @Valid @RequestBody EventInput body) {
         sessions.requireAdmin(request);
@@ -62,8 +69,9 @@ public class EventController {
     }
 
     public record EventInput(@NotBlank @Size(max = 200) String title,
-            @NotBlank @Size(max = 10000) String description, @NotNull Instant startAt, @NotNull Instant endAt,
+            @NotNull @Size(max = 10000) String description, @NotNull Instant startAt, @NotNull Instant endAt,
             @NotNull Boolean obEligible, @NotNull Boolean publicVisible) {}
+    public record EventBatchInput(@NotEmpty @Size(max = 31) List<@NotNull @Valid EventInput> events) {}
     public record EventItem(Long id, String title, String description, Instant startAt, Instant endAt,
             boolean obEligible, boolean publicVisible, Instant createdAt, Instant updatedAt) {}
 }

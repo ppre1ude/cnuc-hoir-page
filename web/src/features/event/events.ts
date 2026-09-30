@@ -13,7 +13,6 @@ export type ChoirEvent = {
 };
 
 export type EventInput = Pick<ChoirEvent, "title" | "description" | "startAt" | "endAt" | "obEligible" | "publicVisible">;
-
 export function monthBounds(month: string) {
   const [year, number] = month.split("-").map(Number);
   const from = new Date(`${month}-01T00:00:00+09:00`).toISOString();
@@ -48,6 +47,12 @@ export function getEvent(id: number): Promise<ChoirEvent> {
 export function createEvent(input: EventInput): Promise<ChoirEvent> {
   return apiRequest<ChoirEvent>("/admin/events", {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
+  });
+}
+
+export function createEventsBatch(events: EventInput[]): Promise<ChoirEvent[]> {
+  return apiRequest<ChoirEvent[]>("/admin/events/batch", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ events }),
   });
 }
 

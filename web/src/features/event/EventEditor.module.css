@@ -4,7 +4,20 @@
 .page a { color: var(--choir-deep-green); text-underline-offset: 4px; }
 .eyebrow { color: var(--choir-deep-green); font-size: 12px; font-weight: 700; letter-spacing: .08em; margin: 0; }
 .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.singleColumn { grid-template-columns: minmax(0, 1fr); }
 .card { background: white; border: 1px solid var(--choir-line); padding: 28px; min-width: 0; }
+.batch { margin-bottom: 20px; }
+.batch .form { max-width: 720px; }
+.batchWeekdays, .batchDays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+.batchWeekdays { margin-top: 12px; color: var(--choir-muted); font-size: 13px; text-align: center; }
+.batchDays button { min-height: 44px; border: 1px solid var(--choir-line); background: white; color: var(--choir-ink); font: inherit; cursor: pointer; }
+.batchDays button:hover, .batchDays button:focus-visible { border-color: var(--choir-green); }
+.batchDays button[aria-pressed="true"] { border-color: var(--choir-green); background: #edf7ef; color: var(--choir-deep-green); font-weight: 700; }
+.selectedDates { margin: 6px 0 12px; color: var(--choir-deep-green); font-size: 14px; }
+.batchFields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; }
+.batchFields label { display: block; }
+.batchFields label:nth-child(2) { grid-row: span 2; }
+.batchFields input, .batchFields textarea { display: block; margin-top: 5px; }
 .card h2 { margin: 0 0 20px; }
 .listHeader { display: flex; justify-content: space-between; gap: 10px; align-items: start; flex-wrap: wrap; }
 .listHeader label { font-size: 13px; }
@@ -20,4 +33,4 @@
 .actions button { border: 1px solid var(--choir-deep-green); background: var(--choir-deep-green); color: white; padding: 10px 18px; font: inherit; cursor: pointer; }
 .actions button + button { background: white; color: var(--choir-deep-green); }
 .actions button:disabled { opacity: .55; cursor: default; }
-@media (max-width: 760px) { .page { padding-top: 28px; } .grid { display: flex; flex-direction: column; } .card { width: 100%; padding: 20px; } }
+@media (max-width: 760px) { .page { padding-top: 28px; } .grid { display: flex; flex-direction: column; } .card { width: 100%; padding: 20px; } .batchFields { display: block; } }

@@ -131,4 +131,30 @@ class EventVisibilityTest {
         assertThat(mvc.perform(get("/api/v1/events?from=2026-10-01T00:00:00Z&to=2026-09-01T00:00:00Z")
                 .session(session(admin))).andReturn().getResponse().getStatus()).isEqualTo(400);
     }
+
+    @Test void batchCreatesSelectedDatesAtomicallyAndRequiresAdmin() throws Exception {
+        Member admin = member(true, "ACTIVE");
+        Member active = member(false, "ACTIVE");
+        String first = input("정기 연습", "2099-10-04T10:00:00Z", "2099-10-04T12:00:00Z", false, false);
+        String second = input("정기 연습", "2099-10-11T10:00:00Z", "2099-10-11T12:00:00Z", false, false);
+        MockHttpSession normal = session(active);
+        assertThat(mvc.perform(post("/api/v1/admin/events/batch").session(normal)
+                .header("X-CSRF-TOKEN", csrf(normal)).contentType("application/json")
+                .content("{\"events\":[" + first + "," + second + "]}"))
+                .andReturn().getResponse().getStatus()).isEqualTo(403);
+        MockHttpSession editor = session(admin);
+        String invalid = input("정기 연습", "2099-10-18T12:00:00Z", "2099-10-18T10:00:00Z", false, false);
+        assertThat(mvc.perform(post("/api/v1/admin/events/batch").session(editor)
+                .header("X-CSRF-TOKEN", csrf(editor)).contentType("application/json")
+                .content("{\"events\":[" + first + "," + invalid + "]}"))
+                .andReturn().getResponse().getStatus()).isEqualTo(400);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM event", Long.class)).isZero();
+        String response = mvc.perform(post("/api/v1/admin/events/batch").session(editor)
+                .header("X-CSRF-TOKEN", csrf(editor)).contentType("application/json")
+                .content("{\"events\":[" + first + "," + second + "]}"))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(response).contains("2099-10-04T10:00:00Z", "2099-10-11T10:00:00Z");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM event", Long.class)).isEqualTo(2);
+    }
+
 }
