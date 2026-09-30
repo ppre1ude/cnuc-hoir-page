@@ -1,0 +1,67 @@
+:root {
+  --color-brand: #008a3e;
+  --color-primary: #006b34;
+  --color-primary-hover: #004f28;
+  --color-ink: #202823;
+  --color-muted: #626e66;
+  --color-surface: #ffffff;
+  --color-subtle: #f4faf5;
+  --color-selected: #edf7ef;
+  --color-highlight: #dff0e3;
+  --color-line: #dfe8e0;
+  --color-field-border: #bbd1c0;
+  --color-danger: #973e30;
+  --color-danger-background: #fff8f6;
+  --color-danger-border: #e5c9c3;
+  --color-neutral-background: #f1f3f1;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --text-small: 0.8125rem;
+  --text-label: 0.875rem;
+  --text-body: 1rem;
+  --text-section: 1.3125rem;
+  --text-title: clamp(1.875rem, 3vw, 2.625rem);
+  --text-display: clamp(3rem, 5vw, 4.75rem);
+  --weight-body: 400;
+  --weight-medium: 550;
+  --weight-label: 650;
+  --weight-heading: 750;
+  --tracking-heading: -0.045em;
+  --radius-small: 6px;
+  --radius-control: 8px;
+  --radius-panel: 12px;
+  --control-small: 36px;
+  --control-medium: 44px;
+  --control-large: 52px;
+  --layout-wide: 1240px;
+  --layout-public: 1320px;
+  --layout-reading: 880px;
+  --page-gutter: 32px;
+  --page-top: 48px;
+  --page-bottom: 88px;
+  --motion-fast: 160ms;
+  --motion-reveal: 540ms;
+  --motion-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  /* 기존 기능 스타일도 같은 팔레트를 사용합니다. */
+  --choir-green: var(--color-brand);
+  --choir-deep-green: var(--color-primary);
+  --choir-ink: var(--color-ink);
+  --choir-muted: var(--color-muted);
+  --choir-line: var(--color-line);
+}
+@media (max-width: 760px) {
+  :root { --page-gutter: 20px; --page-top: 28px; --page-bottom: 64px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --motion-fast: 0ms; --motion-reveal: 0ms; }
+}
