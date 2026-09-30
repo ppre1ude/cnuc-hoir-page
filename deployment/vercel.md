@@ -8,7 +8,7 @@
 2. 실제 배포를 시작하면 발급된 HTTPS 주소에서 첫 화면, 사진, 모바일 레이아웃과 공개 링크를 확인합니다. Git 저장소를 연결한 뒤 `main`에 새 커밋을 푸시하면 해당 프로젝트의 배포가 다시 실행됩니다.
 3. 공개 화면만 확인하는 단계에서는 웹 환경 변수에 DB 비밀번호를 넣지 않습니다. `CHOIR_API_ORIGIN`이 비어 있으면 `/api/v1`을 처리할 서버가 없으므로 로그인, 계정 초대, 공지, 투표, 출석은 작동하지 않습니다. 이 단계에서 실제 단원 정보를 입력하지 않습니다.
 
-Vercel의 `ppre1udes-projects/cnuc-hoir-page` 프로젝트는 `web/` 루트로 준비되어 있습니다. Git 연결과 실제 배포 상태는 Vercel 대시보드에서 확인합니다.
+2026-09-30 현재 Vercel의 `ppre1udes-projects/cnuc-hoir-page` 프로젝트는 `web/` 루트로 Git 연결되어 배포되었습니다. `https://cnuc-hoir-page.vercel.app/`은 200을 반환하지만 `/api/v1/auth/csrf`는 404입니다. Render API 주소를 연결하기 전까지 로그인과 회원 기능을 시험할 수 없습니다.
 
 ## 회원 기능을 포함한 검증 조건
 
