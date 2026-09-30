@@ -9,6 +9,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     <nav className={styles.adminNav} aria-label="운영진 메뉴">
       <div className={styles.adminNavInner}>
         <Link href="/admin/members">단원 계정</Link>
+        <Link href="/admin/applications">가입 승인</Link>
         <Link href="/admin/notices">공지 관리</Link>
         <Link href="/admin/events">행사 관리</Link>
       </div>

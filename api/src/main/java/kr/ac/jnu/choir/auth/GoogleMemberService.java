@@ -1,0 +1,100 @@
+package kr.ac.jnu.choir.auth;
+
+import java.time.Clock;
+import kr.ac.jnu.choir.auth.GoogleIdentityVerifier.GoogleIdentity;
+import kr.ac.jnu.choir.common.AdminActionLog;
+import kr.ac.jnu.choir.common.AdminActionLogRepository;
+import kr.ac.jnu.choir.common.ApiException;
+import kr.ac.jnu.choir.member.AccountStatus;
+import kr.ac.jnu.choir.member.Member;
+import kr.ac.jnu.choir.member.MemberAllowlistRepository;
+import kr.ac.jnu.choir.member.MemberRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class GoogleMemberService {
+    private final MemberRepository members;
+    private final MemberAllowlistRepository allowlist;
+    private final AdminActionLogRepository logs;
+    private final AuthTokenService tokens;
+    private final JdbcTemplate jdbc;
+    private final Clock clock;
+
+    public GoogleMemberService(MemberRepository members, MemberAllowlistRepository allowlist,
+            AdminActionLogRepository logs, AuthTokenService tokens, JdbcTemplate jdbc, Clock clock) {
+        this.members = members;
+        this.allowlist = allowlist;
+        this.logs = logs;
+        this.tokens = tokens;
+        this.jdbc = jdbc;
+        this.clock = clock;
+    }
+
+    @Transactional
+    public Member login(GoogleIdentity identity) {
+        // 같은 구글 계정과 이메일의 동시 첫 로그인을 직렬화해 계정 중복을 막습니다.
+        jdbc.query("SELECT pg_advisory_xact_lock(hashtextextended(?, 0))", rs -> { }, "google:" + identity.subject());
+        Member existing = members.findByGoogleSubjectForUpdate(identity.subject()).orElse(null);
+        if (existing != null) return existingLogin(existing, identity);
+        jdbc.query("SELECT pg_advisory_xact_lock(hashtextextended(?, 0))", rs -> { }, identity.email());
+        existing = members.findByGoogleSubjectForUpdate(identity.subject()).orElse(null);
+        if (existing != null) return existingLogin(existing, identity);
+        existing = members.findByEmailForUpdate(identity.email()).orElse(null);
+        if (existing != null) throw linkRequired();
+        Member member = members.saveAndFlush(Member.googleApplicant(identity.email(), identity.name(),
+                identity.subject(), clock));
+        if (identity.authoritativeEmail()) approveFromAllowlist(member);
+        return member;
+    }
+
+    private Member existingLogin(Member existing, GoogleIdentity identity) {
+        if (existing.getStatus() == AccountStatus.REVOKED) throw blocked();
+        if (existing.getStatus() == AccountStatus.INVITED) throw linkRequired();
+        if (existing.getStatus() == AccountStatus.APPROVAL_PENDING
+                && existing.getEmail().equals(identity.email()) && identity.authoritativeEmail()) {
+            approveFromAllowlist(existing);
+        }
+        return existing;
+    }
+
+    @Transactional
+    public Member connect(String token, GoogleIdentity identity) {
+        jdbc.query("SELECT pg_advisory_xact_lock(hashtextextended(?, 0))", rs -> { }, "google:" + identity.subject());
+        long memberId = tokens.memberIdForAccountSetup(token);
+        Member member = members.findByIdForUpdate(memberId).orElseThrow(GoogleMemberService::invalidToken);
+        if ((member.getStatus() != AccountStatus.INVITED && member.getStatus() != AccountStatus.APPROVED)
+                || !member.getEmail().equals(identity.email())
+                || member.getGoogleSubject() != null
+                || members.findByGoogleSubject(identity.subject()).isPresent()) {
+            throw invalidToken();
+        }
+        tokens.consumeAccountSetup(token);
+        member.connectGoogle(identity.subject(), clock);
+        return member;
+    }
+
+    private void approveFromAllowlist(Member member) {
+        allowlist.findByEmailIgnoreCase(member.getEmail()).ifPresent(entry -> {
+            AccountStatus before = member.getStatus();
+            member.approve(entry.getMemberType(), clock);
+            logs.save(new AdminActionLog(entry.getCreatedBy(), member, "ALLOWLIST_APPROVE", before,
+                    member.getStatus(), null, clock.instant()));
+        });
+    }
+
+    private static ApiException linkRequired() {
+        return new ApiException(HttpStatus.CONFLICT, "ACCOUNT_LINK_REQUIRED",
+                "이미 등록된 이메일입니다. 운영진에게 계정 연결 링크를 요청해 주세요.");
+    }
+
+    private static ApiException blocked() {
+        return new ApiException(HttpStatus.FORBIDDEN, "ACCESS_REVOKED", "접근이 해제된 계정입니다.");
+    }
+
+    private static ApiException invalidToken() {
+        return new ApiException(HttpStatus.CONFLICT, "INVALID_INVITE_TOKEN", "사용할 수 없는 계정 연결 링크입니다.");
+    }
+}

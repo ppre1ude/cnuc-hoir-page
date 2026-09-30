@@ -1,0 +1,90 @@
+package kr.ac.jnu.choir.auth;
+
+import java.time.Duration;
+import java.util.Locale;
+import kr.ac.jnu.choir.common.ApiException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.BadJwtException;
+import org.springframework.security.oauth2.jwt.JwtException;
+import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+@Service
+public class GoogleIdentityVerifier {
+    private final String clientId;
+    private final NimbusJwtDecoder decoder;
+
+    @Autowired
+    public GoogleIdentityVerifier(@Value("${choir.google.client-id:}") String clientId) {
+        this(clientId, createDecoder());
+    }
+
+    GoogleIdentityVerifier(String clientId, NimbusJwtDecoder decoder) {
+        this.clientId = clientId;
+        this.decoder = decoder;
+        this.decoder.setJwtValidator(JwtValidators.createDefault());
+    }
+
+    private static NimbusJwtDecoder createDecoder() {
+        var requests = new SimpleClientHttpRequestFactory();
+        requests.setConnectTimeout(Duration.ofSeconds(3));
+        requests.setReadTimeout(Duration.ofSeconds(5));
+        return NimbusJwtDecoder.withJwkSetUri("https://www.googleapis.com/oauth2/v3/certs")
+                .restOperations(new RestTemplate(requests)).build();
+    }
+
+    public GoogleIdentity verify(String credential) {
+        if (clientId.isBlank()) {
+            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "GOOGLE_NOT_CONFIGURED",
+                    "구글 로그인이 준비되지 않았습니다.");
+        }
+        if (credential == null || credential.length() > 8192) throw invalid();
+        Jwt jwt;
+        try {
+            jwt = decoder.decode(credential);
+        } catch (BadJwtException exception) {
+            throw invalid();
+        } catch (JwtException exception) {
+            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "GOOGLE_AUTH_UNAVAILABLE",
+                    "구글 인증을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.");
+        }
+        return extract(jwt, clientId);
+    }
+
+    static GoogleIdentity extract(Jwt jwt, String clientId) {
+        String issuer = jwt.getIssuer() == null ? "" : jwt.getIssuer().toString();
+        String subject = jwt.getSubject();
+        String email = jwt.getClaimAsString("email");
+        String nonce = jwt.getClaimAsString("nonce");
+        if (!(issuer.equals("https://accounts.google.com") || issuer.equals("accounts.google.com"))
+                || jwt.getAudience() == null || !jwt.getAudience().contains(clientId)
+                || jwt.getAudience().size() != 1 || subject == null || subject.isBlank() || subject.length() > 255
+                || email == null || email.isBlank() || nonce == null || nonce.isBlank()
+                || !Boolean.TRUE.equals(jwt.getClaim("email_verified"))) {
+            throw invalid();
+        }
+        String normalized = email.strip().toLowerCase(Locale.ROOT);
+        if (normalized.length() > 320 || !normalized.matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+")) throw invalid();
+        String domain = normalized.substring(normalized.lastIndexOf('@') + 1);
+        String hostedDomain = jwt.getClaimAsString("hd");
+        boolean authoritative = domain.equals("gmail.com")
+                || (hostedDomain != null && hostedDomain.equalsIgnoreCase(domain));
+        String name = jwt.getClaimAsString("name");
+        if (name == null || name.isBlank()) name = normalized.substring(0, normalized.indexOf('@'));
+        name = name.strip();
+        if (name.length() > 100) name = name.substring(0, 100);
+        return new GoogleIdentity(subject, normalized, name, authoritative, nonce);
+    }
+
+    private static ApiException invalid() {
+        return new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_GOOGLE_CREDENTIAL", "구글 인증을 확인하지 못했습니다.");
+    }
+
+    public record GoogleIdentity(String subject, String email, String name, boolean authoritativeEmail, String nonce) {}
+}

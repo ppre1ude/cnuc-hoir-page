@@ -8,11 +8,15 @@ export type MemberSession = {
   admin: boolean;
 };
 
-export function login(email: string, password: string): Promise<void> {
-  return apiRequest<void>("/auth/login", {
+export function getGoogleNonce(): Promise<{ nonce: string }> {
+  return apiRequest<{ nonce: string }>("/auth/google/nonce");
+}
+
+export function loginWithGoogle(credential: string): Promise<MemberSession> {
+  return apiRequest<MemberSession>("/auth/google", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ credential }),
   });
 }
 
@@ -24,10 +28,10 @@ export function getSession(): Promise<MemberSession> {
   return apiRequest<MemberSession>("/auth/me");
 }
 
-export function completeAccountSetup(token: string, newPassword: string): Promise<void> {
-  return apiRequest<void>("/auth/account-setup/confirm", {
+export function completeAccountSetup(token: string, credential: string): Promise<MemberSession> {
+  return apiRequest<MemberSession>("/auth/account-setup/confirm", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token, newPassword }),
+    body: JSON.stringify({ token, credential }),
   });
 }

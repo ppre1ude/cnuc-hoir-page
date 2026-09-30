@@ -7,10 +7,15 @@
 $ErrorActionPreference = 'Stop'
 $problems = [System.Collections.Generic.List[string]]::new()
 
-foreach ($name in @('DB_URL', 'DB_USER', 'DB_PASSWORD')) {
+foreach ($name in @('DB_URL', 'DB_USER', 'DB_PASSWORD', 'GOOGLE_CLIENT_ID', 'NEXT_PUBLIC_GOOGLE_CLIENT_ID')) {
     if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name))) {
         $problems.Add("환경 변수 $name 이(가) 비어 있습니다.")
     }
+}
+
+if ($env:GOOGLE_CLIENT_ID -and $env:NEXT_PUBLIC_GOOGLE_CLIENT_ID -and
+    $env:GOOGLE_CLIENT_ID -ne $env:NEXT_PUBLIC_GOOGLE_CLIENT_ID) {
+    $problems.Add('API와 웹의 구글 클라이언트 ID가 다릅니다.')
 }
 
 if ($env:DB_URL -and $env:DB_URL -notmatch '^jdbc:postgresql://[^/]+/[^?]+') {

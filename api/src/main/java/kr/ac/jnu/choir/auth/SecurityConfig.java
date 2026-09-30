@@ -20,7 +20,7 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http, SessionMemberService sessions) throws Exception {
         http.authorizeHttpRequests(authorize -> authorize
                 .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
-                .requestMatchers("/api/v1/auth/csrf", "/api/v1/auth/login",
+                .requestMatchers("/api/v1/auth/csrf", "/api/v1/auth/google/nonce", "/api/v1/auth/google",
                         "/api/v1/auth/account-setup/confirm").permitAll()
                 .requestMatchers("/api/v1/auth/me", "/api/v1/auth/logout").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/v1/public/events").permitAll()
@@ -36,7 +36,15 @@ public class SecurityConfig {
                         .accessDeniedHandler((request, response, failure) -> {
                             response.setStatus(403);
                             response.setContentType("application/json;charset=UTF-8");
-                            response.getWriter().write("{\"code\":\"FORBIDDEN\",\"message\":\"접근 권한이 없습니다.\"}");
+                            boolean pending = false;
+                            try {
+                                pending = sessions.current(request).getStatus() != kr.ac.jnu.choir.member.AccountStatus.APPROVED;
+                            } catch (kr.ac.jnu.choir.common.ApiException ignored) {
+                                // 유효한 로그인 정보가 없으면 일반 권한 오류로 응답합니다.
+                            }
+                            response.getWriter().write(pending
+                                    ? "{\"code\":\"APPROVAL_REQUIRED\",\"message\":\"가입 승인 후 이용할 수 있습니다.\"}"
+                                    : "{\"code\":\"FORBIDDEN\",\"message\":\"접근 권한이 없습니다.\"}");
                         }))
                 .addFilterBefore(new OncePerRequestFilter() {
                     @Override

@@ -62,8 +62,8 @@ export function ApplicationQueue() {
 
   return (
     <section className={styles.page}>
-      <h1>가입 신청 관리</h1>
-      <p>보유 명단과 대조한 뒤 승인해 주세요.</p>
+      <h1>가입 승인</h1>
+      <p>구글 로그인 신청자의 이메일을 단원 명단과 대조해 주세요.</p>
       {error && <p className={styles.error} role="alert">{error}</p>}
       {authorized && !data && error && <button className={styles.secondary} type="button" onClick={() => { setError(""); setRetry((value) => value + 1); }}>다시 시도</button>}
       {authorized && !data && !error && <p role="status">신청 목록을 불러오는 중입니다.</p>}

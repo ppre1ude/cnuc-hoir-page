@@ -21,6 +21,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-flyway")
 	implementation("org.springframework.boot:spring-boot-starter-security")
+	implementation("org.springframework.security:spring-security-oauth2-jose")
 	implementation("org.springframework.boot:spring-boot-starter-session-jdbc")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-starter-webmvc")
@@ -43,5 +44,13 @@ tasks.register<JavaExec>("bootstrapAdminInvite") {
 	description = "최초 운영진 계정을 만들고 1회용 계정 설정 토큰을 발급합니다."
 	classpath = sourceSets.main.get().runtimeClasspath
 	mainClass = "kr.ac.jnu.choir.member.AdminBootstrapInvitationCommand"
+	standardInput = System.`in`
+}
+
+tasks.register<JavaExec>("linkExistingAdminGoogle") {
+	group = "운영"
+	description = "기존 운영진 계정에 구글 계정을 연결할 1회용 토큰을 발급합니다."
+	classpath = sourceSets.main.get().runtimeClasspath
+	mainClass = "kr.ac.jnu.choir.member.AdminGoogleConnectionCommand"
 	standardInput = System.`in`
 }
