@@ -50,10 +50,11 @@
 
 .activity, .participate { scroll-margin-top: 76px; }
 .history { padding: 112px 0 0; }
-.history h2 { margin: 0 0 var(--space-12); }
+.history .container { max-width: var(--layout-reading); }
+.history h2 { margin: 0 0 var(--space-6); font-size: clamp(32px, 4vw, 48px); font-weight: var(--weight-heading); letter-spacing: var(--tracking-heading); line-height: 1.2; }
 .activity { padding: 138px 0 150px; }
 .activityHeading { display: flex; align-items: end; justify-content: space-between; gap: 32px; margin-bottom: 48px; }
-.activity h2, .participate h2, .history h2 { font-size: clamp(47px, 5.3vw, 80px); font-weight: var(--weight-heading); letter-spacing: -.075em; line-height: 1.2; }
+.activity h2, .participate h2 { font-size: clamp(47px, 5.3vw, 80px); font-weight: var(--weight-heading); letter-spacing: -.075em; line-height: 1.2; }
 .activity h2, .participate h2 { margin: 0; }
 .activityLink { padding-bottom: 8px; border-bottom: 1px solid var(--color-primary); color: var(--color-primary) !important; font-size: 15px; font-weight: 700; white-space: nowrap; }
 .activityLink:hover { border-bottom-width: 2px; }
@@ -90,8 +91,7 @@
   .activity { padding: 88px 0 100px; scroll-margin-top: 66px; }
   .activityHeading { display: block; margin-bottom: 34px; }
   .history { padding-top: var(--space-20); }
-  .history h2 { margin-bottom: var(--space-8); }
-  .activity h2, .participate h2, .history h2 { font-size: clamp(42px, 10vw, 58px); }
+  .activity h2, .participate h2 { font-size: clamp(42px, 10vw, 58px); }
   .activityLink { display: inline-block; margin-top: 20px; font-size: 13px; }
   .participate { padding: 90px 0 100px; scroll-margin-top: 66px; }
   .participateGrid { display: block; }
