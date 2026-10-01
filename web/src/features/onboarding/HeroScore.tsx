@@ -1,37 +1,32 @@
+import { useId } from "react";
 import styles from "./HeroScore.module.css";
 
-// 로고의 오선과 음표 형태를 확장한 장식이며 실제 곡의 악보를 나타내지 않습니다.
-function ScoreStrip() {
-  return <svg viewBox="0 0 480 160" className={styles.strip} focusable="false">
-    <g className={styles.staff} fill="none" stroke="currentColor" strokeWidth="2">
-      {[32, 48, 64, 80, 96].map((height) =>
-        <path key={height} d={`M0 ${height} C80 ${height - 18} 160 ${height - 18} 240 ${height} S400 ${height + 18} 480 ${height}`} />)}
-    </g>
-    <g fill="currentColor">
-      <g transform="translate(92 68)">
-        <ellipse rx="10" ry="6.5" transform="rotate(-22)" />
-        <path d="M7 -2 L-3 -47 L1 -48 L11 -3 Z" />
-      </g>
-      <g transform="translate(248 96)">
-        <ellipse rx="10" ry="6.5" transform="rotate(-22)" />
-        <path d="M7 -2 L11 -53 L15 -53 L11 -2 Z" />
-        <path d="M13 -53 C20 -43 36 -40 31 -26 C28 -18 24 -12 19 -8 C25 -19 28 -29 22 -34 L12 -39 Z" />
-      </g>
-      <g transform="translate(388 72)">
-        <ellipse rx="10" ry="6.5" transform="rotate(-22)" />
-        <path d="M7 -2 L7 -48 L11 -48 L11 -2 Z" />
-      </g>
-    </g>
+// 로고의 오선과 음표 형태를 확장한 장식이며 실제 곡의 악보가 아닙니다.
+function ScoreCanvas({ id, mobile = false }: { id: string; mobile?: boolean }) {
+  const width = mobile ? 420 : 580;
+  const height = width * 140 / 580;
+  return <svg className={`${styles.canvas} ${mobile ? styles.mobile : styles.desktop}`}
+    focusable="false" height={height}>
+    <defs>
+      <pattern id={id} width={width} height={height} patternUnits="userSpaceOnUse" viewBox="0 0 580 140">
+        <g fill="none" stroke="currentColor" strokeWidth="2">
+          {[30, 48, 66, 84, 102].map((y) =>
+            <path key={y} d={`M0 ${y} C100 ${y - 12} 160 ${y - 12} 260 ${y} S460 ${y + 12} 580 ${y}`} />)}
+          <path d="M189 65 V20" /><path d="M389 91 V43 Q420 54 399 75" />
+        </g>
+        <g fill="currentColor">
+          <ellipse cx="180" cy="66" rx="10" ry="7" transform="rotate(-20 180 66)" />
+          <ellipse cx="380" cy="92" rx="10" ry="7" transform="rotate(-20 380 92)" />
+        </g>
+      </pattern>
+    </defs>
+    <rect width="100%" height="100%" fill={`url(#${id})`} />
   </svg>;
 }
 
 export function HeroScore() {
+  const id = useId();
   return <div className={styles.score} aria-hidden="true">
-    {(["left", "right"] as const).map((side) =>
-      <div className={`${styles.side} ${styles[side]}`} key={side}>
-        <div className={styles.sway}>
-          <div className={styles.track}><ScoreStrip /><ScoreStrip /></div>
-        </div>
-      </div>)}
+    <ScoreCanvas id={`${id}-desktop`} /><ScoreCanvas id={`${id}-mobile`} mobile />
   </div>;
 }
