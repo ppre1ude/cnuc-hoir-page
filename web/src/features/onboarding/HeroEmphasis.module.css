@@ -1,0 +1,19 @@
+.emphasis { white-space: nowrap; }
+.accessibleText { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.letter { display: inline-block; white-space: pre; transform-origin: 50% 80%; }
+.emphasis[data-enter="ready"] .letter {
+  animation: resonance 1150ms ease-in-out backwards;
+  animation-delay: calc(220ms + var(--letter-index) * 85ms);
+}
+
+/* 왼쪽부터 작은 파동이 한 번 지나간 뒤 글자는 원래 위치에 멈춥니다. */
+@keyframes resonance {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  22% { transform: translateY(-.1em) rotate(-1deg); }
+  48% { transform: translateY(.035em) rotate(.5deg); }
+  72% { transform: translateY(-.015em) rotate(0deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emphasis[data-enter="ready"] .letter { animation: none; }
+}

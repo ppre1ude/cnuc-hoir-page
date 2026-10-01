@@ -5,6 +5,7 @@ import { ActivityGallery } from "@/features/onboarding/ActivityGallery";
 import { activityPhotos } from "@/features/onboarding/activityPhotos";
 import { ChoirHistory } from "@/features/onboarding/ChoirHistory";
 import { HeroScore } from "@/features/onboarding/HeroScore";
+import { HeroEmphasis } from "@/features/onboarding/HeroEmphasis";
 import { Reveal } from "@/features/onboarding/Reveal";
 import { choirChannels, choirMilestones } from "@/features/onboarding/choirProfile";
 import styles from "./page.module.css";
@@ -25,7 +26,7 @@ export default function Home() {
           <div className={styles.heroContent}>
             <BrandLogo mark className={styles.heroMark} alt="" priority />
             <p className={styles.heroAffiliation}>전남대학교 중앙동아리</p>
-            <h1 id="hero-title">합창으로 전하는<br /><strong>울림과 감동</strong>의 이야기</h1>
+            <h1 id="hero-title">합창으로 전하는<br /><HeroEmphasis />의 이야기</h1>
             <div className={styles.heroActions}>
               <ActionLink size="large" href="#activity">공연·활동 보기 <span aria-hidden="true">↗</span></ActionLink>
               <ActionLink size="large" variant="secondary" href="#participate">함께하기 <span aria-hidden="true">↗</span></ActionLink>
