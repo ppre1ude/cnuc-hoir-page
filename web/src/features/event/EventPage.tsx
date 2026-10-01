@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Feedback, PageHeader } from "../../components/ui";
+import { Button, Feedback, PageHeader, StatusBadge } from "../../components/ui";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -19,6 +19,7 @@ export function EventPage() {
   const [event, setEvent] = useState<ChoirEvent | null>(null);
   const [session, setSession] = useState<MemberSession | null>(null);
   const [error, setError] = useState("");
+  const [retry, setRetry] = useState(0);
   const [attendance, setAttendance] = useState<AttendanceState | null>(null);
   const [attendanceError, setAttendanceError] = useState("");
   const [rsvpChoice, setRsvpChoice] = useState<EventRsvpChoice | null>(null);
@@ -51,7 +52,7 @@ export function EventPage() {
       else setError("행사를 불러오지 못했습니다.");
     });
     return () => { alive = false; if (timer !== undefined) window.clearInterval(timer); };
-  }, [id, router]);
+  }, [id, router, retry]);
 
   useEffect(() => {
     if (!event || session?.status !== "APPROVED") return;
@@ -62,10 +63,10 @@ export function EventPage() {
     return () => { alive = false; };
   }, [event, session?.status, rsvpRetry]);
 
-  return <main className={styles.eventPage}>
+  return <main id="member-content" tabIndex={-1} className={styles.eventPage}>
     <Link className={styles.backLink} href="/dashboard">← 일정</Link>
     <PageHeader title="행사" />
-    {error && <Feedback tone="error">{error}</Feedback>}
+    {error && <Feedback tone="error">{error} <Button variant="secondary" onClick={() => { setError(""); setRetry((value) => value + 1); }}>다시 시도</Button></Feedback>}
     {!Number.isSafeInteger(Number(id)) || Number(id) < 1 ? <p>행사 주소를 확인해 주세요.</p> :
       event && session ? <div className={styles.eventPageCard}><EventDetail event={event} memberType={session.memberType}
         checkInOpen={attendance?.checkInOpen ?? false} />
@@ -73,7 +74,7 @@ export function EventPage() {
         {rsvpError && <Feedback tone="error">{rsvpError} <Button variant="secondary" type="button" onClick={() => {
           setRsvpError(""); setRsvpRetry((value) => value + 1);
         }}>다시 시도</Button></Feedback>}
-        <p className={styles.eventAttendance}>내 출석: <strong>{attendance ? attendanceLabel[attendance.status] : "확인 중"}</strong></p>
+        <div className={styles.eventAttendance}><strong>내 출석</strong>{attendance ? <StatusBadge tone={attendance.status === "CHECKED_IN" ? "positive" : attendance.status === "MISSED" ? "negative" : "neutral"}>{attendanceLabel[attendance.status]}</StatusBadge> : !attendanceError && <span role="status">확인 중</span>}</div>
         {attendanceError && <Feedback tone="error">{attendanceError}</Feedback>}
         {session.admin && <p><Link href={`/admin/events/${event.id}/attendance`}>운영진 출석 관리</Link></p>}</div>
         : !error && <p role="status">행사를 불러오는 중입니다.</p>}

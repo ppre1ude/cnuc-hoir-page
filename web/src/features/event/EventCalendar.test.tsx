@@ -50,6 +50,25 @@ describe("일정 중심 회원 화면", () => {
   });
   afterEach(() => { cleanup(); vi.useRealTimers(); });
 
+  it("달력을 요일 머리글이 있는 표로 표시하고 오늘과 선택 날짜를 구분한다", async () => {
+    render(<EventCalendar />);
+    expect(screen.getByRole("table", { name: "2026년 09월" })).toBeInTheDocument();
+    expect(screen.getAllByRole("columnheader")).toHaveLength(7);
+    expect(screen.getByRole("button", { name: /27일/ })).toHaveAttribute("aria-current", "date");
+    expect(screen.getByRole("button", { name: /27일/ })).toHaveAttribute("aria-pressed", "true");
+    expect(await screen.findByRole("link", { name: "공연 안내" })).toHaveAttribute("href", "/notices?notice=9");
+  });
+
+  it("일정과 출석을 조회하는 동안 빈 기록으로 잘못 안내하지 않는다", () => {
+    getEvents.mockReturnValue(new Promise(() => {}));
+    getMyAttendance.mockReturnValue(new Promise(() => {}));
+    render(<EventCalendar />);
+    expect(screen.getByText("일정을 불러오는 중입니다.")).toBeInTheDocument();
+    expect(screen.queryByText("일정 없음")).not.toBeInTheDocument();
+    expect(screen.queryByText("등록된 행사가 없습니다.")).not.toBeInTheDocument();
+    expect(screen.queryByText("출석 기록이 없습니다.")).not.toBeInTheDocument();
+  });
+
   it("날짜를 고르면 해당 행사 상세와 OB 출석 대상 여부를 표시한다", async () => {
     render(<EventCalendar />);
     await screen.findByRole("button", { name: /29일/ });
