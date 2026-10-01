@@ -14,11 +14,14 @@ function dateTime(value: string) {
   return new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
-export function NoticeList() {
+export function NoticeList({ initialNoticeId = null }: { initialNoticeId?: number | null }) {
   const router = useRouter();
   const [page, setPage] = useState(0);
   const [data, setData] = useState<NoticePage | null>(null);
   const [selected, setSelected] = useState<Notice | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(initialNoticeId);
+  const [approved, setApproved] = useState(false);
+  const [detailRetry, setDetailRetry] = useState(0);
   const [listError, setListError] = useState("");
   const [detailError, setDetailError] = useState("");
   const [retry, setRetry] = useState(0);
@@ -30,6 +33,8 @@ export function NoticeList() {
         if (alive) router.replace("/application-status");
         return;
       }
+      if (!alive) return;
+      setApproved(true);
       const result = await getNotices(page);
       if (alive) {
         setData(result);
@@ -43,34 +48,61 @@ export function NoticeList() {
     return () => { alive = false; };
   }, [page, retry, router]);
 
-  async function open(id: number) {
+  useEffect(() => {
+    if (!approved || selectedId === null) return;
+    let alive = true;
+    getNotice(selectedId).then((notice) => {
+      if (alive) { setSelected(notice); setDetailError(""); }
+    }).catch(() => { if (alive) setDetailError("공지를 불러오지 못했습니다."); });
+    return () => { alive = false; };
+  }, [approved, selectedId, detailRetry]);
+
+  function open(id: number | null) {
+    setSelected(null);
     setDetailError("");
-    try { setSelected(await getNotice(id)); }
-    catch { setDetailError("공지를 불러오지 못했습니다."); }
+    setSelectedId(id === selectedId ? null : id);
+  }
+
+  function close() {
+    (document.getElementById(`notice-trigger-${selectedId}`) ?? document.getElementById("member-content"))?.focus();
+    open(null);
   }
 
   const visibleData = !listError && data?.page === page ? data : null;
-  return <section className={styles.page}>
+  const visibleNotice = selected?.id === selectedId ? selected : null;
+  const isInList = visibleData?.items.some((notice) => notice.id === selectedId);
+  function detail() {
+    return <section aria-label="공지 본문" className={styles.detail}>
+      {detailError ? <><Feedback tone="error">{detailError}</Feedback><Button variant="secondary" onClick={() => { setDetailError(""); setDetailRetry((value) => value + 1); }}>다시 시도</Button></>
+        : !visibleNotice ? <p role="status">공지를 불러오는 중입니다.</p>
+        : <><p className={styles.body}>{visibleNotice.body}</p><NoticePoll key={visibleNotice.id} noticeId={visibleNotice.id} /></>}
+      <Button variant="ghost" className={styles.close} onClick={close}>닫기</Button>
+    </section>;
+  }
+
+  return <main id="member-content" tabIndex={-1} className={styles.page}>
     <PageHeader title="공지" />
     {listError && <><Feedback tone="error">{listError}</Feedback><Button variant="secondary" type="button" onClick={() => { setListError(""); setData(null); setRetry(retry + 1); }}>다시 시도</Button></>}
-    {detailError && <Feedback tone="error">{detailError}</Feedback>}
     {!visibleData && !listError && <p role="status">공지를 불러오는 중입니다.</p>}
     {visibleData?.items.length === 0 && <p>게시된 공지가 없습니다.</p>}
-    <div className={styles.list}>{visibleData?.items.map((notice) => <article key={notice.id} className={styles.row}>
-      <h2><Button variant="secondary" type="button" onClick={() => open(notice.id)}>{notice.title}</Button></h2>
-      <p>{notice.author} · {notice.publishedAt && dateTime(notice.publishedAt)}</p>
-    </article>)}</div>
-    {selected && <article aria-label="공지 본문" className={styles.detail}>
-      <h2>{selected.title}</h2>
-      <p className={styles.meta}>{selected.author} · {dateTime(selected.createdAt)}</p>
-      <p className={styles.body}>{selected.body}</p>
-      <NoticePoll key={selected.id} noticeId={selected.id} />
-      <Button variant="secondary" type="button" onClick={() => setSelected(null)}>닫기</Button>
+    {approved && visibleData && selectedId !== null && !isInList && <article className={styles.standalone}>
+      <h2>{visibleNotice?.title ?? "선택한 공지"}</h2>
+      {detail()}
     </article>}
+    <div className={styles.list}>{visibleData?.items.map((notice) => <article key={notice.id} className={`${styles.row} ${selectedId === notice.id ? styles.expanded : ""}`}>
+      <h2><Button variant="unstyled" id={`notice-trigger-${notice.id}`} aria-expanded={selectedId === notice.id}
+        aria-controls={`notice-body-${notice.id}`} onClick={() => open(notice.id)}>
+        <span>{notice.title}</span><span className={styles.chevron} aria-hidden="true">{selectedId === notice.id ? "−" : "+"}</span>
+      </Button></h2>
+      <p className={styles.meta}>{notice.author}{notice.publishedAt && <> · <time dateTime={notice.publishedAt}>{dateTime(notice.publishedAt)}</time></>}</p>
+      <div id={`notice-body-${notice.id}`} hidden={selectedId !== notice.id}>
+        {selectedId === notice.id && detail()}
+      </div>
+    </article>)}</div>
     {visibleData && visibleData.total > visibleData.size && <nav aria-label="공지 목록 페이지" className={styles.pagination}>
-      <Button variant="secondary" type="button" disabled={page === 0} onClick={() => { setSelected(null); setDetailError(""); setPage(page - 1); }}>이전</Button>
-      <span>{page + 1} / {Math.ceil(visibleData.total / visibleData.size)}</span>
-      <Button variant="secondary" type="button" disabled={(page + 1) * visibleData.size >= visibleData.total} onClick={() => { setSelected(null); setDetailError(""); setPage(page + 1); }}>다음</Button>
+      <Button variant="secondary" type="button" disabled={page === 0} onClick={() => { open(null); setPage(page - 1); }}>이전</Button>
+      <span aria-label={`${Math.ceil(visibleData.total / visibleData.size)}페이지 중 ${page + 1}페이지`}>{page + 1} / {Math.ceil(visibleData.total / visibleData.size)}</span>
+      <Button variant="secondary" type="button" disabled={(page + 1) * visibleData.size >= visibleData.total} onClick={() => { open(null); setPage(page + 1); }}>다음</Button>
     </nav>}
-  </section>;
+  </main>;
 }

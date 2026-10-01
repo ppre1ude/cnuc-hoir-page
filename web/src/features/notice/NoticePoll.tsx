@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Input, Feedback } from "../../components/ui";
+import { Button, Input, Feedback, StatusBadge } from "../../components/ui";
 
 import { useEffect, useState } from "react";
 import { ApiRequestError } from "../../lib/api";
@@ -20,6 +20,7 @@ export function NoticePoll({ noticeId }: { noticeId: number }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [retry, setRetry] = useState(0);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -42,10 +43,12 @@ export function NoticePoll({ noticeId }: { noticeId: number }) {
     if (choice === null || busy) return;
     setBusy(true);
     setError("");
+    setSaved(false);
     try {
       const result = await voteNoticePoll(noticeId, choice);
       setPoll(result);
       setChoice(result.myChoice);
+      setSaved(true);
     } catch (caught) {
       if (caught instanceof ApiRequestError && caught.code === "POLL_CLOSED") {
         setError("투표가 마감되었습니다.");
@@ -59,16 +62,16 @@ export function NoticePoll({ noticeId }: { noticeId: number }) {
   if (!poll) return <div role="alert">{error} <Button variant="secondary" type="button" onClick={() => { setError(""); setRetry((value) => value + 1); }}>다시 시도</Button></div>;
 
   const total = poll.firstCount + poll.secondCount;
-  return <form className={styles.poll} onSubmit={submit}>
-    <div className={styles.heading}><h3>{poll.question}</h3><span>{poll.closed ? "마감" : "진행 중"}</span></div>
-    <p className={styles.deadline}>마감 {deadline(poll.closesAt)} · {total}명 참여</p>
+  return <form className={styles.poll} onSubmit={submit} aria-labelledby={`poll-question-${noticeId}`} aria-busy={busy}>
+    <div className={styles.heading}><h3 id={`poll-question-${noticeId}`}>{poll.question}</h3><StatusBadge tone={poll.closed ? "neutral" : "positive"}>{poll.closed ? "마감" : "진행 중"}</StatusBadge></div>
+    <p className={styles.deadline}>마감 <time dateTime={poll.closesAt}>{deadline(poll.closesAt)}</time> · {total}명 참여</p>
     <fieldset disabled={poll.closed || busy}>
       <legend className={styles.srOnly}>투표 선택지</legend>
       {[{ value: 1, label: poll.firstOption, count: poll.firstCount },
         { value: 2, label: poll.secondOption, count: poll.secondCount }].map((option) =>
         <label key={option.value} className={`${styles.option} ${choice === option.value ? styles.selected : ""}`}>
           <Input type="radio" name={`poll-${noticeId}`} value={option.value} checked={choice === option.value}
-            onChange={() => setChoice(option.value)} />
+            onChange={() => { setChoice(option.value); setSaved(false); }} />
           <span className={styles.label}>{option.label}</span>
           <span className={styles.count}>{option.count}명</span>
           <span className={styles.bar} style={{ width: `${total ? option.count / total * 100 : 0}%` }} aria-hidden="true" />
@@ -76,8 +79,9 @@ export function NoticePoll({ noticeId }: { noticeId: number }) {
     </fieldset>
     {poll.myChoice !== null && <p className={styles.mine}>내 선택: {poll.myChoice === 1 ? poll.firstOption : poll.secondOption}</p>}
     {error && <Feedback tone="error">{error}</Feedback>}
+    <p className={styles.srOnly} role="status">{saved ? "투표가 저장되었습니다." : ""}</p>
     {!poll.closed && <Button variant="primary" type="submit" disabled={choice === null || busy || choice === poll.myChoice}>
-      {poll.myChoice === null ? "투표하기" : "선택 변경"}
+      {busy ? "저장 중…" : poll.myChoice === null ? "투표하기" : "선택 변경"}
     </Button>}
   </form>;
 }
