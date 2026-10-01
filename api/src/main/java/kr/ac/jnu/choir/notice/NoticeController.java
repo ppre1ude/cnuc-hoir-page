@@ -25,17 +25,22 @@ import org.springframework.web.bind.annotation.RestController;
 public class NoticeController {
     private final SessionMemberService sessions;
     private final NoticeService notices;
+    private final NoticePollService polls;
 
-    public NoticeController(SessionMemberService sessions, NoticeService notices) {
+    public NoticeController(SessionMemberService sessions, NoticeService notices, NoticePollService polls) {
         this.sessions = sessions;
         this.notices = notices;
+        this.polls = polls;
     }
 
     @GetMapping("/notices")
     public NoticePage list(HttpServletRequest request, @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        sessions.requireApproved(request);
-        return page(notices.list(page, size, false), page, size);
+        var member = sessions.requireApproved(request);
+        var result = notices.list(page, size, false);
+        var summaries = polls.memberSummaries(result.getContent().stream().map(Notice::getId).toList(), member.getId());
+        return new NoticePage(result.getContent().stream()
+                .map(notice -> item(notice, summaries.get(notice.getId()))).toList(), page, size, result.getTotalElements());
     }
 
     @GetMapping("/notices/{id}")
@@ -75,8 +80,12 @@ public class NoticeController {
     }
 
     private NoticeItem item(Notice notice) {
+        return item(notice, null);
+    }
+
+    private NoticeItem item(Notice notice, NoticePollService.PollSummary summary) {
         return new NoticeItem(notice.getId(), notice.getTitle(), notice.getBody(), notice.getAuthor().getName(),
-                notice.isPublished(), notice.getCreatedAt(), notice.getUpdatedAt(), notice.getPublishedAt());
+                notice.isPublished(), notice.getCreatedAt(), notice.getUpdatedAt(), notice.getPublishedAt(), summary);
     }
 
     private NoticePollService.PollInput poll(PollInput input) {
@@ -91,6 +100,6 @@ public class NoticeController {
             @NotBlank @Size(max = 80) String firstOption,
             @NotBlank @Size(max = 80) String secondOption, @NotNull Instant closesAt) {}
     public record NoticeItem(Long id, String title, String body, String author, boolean published,
-            Instant createdAt, Instant updatedAt, Instant publishedAt) {}
+            Instant createdAt, Instant updatedAt, Instant publishedAt, NoticePollService.PollSummary poll) {}
     public record NoticePage(List<NoticeItem> items, int page, int size, long total) {}
 }

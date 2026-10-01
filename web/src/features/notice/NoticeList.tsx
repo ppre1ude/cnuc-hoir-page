@@ -2,12 +2,13 @@
 
 import { Button, Feedback, PageHeader } from "../../components/ui";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiRequestError } from "../../lib/api";
 import { getSession } from "../auth/session";
-import { getNotice, getNotices, type Notice, type NoticePage } from "./notices";
+import { getNotice, getNotices, type Notice, type NoticePage, type PollView } from "./notices";
 import { NoticePoll } from "./NoticePoll";
+import { NoticePollPreview } from "./NoticePollPreview";
 import styles from "./NoticeList.module.css";
 
 function dateTime(value: string) {
@@ -25,6 +26,11 @@ export function NoticeList({ initialNoticeId = null }: { initialNoticeId?: numbe
   const [listError, setListError] = useState("");
   const [detailError, setDetailError] = useState("");
   const [retry, setRetry] = useState(0);
+  const updatePoll = useCallback((noticeId: number, poll: PollView) => {
+    setData((current) => current ? {
+      ...current, items: current.items.map((notice) => notice.id === noticeId ? { ...notice, poll } : notice),
+    } : current);
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -75,7 +81,7 @@ export function NoticeList({ initialNoticeId = null }: { initialNoticeId?: numbe
     return <section aria-label="공지 본문" className={styles.detail}>
       {detailError ? <><Feedback tone="error">{detailError}</Feedback><Button variant="secondary" onClick={() => { setDetailError(""); setDetailRetry((value) => value + 1); }}>다시 시도</Button></>
         : !visibleNotice ? <p role="status">공지를 불러오는 중입니다.</p>
-        : <><p className={styles.body}>{visibleNotice.body}</p><NoticePoll key={visibleNotice.id} noticeId={visibleNotice.id} /></>}
+        : <><p className={styles.body}>{visibleNotice.body}</p><NoticePoll key={visibleNotice.id} noticeId={visibleNotice.id} onChanged={updatePoll} /></>}
       <Button variant="ghost" className={styles.close} onClick={close}>닫기</Button>
     </section>;
   }
@@ -91,10 +97,13 @@ export function NoticeList({ initialNoticeId = null }: { initialNoticeId?: numbe
     </article>}
     <div className={styles.list}>{visibleData?.items.map((notice) => <article key={notice.id} className={`${styles.row} ${selectedId === notice.id ? styles.expanded : ""}`}>
       <h2><Button variant="unstyled" id={`notice-trigger-${notice.id}`} aria-expanded={selectedId === notice.id}
-        aria-controls={`notice-body-${notice.id}`} onClick={() => open(notice.id)}>
+        aria-controls={`notice-body-${notice.id}`} aria-describedby={notice.poll ? `notice-poll-status-${notice.id}` : undefined} onClick={() => open(notice.id)}>
         <span>{notice.title}</span><span className={styles.chevron} aria-hidden="true">{selectedId === notice.id ? "−" : "+"}</span>
       </Button></h2>
-      <p className={styles.meta}>{notice.author}{notice.publishedAt && <> · <time dateTime={notice.publishedAt}>{dateTime(notice.publishedAt)}</time></>}</p>
+      <div className={styles.rowMeta}>
+        {notice.poll && <NoticePollPreview id={`notice-poll-status-${notice.id}`} poll={notice.poll} />}
+        <p className={styles.meta}>{notice.author}{notice.publishedAt && <> · <time dateTime={notice.publishedAt}>{dateTime(notice.publishedAt)}</time></>}</p>
+      </div>
       <div id={`notice-body-${notice.id}`} hidden={selectedId !== notice.id}>
         {selectedId === notice.id && detail()}
       </div>

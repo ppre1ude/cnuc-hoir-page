@@ -13,7 +13,10 @@ function deadline(value: string) {
   }).format(new Date(value));
 }
 
-export function NoticePoll({ noticeId }: { noticeId: number }) {
+export function NoticePoll({ noticeId, onChanged }: {
+  noticeId: number;
+  onChanged?: (noticeId: number, poll: PollView) => void;
+}) {
   const [poll, setPoll] = useState<PollView | null>(null);
   const [choice, setChoice] = useState<number | null>(null);
   const [missing, setMissing] = useState(false);
@@ -30,13 +33,14 @@ export function NoticePoll({ noticeId }: { noticeId: number }) {
       setChoice(value.myChoice);
       setMissing(false);
       setError("");
+      onChanged?.(noticeId, value);
     }).catch((caught) => {
       if (!active) return;
       if (caught instanceof ApiRequestError && caught.status === 404) setMissing(true);
       else setError("투표를 불러오지 못했습니다.");
     });
     return () => { active = false; };
-  }, [noticeId, retry]);
+  }, [noticeId, retry, onChanged]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -49,6 +53,7 @@ export function NoticePoll({ noticeId }: { noticeId: number }) {
       setPoll(result);
       setChoice(result.myChoice);
       setSaved(true);
+      onChanged?.(noticeId, result);
     } catch (caught) {
       if (caught instanceof ApiRequestError && caught.code === "POLL_CLOSED") {
         setError("투표가 마감되었습니다.");

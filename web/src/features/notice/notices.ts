@@ -9,6 +9,7 @@ export type Notice = {
   createdAt: string;
   updatedAt: string;
   publishedAt: string | null;
+  poll?: PollSummary | null;
 };
 
 export type NoticePage = { items: Notice[]; page: number; size: number; total: number };
@@ -24,6 +25,7 @@ export type PollView = PollInput & {
   secondCount: number;
   myChoice: number | null;
 };
+export type PollSummary = Pick<PollView, "firstOption" | "secondOption" | "closesAt" | "closed" | "myChoice">;
 export type PollRespondent = {
   memberId: number;
   name: string;

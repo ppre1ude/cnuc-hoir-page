@@ -5,26 +5,33 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import kr.ac.jnu.choir.common.ApiException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class NoticePollService {
     private final JdbcTemplate jdbc;
+    private final NamedParameterJdbcTemplate namedJdbc;
     private final Clock clock;
 
     public NoticePollService(JdbcTemplate jdbc, Clock clock) {
         this.jdbc = jdbc;
+        this.namedJdbc = new NamedParameterJdbcTemplate(jdbc);
         this.clock = clock;
     }
 
     public record PollInput(String question, String firstOption, String secondOption, Instant closesAt) {}
     public record PollView(String question, String firstOption, String secondOption, Instant closesAt,
             boolean closed, long firstCount, long secondCount, Integer myChoice) {}
+    public record PollSummary(String firstOption, String secondOption, Instant closesAt,
+            boolean closed, Integer myChoice) {}
     public record Respondent(Long memberId, String name, String email, int choice, Instant updatedAt) {}
     public record AdminPollView(PollView poll, List<Respondent> respondents) {}
 
@@ -55,6 +62,24 @@ public class NoticePollService {
         PollRow poll = find(noticeId, false);
         if (!poll.published()) throw missing();
         return view(poll, memberId);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<Long, PollSummary> memberSummaries(List<Long> noticeIds, long memberId) {
+        if (noticeIds.isEmpty()) return Map.of();
+        Instant now = clock.instant();
+        // 현재 페이지의 투표와 본인 선택만 한 번에 조회한다.
+        return namedJdbc.query("SELECT p.notice_id, p.first_option, p.second_option, p.closes_at, v.choice "
+                + "FROM notice_poll p JOIN notice n ON n.id = p.notice_id "
+                + "LEFT JOIN notice_poll_vote v ON v.poll_id = p.id AND v.member_id = :memberId "
+                + "WHERE n.published = true AND p.notice_id IN (:noticeIds)",
+                Map.of("noticeIds", noticeIds, "memberId", memberId),
+                (rs, row) -> {
+                    Instant closesAt = rs.getObject("closes_at", LocalDateTime.class).toInstant(ZoneOffset.UTC);
+                    return Map.entry(rs.getLong("notice_id"), new PollSummary(rs.getString("first_option"),
+                            rs.getString("second_option"), closesAt, !now.isBefore(closesAt),
+                            rs.getObject("choice", Integer.class)));
+                }).stream().collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     @Transactional

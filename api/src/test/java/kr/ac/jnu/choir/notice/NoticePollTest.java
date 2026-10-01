@@ -100,6 +100,80 @@ class NoticePollTest {
         return json.readTree(response.getContentAsString());
     }
 
+    private JsonNode list(MockHttpSession session, int page, int size) throws Exception {
+        var response = mvc.perform(get("/api/v1/notices").session(session)
+                .param("page", String.valueOf(page)).param("size", String.valueOf(size)))
+                .andReturn().getResponse();
+        assertThat(response.getStatus()).isEqualTo(200);
+        return json.readTree(response.getContentAsString());
+    }
+
+    private JsonNode summary(JsonNode page, long id) {
+        for (JsonNode item : page.get("items")) {
+            if (item.get("id").asLong() == id) return item.get("poll");
+        }
+        throw new AssertionError("공지 목록에 해당 공지가 없습니다.");
+    }
+
+    @Test void listReturnsOnlyPublishedPollsAndCurrentMembersChoice() throws Exception {
+        Member admin = member("운영진", "APPROVED", true);
+        Member first = member("첫 단원", "APPROVED", false);
+        Member second = member("둘째 단원", "APPROVED", false);
+        long open = createPoll(admin, true);
+        long closed = createPoll(admin, true);
+        createPoll(admin, false);
+        vote(open, session(first), 1);
+        vote(open, session(second), 2);
+        vote(closed, session(first), 2);
+        jdbc.update("UPDATE notice_poll SET closes_at = ? WHERE notice_id = ?",
+                LocalDateTime.ofInstant(Instant.now().minusSeconds(1), ZoneOffset.UTC), closed);
+        MockHttpSession adminSession = session(admin);
+        var plain = mvc.perform(post("/api/v1/admin/notices").session(adminSession)
+                .header("X-CSRF-TOKEN", csrf(adminSession)).contentType("application/json")
+                .content("{\"title\":\"일반 공지\",\"body\":\"본문\",\"published\":true}"))
+                .andReturn().getResponse();
+        assertThat(plain.getStatus()).isEqualTo(201);
+        long plainId = json.readTree(plain.getContentAsString()).get("id").asLong();
+
+        JsonNode firstPage = list(session(first), 0, 20);
+        assertThat(firstPage.get("total").asLong()).isEqualTo(3);
+        assertThat(summary(firstPage, open).get("myChoice").asInt()).isEqualTo(1);
+        assertThat(summary(firstPage, open).get("closed").asBoolean()).isFalse();
+        assertThat(summary(firstPage, open).get("firstOption").asText()).isEqualTo("참석");
+        assertThat(summary(firstPage, closed).get("closed").asBoolean()).isTrue();
+        assertThat(summary(firstPage, closed).get("myChoice").asInt()).isEqualTo(2);
+        assertThat(summary(firstPage, plainId).isNull()).isTrue();
+        assertThat(firstPage.toString()).doesNotContain(first.getEmail(), second.getEmail(), "respondents", "memberId");
+        assertThat(summary(list(session(second), 0, 20), open).get("myChoice").asInt()).isEqualTo(2);
+        assertThat(summary(list(session(second), 0, 20), closed).get("myChoice").isNull()).isTrue();
+        vote(open, session(first), 2);
+        assertThat(summary(list(session(first), 0, 20), open).get("myChoice").asInt()).isEqualTo(2);
+    }
+
+    @Test void listSummariesFollowPaginationAndRequireApprovedSession() throws Exception {
+        Member admin = member("운영진", "APPROVED", true);
+        Member voter = member("단원", "APPROVED", false);
+        Member pending = member("대기", "APPROVAL_PENDING", false);
+        long first = createPoll(admin, true);
+        long second = createPoll(admin, true);
+        vote(first, session(voter), 1);
+        vote(second, session(voter), 2);
+        JsonNode firstPage = list(session(voter), 0, 1);
+        JsonNode secondPage = list(session(voter), 1, 1);
+        assertThat(firstPage.get("items").size()).isEqualTo(1);
+        assertThat(secondPage.get("items").size()).isEqualTo(1);
+        assertThat(firstPage.get("items").get(0).get("id").asLong())
+                .isNotEqualTo(secondPage.get("items").get(0).get("id").asLong());
+        for (JsonNode page : java.util.List.of(firstPage, secondPage)) {
+            JsonNode item = page.get("items").get(0);
+            assertThat(item.get("poll").get("myChoice").asInt()).isEqualTo(item.get("id").asLong() == first ? 1 : 2);
+        }
+        assertThat(list(session(voter), 2, 1).get("items").size()).isZero();
+        assertThat(mvc.perform(get("/api/v1/notices")).andReturn().getResponse().getStatus()).isEqualTo(401);
+        assertThat(mvc.perform(get("/api/v1/notices").session(session(pending)))
+                .andReturn().getResponse().getStatus()).isEqualTo(403);
+    }
+
     @Test void approvedMemberCanChangeVoteAndOnlyAdminSeesRespondents() throws Exception {
         Member admin = member("운영진", "APPROVED", true);
         Member voter = member("단원", "APPROVED", false);
