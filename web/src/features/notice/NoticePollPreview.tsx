@@ -16,8 +16,8 @@ export function NoticePollPreview({ id, poll }: { id: string; poll: PollSummary 
     return () => window.clearTimeout(timer);
   }, [closed, deadline, now]);
   const choice = poll.myChoice === 1 ? poll.firstOption : poll.myChoice === 2 ? poll.secondOption : null;
-  const label = closed ? "마감" : choice ? "참여 완료" : "미참여";
+  const label = closed ? "마감" : choice ?? "미참여";
   return <StatusBadge id={id} tone={!closed && choice ? "positive" : "neutral"} className={styles.pollBadge}>
-    {label}{choice && ` · ${choice}`}
+    {label}{closed && choice && ` · ${choice}`}
   </StatusBadge>;
 }

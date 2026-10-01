@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NoticeList } from "./NoticeList";
 import { NoticePollPreview } from "./NoticePollPreview";
@@ -23,7 +23,7 @@ describe("공지 목록 투표 미리보기", () => {
     api.getNoticePoll.mockResolvedValue(poll);
   });
 
-  it("투표가 있는 공지에만 미참여·참여 완료·마감 상태와 본인 선택을 표시한다", async () => {
+  it("투표가 있는 공지에만 미참여·본인 선택·마감 상태를 표시한다", async () => {
     api.getNotices.mockResolvedValue({ items: [notice,
       { ...notice, id: 2, title: "참여한 조사", poll: { ...poll, myChoice: 2 } },
       { ...notice, id: 3, title: "끝난 조사", poll: { ...poll, closed: true, myChoice: 1 } },
@@ -32,8 +32,8 @@ describe("공지 목록 투표 미리보기", () => {
     const trigger = await screen.findByRole("button", { name: "연습 참여 조사" });
     expect(trigger).toHaveAccessibleDescription("미참여");
     expect(screen.getByText("미참여").className).toContain("neutral");
-    expect(screen.getByRole("button", { name: "참여한 조사" })).toHaveAccessibleDescription("참여 완료 · 불참");
-    expect(screen.getByText("참여 완료 · 불참").className).toContain("positive");
+    expect(screen.getByRole("button", { name: "참여한 조사" })).toHaveAccessibleDescription("불참");
+    expect(screen.getByText("불참").className).toContain("positive");
     expect(screen.getByText("마감 · 참석").className).toContain("neutral");
     expect(screen.getByRole("button", { name: "일반 공지" })).not.toHaveAttribute("aria-describedby");
     expect(api.getNoticePoll).not.toHaveBeenCalled();
@@ -48,19 +48,18 @@ describe("공지 목록 투표 미리보기", () => {
     fireEvent.click(await screen.findByRole("radio", { name: /^참석/ }));
     expect(trigger).toHaveAccessibleDescription("미참여");
     fireEvent.click(screen.getByRole("button", { name: "투표하기" }));
-    await screen.findByText("참여 완료 · 참석");
-    expect(trigger).toHaveAccessibleDescription("참여 완료 · 참석");
+    await waitFor(() => expect(trigger).toHaveAccessibleDescription("참석"));
     fireEvent.click(screen.getByRole("radio", { name: /^불참/ }));
-    expect(trigger).toHaveAccessibleDescription("참여 완료 · 참석");
+    expect(trigger).toHaveAccessibleDescription("참석");
     fireEvent.click(screen.getByRole("button", { name: "선택 변경" }));
-    await screen.findByText("참여 완료 · 불참");
+    await waitFor(() => expect(trigger).toHaveAccessibleDescription("불참"));
     fireEvent.click(screen.getByRole("button", { name: "닫기" }));
-    expect(trigger).toHaveAccessibleDescription("참여 완료 · 불참");
+    expect(trigger).toHaveAccessibleDescription("불참");
     expect(trigger).toHaveFocus();
     expect(api.voteNoticePoll.mock.calls).toEqual([[1, 1], [1, 2]]);
   });
 
-  it("저장 실패 시 참여 완료로 표시하지 않고 재시도할 수 있다", async () => {
+  it("저장 실패 시 선택을 목록에 반영하지 않고 재시도할 수 있다", async () => {
     api.voteNoticePoll.mockRejectedValueOnce(new Error("연결 실패"));
     render(<NoticeList />);
     const trigger = await screen.findByRole("button", { name: "연습 참여 조사" });
@@ -86,7 +85,7 @@ describe("공지 목록 투표 미리보기", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-10-01T00:00:00Z"));
     render(<NoticePollPreview id="deadline-status" poll={{ ...poll, closesAt: "2026-10-01T00:00:01Z", myChoice: 1 }} />);
-    expect(screen.getByText("참여 완료 · 참석").className).toContain("positive");
+    expect(screen.getByText("참석").className).toContain("positive");
     await act(async () => { vi.advanceTimersByTime(1001); });
     expect(screen.getByText("마감 · 참석").className).toContain("neutral");
   });
