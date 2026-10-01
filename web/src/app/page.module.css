@@ -53,7 +53,6 @@
 .introduction .container { max-width: var(--layout-reading); }
 .introductionLine { margin: 0; font-size: clamp(36px, 4.5vw, 64px); font-weight: var(--weight-medium); letter-spacing: var(--tracking-heading); line-height: 1.4; word-break: keep-all; }
 .introductionLine strong { color: var(--color-primary); font-weight: var(--weight-heading); }
-.introductionIdentity { margin: var(--space-8) 0 0; font-size: var(--text-body); font-weight: var(--weight-label); line-height: 1.65; word-break: keep-all; }
 .history { padding: var(--space-20) 0; border-top: 1px solid var(--color-line); }
 .history .container { max-width: var(--layout-reading); }
 .history h2 { margin: 0 0 var(--space-6); font-size: clamp(32px, 4vw, 48px); font-weight: var(--weight-heading); letter-spacing: var(--tracking-heading); line-height: 1.2; }
@@ -97,7 +96,6 @@
   .activityHeading { display: block; margin-bottom: 34px; }
   .introduction { padding-top: var(--space-20); }
   .introductionLine { font-size: clamp(28px, 7.8vw, 42px); }
-  .introductionIdentity { margin-top: var(--space-6); }
   .history { padding-block: var(--space-16); }
   .activity h2, .participate h2 { font-size: clamp(42px, 10vw, 58px); }
   .activityLink { display: inline-block; margin-top: 20px; font-size: 13px; }

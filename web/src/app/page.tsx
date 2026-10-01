@@ -38,7 +38,6 @@ export default function Home() {
           <Reveal><p className={styles.introductionLine}><strong>내 목소리</strong>를 알아가고,</p></Reveal>
           <Reveal delayed><p className={styles.introductionLine}><strong>나</strong>를 발견하고,</p></Reveal>
           <Reveal delayed><p className={styles.introductionLine}>함께 노래하며<br /><strong>우리가 됩니다.</strong></p></Reveal>
-          <Reveal><p className={styles.introductionIdentity}>전남대학교 중앙동아리, 전남대학교 합창단</p></Reveal>
         </div>
       </section>
 
