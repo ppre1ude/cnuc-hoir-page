@@ -15,8 +15,9 @@ export function ActivityGallery({ photos }: ActivityGalleryProps) {
           <Image
             src={photo.src}
             alt={photo.alt}
-            fill
-            sizes="(max-width: 760px) 100vw, 64vw"
+            width={photo.width}
+            height={photo.height}
+            sizes="(max-width: 760px) calc(100vw - 40px), (max-width: 1280px) calc((100vw - 88px) / 2), 608px"
             style={{ objectPosition: photo.objectPosition }}
           />
         </Reveal>
