@@ -1,1 +1,4 @@
 .shell { min-height: 100svh; background: var(--color-surface); color: var(--color-ink); }
+.shell main { scroll-margin-top: 140px; }
+.skipLink { position: fixed; top: var(--space-3); left: var(--space-4); z-index: 50; padding: var(--space-3) var(--space-5); border-radius: var(--radius-control); background: var(--color-primary); color: var(--color-surface); font-weight: var(--weight-label); transform: translateY(-200%); }
+.skipLink:focus { transform: translateY(0); }

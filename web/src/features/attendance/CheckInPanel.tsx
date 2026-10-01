@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Input, Feedback, PageHeader } from "../../components/ui";
+import { Button, Input, Feedback, PageHeader, StatusBadge } from "../../components/ui";
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -15,6 +15,8 @@ export function CheckInPanel({ eventId }: { eventId: number }) {
   const [busy, setBusy] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [statusRefreshFailed, setStatusRefreshFailed] = useState(false);
+  const [statusLoadFailed, setStatusLoadFailed] = useState(false);
+  const [codeError, setCodeError] = useState(false);
   const pendingQrToken = useRef<string | null>(null);
   const statusRequestVersion = useRef(0);
   const qrSubmissionInFlight = useRef(false);
@@ -52,7 +54,7 @@ export function CheckInPanel({ eventId }: { eventId: number }) {
         if (alive) {
           try {
             const latest = await getEventAttendance(eventId);
-            if (alive) { setStatus(latest); setMessage("출석이 완료되었습니다."); }
+            if (alive) { setStatus(latest); setStatusLoadFailed(false); setMessage("출석이 완료되었습니다."); }
           } catch {
             if (alive) {
               setStatusRefreshFailed(true);
@@ -76,7 +78,7 @@ export function CheckInPanel({ eventId }: { eventId: number }) {
     if (!consumeHash()) {
       const version = ++statusRequestVersion.current;
       getEventAttendance(eventId).then((value) => { if (alive && version === statusRequestVersion.current) setStatus(value); })
-        .catch(() => { if (alive && version === statusRequestVersion.current) setMessage("출석 상태를 불러오지 못했습니다."); });
+        .catch(() => { if (alive && version === statusRequestVersion.current) { setStatusLoadFailed(true); setMessage("출석 상태를 불러오지 못했습니다."); } });
     }
     return () => { alive = false; window.removeEventListener("hashchange", consumeHash); };
   }, [eventId]);
@@ -87,12 +89,14 @@ export function CheckInPanel({ eventId }: { eventId: number }) {
     statusRequestVersion.current++;
     setBusy(true);
     setMessage("");
+    setCodeError(false);
     try {
       await submitCheckIn(eventId, code.trim().toUpperCase());
       completedRef.current = true;
       setCompleted(true);
       setCode("");
     } catch (error) {
+      setCodeError(error instanceof ApiRequestError && error.code === "INVALID_CREDENTIAL");
       setMessage(errorMessage(error));
       setBusy(false);
       return;
@@ -107,26 +111,34 @@ export function CheckInPanel({ eventId }: { eventId: number }) {
   }
 
   async function retryStatus() {
+    if (busy) return;
+    setBusy(true);
+    statusRequestVersion.current++;
     try {
       setStatus(await getEventAttendance(eventId));
+      setStatusLoadFailed(false);
       setStatusRefreshFailed(false);
-      setMessage("출석이 완료되었습니다.");
-    } catch { setMessage("출석은 완료됐지만 상태를 확인하지 못했습니다."); }
+      setStatusLoadFailed(false);
+      setMessage(completed ? "출석이 완료되었습니다." : "");
+    } catch { setMessage(completed ? "출석은 완료됐지만 상태를 확인하지 못했습니다." : "출석 상태를 불러오지 못했습니다."); }
+    finally { setBusy(false); }
   }
 
   return <section aria-label="현장 출석" className={styles.panel}>
     <PageHeader title="현장 출석" />
-    {status && <p>현재 상태: <strong>{attendanceLabel[status.status]}</strong></p>}
+    {status && <p className={styles.state}>현재 상태 <strong><StatusBadge tone={status.status === "CHECKED_IN" ? "positive" : status.status === "MISSED" ? "negative" : "neutral"}>{attendanceLabel[status.status]}</StatusBadge></strong></p>}
     <form className={styles.form} onSubmit={submit}>
       <label htmlFor="check-in-code">운영진이 알려준 출석 코드</label>
       <Input id="check-in-code" value={code} maxLength={8} autoComplete="off"
-        onChange={(event) => setCode(event.target.value)} disabled={busy || completed || status?.status === "CHECKED_IN"} />
-      <Button variant="primary" type="submit" disabled={busy || completed || !code.trim() || status?.status === "CHECKED_IN"}>
+        name="code" required autoCapitalize="characters" spellCheck={false} aria-invalid={codeError || undefined}
+        aria-describedby={codeError ? "check-in-feedback" : undefined}
+        onChange={(event) => { setCode(event.target.value); if (codeError) setMessage(""); setCodeError(false); }} disabled={busy || completed || status?.status === "CHECKED_IN"} />
+      <Button variant="primary" size="large" type="submit" disabled={busy || completed || !code.trim() || status?.status === "CHECKED_IN"}>
         {busy ? "확인 중..." : "출석하기"}
       </Button>
     </form>
-    {message && <Feedback tone={completed && !statusRefreshFailed ? "success" : "error"}>{message}</Feedback>}
-    {statusRefreshFailed && <Button variant="secondary" type="button" onClick={retryStatus}>상태 다시 확인</Button>}
+    <div id="check-in-feedback">{message && <Feedback tone={completed && !statusRefreshFailed ? "success" : "error"}>{message}</Feedback>}</div>
+    {(statusRefreshFailed || statusLoadFailed) && <Button variant="secondary" type="button" disabled={busy} onClick={retryStatus}>상태 다시 확인</Button>}
     <p><Link href={`/events/${eventId}`}>행사로 돌아가기</Link></p>
   </section>;
 }

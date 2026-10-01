@@ -27,7 +27,7 @@ test("QR 토큰을 주소에서 즉시 지우고 본문으로 제출합니다", 
   expect(window.location.hash).toBe("");
   await waitFor(() => expect(attendance.submitCheckIn).toHaveBeenCalledWith(3, "secret-token"));
   expect(attendance.getEventAttendance).toHaveBeenCalledTimes(1);
-  await screen.findByText("출석 완료", { selector: "strong" });
+  await screen.findByText("출석 완료");
 });
 
 test("개발 모드의 이중 효과 실행에서도 QR 출석을 한 번 제출합니다", async () => {
@@ -110,4 +110,17 @@ test.each([
   fireEvent.change(screen.getByLabelText("운영진이 알려준 출석 코드"), { target: { value: "ABCD2345" } });
   fireEvent.click(screen.getByRole("button", { name: "출석하기" }));
   await screen.findByText(message);
+});
+
+test("잘못된 출석 코드의 오류를 입력과 연결하고 수정하면 오류 표시를 해제합니다", async () => {
+  vi.mocked(attendance.submitCheckIn).mockRejectedValue(new ApiRequestError(400, "INVALID_CREDENTIAL", "실패"));
+  render(<CheckInPanel eventId={3} />);
+  const input = screen.getByLabelText("운영진이 알려준 출석 코드");
+  fireEvent.change(input, { target: { value: "BADCODE" } });
+  fireEvent.click(screen.getByRole("button", { name: "출석하기" }));
+  await screen.findByText("출석 코드를 확인해 주세요.");
+  expect(input).toHaveAttribute("aria-invalid", "true");
+  expect(input).toHaveAccessibleDescription("출석 코드를 확인해 주세요.");
+  fireEvent.change(input, { target: { value: "ABCD2345" } });
+  expect(input).not.toHaveAttribute("aria-invalid");
 });

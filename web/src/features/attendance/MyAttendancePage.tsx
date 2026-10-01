@@ -1,6 +1,6 @@
 "use client";
 
-import { Feedback, PageHeader, StatusBadge } from "../../components/ui";
+import { Button, Feedback, PageHeader, StatusBadge } from "../../components/ui";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -10,18 +10,21 @@ import styles from "./MyAttendancePage.module.css";
 export function MyAttendancePage() {
   const [items, setItems] = useState<AttendanceState[]>([]);
   const [error, setError] = useState("");
+  const [loaded, setLoaded] = useState(false);
+  const [retry, setRetry] = useState(0);
   useEffect(() => {
     let alive = true;
-    getMyAttendance().then((value) => { if (alive) setItems(value); })
+    getMyAttendance().then((value) => { if (alive) { setItems(value); setLoaded(true); } })
       .catch(() => { if (alive) setError("출석 기록을 불러오지 못했습니다."); });
     return () => { alive = false; };
-  }, []);
-  return <main className={styles.page}>
+  }, [retry]);
+  return <main id="member-content" tabIndex={-1} className={styles.page}>
     <PageHeader title="내 출석 기록" />
-    {error && <Feedback tone="error">{error}</Feedback>}
-    {items.length === 0 && !error && <p className={styles.empty}>출석 기록이 없습니다.</p>}
-    <ul className={styles.list}>{items.map((item) => <li key={item.eventId}>
-      <Link href={`/events/${item.eventId}`}>{item.eventTitle}<StatusBadge tone={item.status === "CHECKED_IN" ? "positive" : item.status === "MISSED" ? "negative" : "neutral"}>{attendanceLabel[item.status]}</StatusBadge></Link>
-    </li>)}</ul>
+    {error && <Feedback tone="error">{error} <Button variant="secondary" onClick={() => { setError(""); setLoaded(false); setRetry((value) => value + 1); }}>다시 시도</Button></Feedback>}
+    {!loaded && !error && <p className={styles.empty} role="status">출석 기록을 불러오는 중입니다.</p>}
+    {loaded && items.length === 0 && !error && <p className={styles.empty}>출석 기록이 없습니다.</p>}
+    {!error && loaded && items.length > 0 && <ul className={styles.list} aria-label="행사별 출석 기록">{items.map((item) => <li key={item.eventId}>
+      <Link href={`/events/${item.eventId}`}><span className={styles.eventTitle}>{item.eventTitle}</span><StatusBadge tone={item.status === "CHECKED_IN" ? "positive" : item.status === "MISSED" ? "negative" : "neutral"}>{attendanceLabel[item.status]}</StatusBadge><span aria-hidden="true" className={styles.arrow}>→</span></Link>
+    </li>)}</ul>}
   </main>;
 }
