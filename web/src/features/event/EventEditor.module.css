@@ -1,45 +1,46 @@
 .page { composes: page from "../../components/ui/ui.module.css"; }
+.card { composes: surface from "../../components/ui/ui.module.css"; }
 
-.page a { text-underline-offset: 4px; }
-
-.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-6); align-items: start; }
 .singleColumn { grid-template-columns: minmax(0, 1fr); }
+.card h2 { margin: 0 0 var(--space-5); letter-spacing: var(--tracking-heading); }
 
-.batch { margin-bottom: 20px; }
+.batch { margin-bottom: var(--space-6); }
 .batch .form { max-width: 720px; }
-.batchWeekdays, .batchDays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
-.batchWeekdays { margin-top: 12px; color: var(--choir-muted); font-size: 13px; text-align: center; }
-
-.selectedDates { margin: 6px 0 12px; color: var(--choir-deep-green); font-size: 14px; }
-.batchFields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; }
+.batchWeekdays, .batchDays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--space-1); }
+.batchWeekdays { margin-top: var(--space-3); color: var(--color-muted); font-size: var(--text-small); text-align: center; }
+.batchDays button { padding-inline: 0; }
+.selectedDates { margin: var(--space-2) 0 var(--space-3); color: var(--color-primary); font-size: var(--text-label); }
+.batchFields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--space-4); }
 .batchFields label { display: block; }
 .batchFields label:nth-child(2) { grid-row: span 2; }
-.batchFields input, .batchFields textarea { display: block; margin-top: 5px; }
-.card h2 { margin: 0 0 20px; }
-.listHeader { display: flex; justify-content: space-between; gap: 10px; align-items: start; flex-wrap: wrap; }
-.listHeader label { font-size: 13px; }
-.listHeader input { display: block; margin-top: 5px; }
-.eventRow { display: flex; flex-direction: column; gap: 5px; width: 100%; padding: 14px 4px; border: 0; border-top: 1px solid var(--choir-line); background: transparent; text-align: left; font: inherit; cursor: pointer; }
-.eventRow span { color: var(--color-muted); font-size: 13px; }
-.form { display: flex; flex-direction: column; gap: 8px; }
+.batchFields input, .batchFields textarea { display: block; margin-top: var(--space-2); }
 
-.form textarea { resize: vertical; }
-.check { display: flex; align-items: center; gap: 8px; }
-
-.actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-
-.rsvpSummary { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--choir-line); }
-.rsvpSummary h3 { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 0 12px; font-size: 18px; }
-
-.rsvpCounts { color: var(--choir-deep-green); font-weight: 700; }
-.rsvpMembers { max-height: 300px; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
-.rsvpMembers li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--choir-line); }
-.rsvpMembers strong { color: var(--choir-deep-green); }
-.rsvpMembers span { min-width: 0; overflow-wrap: anywhere; font-size: 14px; }
-.rsvpMembers strong { flex-shrink: 0; }
-@media (max-width: 760px) {  .grid { display: flex; flex-direction: column; }  .batchFields { display: block; } }
-
-.card { composes: surface from "../../components/ui/ui.module.css"; }
-.form input:not([type="checkbox"]), .form textarea { margin-bottom: var(--space-2); }
-.batchDays button { padding-inline: 0; }
+.listHeader { display: flex; align-items: start; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); }
+.listHeader label { font-size: var(--text-small); font-weight: var(--weight-label); }
+.listHeader input { display: block; margin-top: var(--space-1); }
+.eventRow { display: flex; flex-direction: column; gap: var(--space-1); width: 100%; padding: var(--space-4) var(--space-2); border: 0; border-top: 1px solid var(--color-line); background: transparent; font: inherit; font-weight: var(--weight-label); text-align: left; cursor: pointer; }
+.eventRow:hover { background: var(--color-subtle); }
+.eventRow span { color: var(--color-muted); font-size: var(--text-small); font-weight: var(--weight-body); }
 .eventRow[aria-pressed="true"] { background: var(--color-selected); color: var(--color-primary); }
+
+.form { display: flex; flex-direction: column; gap: var(--space-2); }
+.form label { font-size: var(--text-label); font-weight: var(--weight-label); }
+.form input:not([type="checkbox"]), .form textarea { margin-bottom: var(--space-2); }
+.check { display: flex; align-items: center; gap: var(--space-2); }
+.form .check { font-weight: var(--weight-body); }
+.hint { margin: 0; color: var(--color-muted); font-size: var(--text-small); }
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
+
+.rsvpSummary { margin-top: var(--space-6); padding-top: var(--space-6); border-top: 1px solid var(--color-line); }
+.rsvpSummary h3 { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin: 0 0 var(--space-3); font-size: var(--text-body); }
+.rsvpCounts { color: var(--color-primary); font-weight: var(--weight-label); }
+.rsvpMembers { max-height: 300px; margin: 0; padding: 0; overflow-y: auto; list-style: none; }
+.rsvpMembers li { display: flex; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) 0; border-top: 1px solid var(--color-line); }
+.rsvpMembers span { min-width: 0; font-size: var(--text-label); overflow-wrap: anywhere; }
+.rsvpMembers strong { flex-shrink: 0; color: var(--color-primary); }
+
+@media (max-width: 760px) {
+  .grid { display: flex; flex-direction: column; }
+  .batchFields { display: block; }
+}

@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { ApiRequestError } from "../../lib/api";
 import { loginWithGoogle } from "./session";
 import { GoogleButton } from "./GoogleButton";
-import styles from "./LoginForm.module.css";
 
 export function LoginForm() {
   const router = useRouter();
@@ -25,8 +24,8 @@ export function LoginForm() {
     }
   }, [router]);
 
-  return <div className={styles.form}>
+  return <>
     <GoogleButton onCredential={signIn} onError={fail} />
     {error && <Feedback tone="error">{error}</Feedback>}
-  </div>;
+  </>;
 }

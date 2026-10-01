@@ -1,2 +1,1 @@
-.page { width: min(100% - 64px, 640px); margin: 0 auto; padding: 42px 0 88px; }
-@media (max-width: 760px) { .page { width: min(100% - 36px, 640px); padding-top: 28px; } }
+.page { composes: readingPage from "../../../../../components/ui/ui.module.css"; }

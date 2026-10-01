@@ -4,12 +4,10 @@ import { Feedback } from "../../../components/ui";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 import { ApiRequestError } from "../../../lib/api";
 import { GoogleButton } from "../../../features/auth/GoogleButton";
 import { completeAccountSetup } from "../../../features/auth/session";
-import styles from "../simple.module.css";
 
 export default function ActivatePage() {
   const router = useRouter();
@@ -40,16 +38,11 @@ export default function ActivatePage() {
 
   const fail = useCallback((value: string) => setMessage(value), []);
 
-  return <main className={styles.page}>
-    <Link className={styles.brand} href="/" aria-label="전남대학교 합창단 홈">
-      <Image src="/images/choir-logo-horizontal.png" alt="" width={280} height={61} priority />
-    </Link>
-    <div className={styles.content}>
-      <h1>구글 계정 연결</h1>
-      {ready && !hasToken && <Feedback tone="error">유효한 계정 연결 링크가 필요합니다. 운영진에게 요청해 주세요.</Feedback>}
-      {ready && hasToken && <GoogleButton onCredential={connect} onError={fail} />}
-      {message && <Feedback tone="error">{message}</Feedback>}
-      <Link className={styles.home} href="/login">로그인으로 돌아가기</Link>
-    </div>
-  </main>;
+  return <>
+    <h1>구글 계정 연결</h1>
+    {ready && !hasToken && <Feedback tone="error">유효한 계정 연결 링크가 필요합니다. 운영진에게 요청해 주세요.</Feedback>}
+    {ready && hasToken && <GoogleButton onCredential={connect} onError={fail} />}
+    {message && <Feedback tone="error">{message}</Feedback>}
+    <Link href="/login">로그인으로 돌아가기</Link>
+  </>;
 }

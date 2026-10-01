@@ -4,10 +4,8 @@ import { Button, Feedback } from "../../../components/ui";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
-import Link from "next/link";
 import { getSession, logout, type MemberSession } from "../../../features/auth/session";
-import styles from "../simple.module.css";
+import styles from "../layout.module.css";
 
 export default function ApplicationStatusPage() {
   const router = useRouter();
@@ -32,16 +30,13 @@ export default function ApplicationStatusPage() {
   const title = session?.status === "REJECTED" ? "가입 신청이 반려되었습니다"
     : session?.status === "INVITED" ? "계정 연결이 필요합니다" : "가입 승인 대기 중입니다";
 
-  return <main className={styles.page}>
-    <Link className={styles.brand} href="/" aria-label="전남대학교 합창단 홈">
-      <Image src="/images/choir-logo-horizontal.png" alt="" width={280} height={61} priority />
-    </Link>
-    <div className={styles.content}>
-      <h1>{session ? title : "계정 확인 중"}</h1>
-      {session && <p className={styles.status}>{session.name}님의 계정 상태입니다.</p>}
-      {session?.status === "APPROVAL_PENDING" && <Button variant="secondary" type="button" onClick={() => window.location.reload()}>상태 다시 확인</Button>}
-      {session && <Button variant="secondary" type="button" onClick={signOut}>로그아웃</Button>}
-      {error && <Feedback tone="error">{error}</Feedback>}
-    </div>
-  </main>;
+  return <>
+    <h1>{session ? title : "계정 확인 중"}</h1>
+    {session && <p>{session.name}님의 계정 상태입니다.</p>}
+    {session && <div className={styles.actions}>
+      {session.status === "APPROVAL_PENDING" && <Button variant="secondary" type="button" onClick={() => window.location.reload()}>상태 다시 확인</Button>}
+      <Button variant="secondary" type="button" onClick={signOut}>로그아웃</Button>
+    </div>}
+    {error && <Feedback tone="error">{error}</Feedback>}
+  </>;
 }
