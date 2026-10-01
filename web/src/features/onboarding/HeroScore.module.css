@@ -1,0 +1,26 @@
+.score { position: absolute; inset: 0; pointer-events: none; color: var(--color-brand); }
+.side { position: absolute; top: 34%; width: calc((100% - clamp(700px, 62vw, 900px)) / 2); height: 180px; overflow: hidden; opacity: .75; }
+.left { left: 0; mask-image: linear-gradient(to right, transparent, black 12%, black 60%, transparent); }
+.right { right: 0; mask-image: linear-gradient(to left, transparent, black 12%, black 60%, transparent); }
+.sway { animation: scoreSway 10s ease-in-out infinite alternate; }
+.right .sway { animation-delay: -5s; }
+.track { display: flex; width: max-content; animation: scoreFlow 26s linear infinite; }
+.right .track { animation-delay: -13s; }
+.strip { display: block; width: 480px; height: 160px; flex: none; }
+.staff { opacity: .5; }
+
+/* 같은 무늬를 두 번 이어 반복되는 경계에서도 흐름이 끊기지 않게 합니다. */
+@keyframes scoreFlow { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+@keyframes scoreSway { from { transform: translateY(-6px); } to { transform: translateY(6px); } }
+
+@media (max-width: 1023px) {
+  .side { top: 120px; width: calc((100% - 280px) / 2); height: 130px; }
+  .strip { width: 360px; height: 120px; }
+}
+@media (max-width: 760px) {
+  .side { top: 108px; width: calc((100% - 190px) / 2); height: 116px; opacity: .6; }
+  .strip { width: 320px; height: 107px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sway, .track { animation: none; }
+}
