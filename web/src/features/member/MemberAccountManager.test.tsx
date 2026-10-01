@@ -25,7 +25,7 @@ test("운영진이 단원 계정을 만들면 1회용 링크를 표시합니다"
   render(<MemberAccountManager />);
   await screen.findByText("등록된 계정이 없습니다.");
   await userEvent.type(screen.getByLabelText("이름"), "새 단원");
-  await userEvent.type(within(screen.getByRole("region", { name: "계정 초대" })).getByLabelText("구글 계정 이메일"), "member@example.org");
+  await userEvent.type(within(screen.getByRole("form", { name: "1회용 링크로 초대" })).getByLabelText("구글 계정 이메일"), "member@example.org");
   await userEvent.click(screen.getByRole("button", { name: "1회용 링크 발급" }));
   expect(inviteMember).toHaveBeenCalledWith({ name: "새 단원", email: "member@example.org", memberType: "ACTIVE" });
   expect(await screen.findByLabelText("구글 계정 연결 링크")).toHaveValue(

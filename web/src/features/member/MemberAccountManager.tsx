@@ -9,8 +9,7 @@ import { getSession } from "../auth/session";
 import { getMembers, inviteMember, reissueAccountSetup, revokeMember,
   type IssuedInvitation, type MemberItem, type MemberPage } from "./adminMembers";
 import styles from "./AdminPages.module.css";
-import { AllowlistManager } from "./AllowlistManager";
-import { OperatorPreapprovalManager } from "./OperatorPreapprovalManager";
+import { MemberRegistration } from "./MemberRegistration";
 
 export function MemberAccountManager() {
   const router = useRouter();
@@ -97,10 +96,11 @@ export function MemberAccountManager() {
 
   return <section className={styles.page}>
     <PageHeader title="단원 계정" />
-    <div className={styles.grid}>
-      <section className={styles.panel} aria-labelledby="invite-title">
-        <div className={styles.panelHeader}><h2 id="invite-title">계정 초대</h2></div>
-        <form className={styles.form} onSubmit={create}>
+    <MemberRegistration>
+      <details className={styles.more}>
+        <summary>구글 로그인으로 승인되지 않는 경우</summary>
+        <p className={styles.hint}>구글이 이메일 소유를 확인하지 못하는 주소라서 로그인해도 승인되지 않을 때 사용합니다. 계정을 먼저 만들고 1회용 링크를 발급하니, 24시간 안에 본인에게 직접 전달해 주세요.</p>
+        <form className={styles.form} aria-label="1회용 링크로 초대" onSubmit={create}>
           <label htmlFor="invite-name">이름</label>
           <Input id="invite-name" name="name" maxLength={100} required />
           <label htmlFor="invite-email">구글 계정 이메일</label>
@@ -111,21 +111,17 @@ export function MemberAccountManager() {
           </Select>
           <Button variant="primary" type="submit" disabled={busy}>1회용 링크 발급</Button>
         </form>
-      </section>
-      <section className={styles.panel} aria-labelledby="link-title">
-        <div className={styles.panelHeader}><h2 id="link-title">발급된 링크</h2></div>
-        {link ? <>
-          <p>이 링크는 한 번만 표시됩니다. 24시간 안에 해당 단원에게 비공개로 전달해 주세요.</p>
-          <label className={styles.fieldLabel} htmlFor="issued-link">구글 계정 연결 링크</label>
-          <Input id="issued-link" className={styles.linkInput} value={link} readOnly onFocus={(event) => event.currentTarget.select()} />
-          <div className={styles.actions}><Button variant="secondary" type="button"
-            onClick={() => navigator.clipboard.writeText(link).catch(() => setError("복사하지 못했습니다. 링크를 직접 선택해 주세요."))}>링크 복사</Button></div>
-        </> : <p>계정 연결 링크를 발급하면 여기 표시됩니다.</p>}
-      </section>
-    </div>
+      </details>
+    </MemberRegistration>
     {error && <Feedback tone="error">{error}</Feedback>}
-    <AllowlistManager />
-    <OperatorPreapprovalManager />
+    {link && <section className={`${styles.panel} ${styles.issued}`} aria-labelledby="link-title">
+      <div className={styles.panelHeader}><h2 id="link-title">발급된 링크</h2></div>
+      <p className={styles.hint}>이 링크는 한 번만 표시됩니다. 24시간 안에 해당 단원에게 비공개로 전달해 주세요.</p>
+      <label className={styles.fieldLabel} htmlFor="issued-link">구글 계정 연결 링크</label>
+      <Input id="issued-link" className={styles.linkInput} value={link} readOnly onFocus={(event) => event.currentTarget.select()} />
+      <div className={styles.actions}><Button variant="secondary" type="button"
+        onClick={() => navigator.clipboard.writeText(link).catch(() => setError("복사하지 못했습니다. 링크를 직접 선택해 주세요."))}>링크 복사</Button></div>
+    </section>}
     <section aria-labelledby="members-title" className={styles.memberSection}>
       <h2 id="members-title">계정 목록</h2>
       {!data && !error && <p role="status">계정 목록을 불러오는 중입니다.</p>}
