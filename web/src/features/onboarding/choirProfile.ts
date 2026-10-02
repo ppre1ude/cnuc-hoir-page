@@ -12,7 +12,7 @@ export const choirMilestones: ChoirMilestone[] = [
   {
     id: "central-club-2026",
     year: 2026,
-    date: "2학기",
+    date: "09. 29",
     title: "전남대학교 중앙동아리 승격",
     featured: true,
   },
@@ -26,7 +26,7 @@ export const choirMilestones: ChoirMilestone[] = [
   {
     id: "founding-2024",
     year: 2024,
-    date: "12월",
+    date: "12. 06",
     title: "창단식",
   },
 ];
