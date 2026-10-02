@@ -31,21 +31,11 @@ export default function Home() {
           <BrandLogo mark className={styles.heroMark} alt="" priority />
           <HeroScore />
           <h1 id="hero-title">합창으로 전하는<br /><HeroEmphasis />의 이야기</h1>
-          <div className={styles.heroActions}>
-            <ActionLink className={styles.action} size="large" href="#activity">공연·활동 보기 <span aria-hidden="true">↗</span></ActionLink>
-            <ActionLink className={styles.action} size="large" variant="secondary" href="#participate">함께하기 <span aria-hidden="true">↗</span></ActionLink>
-          </div>
+          <p className={styles.heroIntro}>전남대학교 합창단은 교내 유일의 합창 동아리입니다.</p>
         </div>
       </section>
 
       <ScoreJourney />
-
-      <section className={styles.identity} aria-labelledby="identity-title">
-        <div className={styles.container}>
-          <h2 id="identity-title">전남대학교 유일의<br />합창 동아리.</h2>
-          <p>2024년부터 활동해 온 전남대학교 합창단은<br />중앙동아리 문예분과에 등록되어 있습니다.</p>
-        </div>
-      </section>
 
       <section className={styles.activity} id="activity" aria-labelledby="activity-title">
         <div className={styles.container}>
@@ -64,8 +54,7 @@ export default function Home() {
             <div>
               <h2 id="participate-title">함께<br />노래해요.</h2>
               <div className={styles.channelActions}>
-                <ActionLink size="large" className={styles.action} href={choirChannels.instagram} target="_blank" rel="noopener noreferrer">합창단 지원 문의 <span aria-hidden="true">↗</span></ActionLink>
-                <ActionLink size="large" variant="secondary" className={styles.action} href="/login">단원 로그인 <span aria-hidden="true">↗</span></ActionLink>
+                <ActionLink size="large" className={styles.action} href={choirChannels.application} target="_blank" rel="noopener noreferrer">지원서 작성하기 <span aria-hidden="true">↗</span></ActionLink>
               </div>
             </div>
             <BrandLogo mark className={styles.participateMark} alt="" />

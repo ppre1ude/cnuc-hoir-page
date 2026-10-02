@@ -7,14 +7,11 @@
 .action { min-height: var(--control-large); padding: 18px 26px; gap: var(--space-6); font-size: 1.125rem; line-height: 1.5; }
 .login { white-space: nowrap; }
 .hero { position: relative; overflow: hidden; text-align: center; }
-.heroContent { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: calc(100svh - 88px); padding-block: var(--space-20) 100px; }
-.heroMark { --logo-width: 210px; flex: none; }
-.hero h1 { max-width: calc(100% - 40px); margin: 0 0 36px; font-size: clamp(44px, 5.5vw, 80px); font-weight: var(--weight-heading); letter-spacing: -.075em; line-height: 1.23; word-break: keep-all; }
+.heroContent { display: flex; flex-direction: column; align-items: center; padding-block: var(--space-10); }
+.heroMark { --logo-width: 180px; flex: none; }
+.hero h1 { max-width: calc(100% - 40px); margin: 0 0 var(--space-6); font-size: clamp(44px, 5vw, 72px); font-weight: var(--weight-heading); letter-spacing: -.075em; line-height: 1.23; word-break: keep-all; }
 .hero h1 strong { color: var(--color-primary); }
-.heroActions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--space-4); padding-inline: var(--page-gutter); }
-.identity { padding-block: 120px; background: var(--color-primary); color: var(--color-surface); }
-.identity h2 { margin: 0 0 var(--space-10); font-size: clamp(44px, 5.5vw, 80px); font-weight: var(--weight-heading); letter-spacing: -.075em; line-height: 1.2; }
-.identity p { max-width: 1060px; margin: 0; font-size: clamp(26px, 3.2vw, 44px); font-weight: var(--weight-body); letter-spacing: var(--tracking-heading); line-height: 1.5; word-break: keep-all; }
+.heroIntro { max-width: 760px; margin: 0; padding-inline: var(--page-gutter); color: var(--color-muted); font-size: clamp(1.0625rem, 1.5vw, 1.3125rem); letter-spacing: -.02em; line-height: 1.65; word-break: keep-all; }
 .activity { padding-block: 120px; scroll-margin-top: var(--space-6); }
 .activityHeading { display: flex; align-items: end; justify-content: space-between; gap: var(--space-5); margin-bottom: var(--space-12); }
 .activity h2 { margin: 0; font-size: clamp(42px, 5vw, 72px); font-weight: var(--weight-heading); letter-spacing: -.065em; line-height: 1.5; }
@@ -43,12 +40,9 @@
   .brandLogo { --logo-width: min(46vw, 175px); }
   .login { min-height: var(--control-medium); padding: var(--space-3) 14px; font-size: var(--text-label); }
   .action:not(.login) { padding: var(--space-4) 18px; gap: var(--space-3); font-size: var(--text-body); }
-  .heroContent { min-height: calc(100svh - 76px); padding-block: 60px 76px; }
+  .heroContent { padding-block: var(--space-8); }
   .heroMark { --logo-width: 160px; }
   .hero h1 { font-size: clamp(38px, 10vw, 64px); }
-  .identity { padding-block: 76px; }
-  .identity h2 { margin-bottom: 28px; font-size: 3rem; }
-  .identity p { font-size: 1.75rem; }
   .activity { padding-block: var(--space-20); }
   .activityHeading { flex-direction: column; align-items: start; margin-bottom: var(--space-8); }
   .participate { padding-block: 76px; }
