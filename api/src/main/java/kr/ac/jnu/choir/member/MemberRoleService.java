@@ -30,9 +30,10 @@ public class MemberRoleService {
 
     @Transactional
     public MemberRole assign(long actorId, long targetId, Role role, Department department, Unit unit, Part part) {
-        Member actor = permissions.require(actorId, required(role));
+        Locked locked = lock(actorId, targetId, required(role));
         validate(role, department, unit, part);
-        Member target = eligible(targetId);
+        Member actor = locked.actor();
+        Member target = eligible(locked.target());
         MemberRole created;
         try {
             created = roles.saveAndFlush(new MemberRole(target, role, department, unit, part, actor, clock.instant()));
@@ -46,11 +47,13 @@ public class MemberRoleService {
 
     @Transactional
     public void remove(long actorId, long targetId, long roleId) {
+        Locked locked = lock(actorId, targetId, Permission.MANAGE_ROLES);
+        Member actor = locked.actor();
+        Member target = locked.target();
         MemberRole existing = roles.findById(roleId)
                 .filter(role -> role.getMember().getId().equals(targetId))
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ROLE_NOT_FOUND", "직책을 찾을 수 없습니다."));
-        Member actor = permissions.require(actorId, required(existing.getRole()));
-        Member target = existing.getMember();
+        if (!permissions.of(actor).contains(required(existing.getRole()))) throw denied();
         roles.delete(existing);
         logs.save(new AdminActionLog(actor, target, "ROLE_REMOVE", target.getStatus(), target.getStatus(),
                 describe(existing.getRole(), existing.getDepartment(), existing.getUnit(), existing.getPart()), clock.instant()));
@@ -58,12 +61,12 @@ public class MemberRoleService {
 
     @Transactional
     public void updateProfile(long actorId, long targetId, Part part, Integer cohort) {
-        Member actor = permissions.require(actorId, Permission.MANAGE_ROLES);
+        Locked locked = lock(actorId, targetId, Permission.MANAGE_ROLES);
+        Member actor = locked.actor();
         if (cohort != null && cohort < 1) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_COHORT", "기수는 1 이상이어야 합니다.");
         }
-        Member target = members.findByIdForUpdate(targetId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "계정을 찾을 수 없습니다."));
+        Member target = locked.target();
         target.updateProfile(part, cohort, clock);
         logs.save(new AdminActionLog(actor, target, "PROFILE_UPDATE", target.getStatus(), target.getStatus(),
                 (part == null ? "파트 없음" : part.name()) + ", 기수 " + (cohort == null ? "없음" : cohort), clock.instant()));
@@ -71,12 +74,12 @@ public class MemberRoleService {
 
     @Transactional
     public void setSiteAdmin(long actorId, long targetId, boolean siteAdmin) {
-        Member actor = permissions.require(actorId, Permission.MANAGE_SITE_ADMINS);
+        Locked locked = lock(actorId, targetId, Permission.MANAGE_SITE_ADMINS);
+        Member actor = locked.actor();
         if (actorId == targetId && !siteAdmin) {
             throw new ApiException(HttpStatus.CONFLICT, "SELF_DEMOTION", "자기 자신의 사이트 관리자 권한은 해제할 수 없습니다.");
         }
-        Member target = siteAdmin ? eligible(targetId) : members.findByIdForUpdate(targetId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "계정을 찾을 수 없습니다."));
+        Member target = siteAdmin ? eligible(locked.target()) : locked.target();
         target.setSiteAdmin(siteAdmin, clock);
         logs.save(new AdminActionLog(actor, target, siteAdmin ? "SITE_ADMIN_GRANT" : "SITE_ADMIN_REVOKE",
                 target.getStatus(), target.getStatus(), null, clock.instant()));
@@ -97,9 +100,28 @@ public class MemberRoleService {
         if (!valid) throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_ROLE", "직책과 부서·계·파트 조합을 확인해 주세요.");
     }
 
-    private Member eligible(long targetId) {
-        Member target = members.findByIdForUpdate(targetId)
+    // MemberApprovalService.lockMembers와 같은 순서(작은 id 먼저)로 잠가 교착을 피합니다.
+    private Locked lock(long actorId, long targetId, Permission required) {
+        Member first = locked(Math.min(actorId, targetId));
+        Member second = actorId == targetId ? first : locked(Math.max(actorId, targetId));
+        Member actor = first.getId() == actorId ? first : second;
+        Member target = first.getId() == targetId ? first : second;
+        if (!permissions.of(actor).contains(required)) throw denied();
+        return new Locked(actor, target);
+    }
+
+    private Member locked(long id) {
+        return members.findByIdForUpdate(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "계정을 찾을 수 없습니다."));
+    }
+
+    private static ApiException denied() {
+        return new ApiException(HttpStatus.FORBIDDEN, "PERMISSION_REQUIRED", "이 기능을 쓸 권한이 없습니다.");
+    }
+
+    private record Locked(Member actor, Member target) {}
+
+    private static Member eligible(Member target) {
         if (target.getStatus() != AccountStatus.APPROVED || target.getMemberType() != MemberType.ACTIVE) {
             throw new ApiException(HttpStatus.CONFLICT, "ROLE_NOT_ALLOWED", "승인된 활동 단원에게만 직책을 줄 수 있습니다.");
         }

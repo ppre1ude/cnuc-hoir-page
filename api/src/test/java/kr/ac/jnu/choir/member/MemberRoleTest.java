@@ -143,6 +143,45 @@ class MemberRoleTest {
         assertThat(jdbc.queryForObject("SELECT count(*) FROM member_role WHERE member_id = ?", Long.class, target.getId())).isZero();
     }
 
+    @Test void removeChecksPermissionPerRole() throws Exception {
+        Member admin = member("관리자", true);
+        Member president = member("단장", false);
+        grant(president, "PRESIDENT", null, null, null, admin);
+        Member target = member("단원", false);
+        grant(target, "SECTION_LEAD", null, null, "TENOR", admin);
+        grant(target, "VICE_PRESIDENT", null, null, null, admin);
+        long leadId = jdbc.queryForObject("SELECT id FROM member_role WHERE member_id = ? AND role = 'SECTION_LEAD'", Long.class, target.getId());
+        long viceId = jdbc.queryForObject("SELECT id FROM member_role WHERE member_id = ? AND role = 'VICE_PRESIDENT'", Long.class, target.getId());
+        Caller byPresident = caller(president);
+        String base = "/api/v1/admin/members/" + target.getId() + "/roles/";
+
+        assertThat(delete(byPresident, base + viceId)).isEqualTo(403);
+        assertThat(delete(byPresident, base + (viceId + 1000))).isEqualTo(404);
+        assertThat(delete(byPresident, base + leadId)).isEqualTo(204);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM member_role WHERE id = ?", Long.class, leadId)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM member_role WHERE id = ?", Long.class, viceId)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM admin_action_log WHERE target_member_id = ? AND action = 'ROLE_REMOVE'",
+                Long.class, target.getId())).isEqualTo(1);
+    }
+
+    @Test void onlySiteAdminReissuesSiteAdminAccount() throws Exception {
+        Member admin = member("관리자", true);
+        Member vice = member("부단장", false);
+        grant(vice, "VICE_PRESIDENT", null, null, null, admin);
+        Member target = member("관리자 계정", true);
+        jdbc.update("UPDATE member SET status = 'REVOKED' WHERE id = ?", target.getId());
+        String path = "/api/v1/admin/members/" + target.getId() + "/account-setup";
+
+        assertThat(post(caller(vice), path, "")).isEqualTo(403);
+        assertThat(post(caller(admin), path, "")).isEqualTo(200);
+    }
+
+    @Test void profileRejectsNonPositiveCohort() throws Exception {
+        Member admin = member("관리자", true);
+        Member target = member("단원", false);
+        assertThat(put(caller(admin), "/api/v1/admin/members/" + target.getId() + "/profile", "{\"cohort\":0}")).isEqualTo(400);
+    }
+
     @Test void memberListIncludesRoles() throws Exception {
         Member admin = member("관리자", true);
         Member lead = member("수석", false);
