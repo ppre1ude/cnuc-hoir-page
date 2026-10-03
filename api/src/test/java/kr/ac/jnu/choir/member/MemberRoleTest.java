@@ -68,6 +68,90 @@ class MemberRoleTest {
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
     }
 
+    record Caller(MockHttpSession session, String token) {}
+
+    Caller caller(Member member) throws Exception {
+        var csrf = mvc.perform(get("/api/v1/auth/csrf").session(session(member))).andReturn();
+        String token = csrf.getResponse().getContentAsString().split("\"token\":\"", 2)[1].split("\"", 2)[0];
+        return new Caller((MockHttpSession) csrf.getRequest().getSession(false), token);
+    }
+
+    int post(Caller caller, String path, String body) throws Exception {
+        return mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(path).session(caller.session())
+                .header("X-CSRF-TOKEN", caller.token()).contentType("application/json").content(body))
+                .andReturn().getResponse().getStatus();
+    }
+
+    int put(Caller caller, String path, String body) throws Exception {
+        return mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(path).session(caller.session())
+                .header("X-CSRF-TOKEN", caller.token()).contentType("application/json").content(body))
+                .andReturn().getResponse().getStatus();
+    }
+
+    int delete(Caller caller, String path) throws Exception {
+        return mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete(path).session(caller.session())
+                .header("X-CSRF-TOKEN", caller.token())).andReturn().getResponse().getStatus();
+    }
+
+    @Test void presidentAssignsStaffRolesButOnlySiteAdminAssignsLeadership() throws Exception {
+        Member admin = member("관리자", true);
+        Member president = member("단장", false);
+        grant(president, "PRESIDENT", null, null, null, admin);
+        Member target = member("단원", false);
+        Caller byPresident = caller(president);
+
+        assertThat(post(byPresident, "/api/v1/admin/members/" + target.getId() + "/roles",
+                "{\"role\":\"SECTION_LEAD\",\"part\":\"TENOR\"}")).isEqualTo(201);
+        assertThat(post(byPresident, "/api/v1/admin/members/" + target.getId() + "/roles",
+                "{\"role\":\"SECTION_LEAD\",\"part\":\"TENOR\"}")).isEqualTo(409);
+        assertThat(post(byPresident, "/api/v1/admin/members/" + target.getId() + "/roles",
+                "{\"role\":\"DEPARTMENT_MEMBER\",\"department\":\"MANAGEMENT\",\"unit\":\"PR\"}")).isEqualTo(400);
+        assertThat(post(byPresident, "/api/v1/admin/members/" + target.getId() + "/roles",
+                "{\"role\":\"VICE_PRESIDENT\"}")).isEqualTo(403);
+        assertThat(post(caller(admin), "/api/v1/admin/members/" + target.getId() + "/roles",
+                "{\"role\":\"VICE_PRESIDENT\"}")).isEqualTo(201);
+        assertThat(put(byPresident, "/api/v1/admin/members/" + target.getId() + "/profile",
+                "{\"part\":\"TENOR\",\"cohort\":3}")).isEqualTo(204);
+        assertThat(me(target)).contains("\"MANAGE_FULL_REHEARSALS\"").contains("\"cohort\":3");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM admin_action_log WHERE target_member_id = ? AND action = 'ROLE_ASSIGN'",
+                Long.class, target.getId())).isEqualTo(2);
+    }
+
+    @Test void staffCannotAssignRolesAndObCannotReceiveThem() throws Exception {
+        Member admin = member("관리자", true);
+        Member lead = member("수석", false);
+        grant(lead, "SECTION_LEAD", null, null, "BASS", admin);
+        Member ob = member("졸업 단원", false);
+        jdbc.update("UPDATE member SET member_type = 'OB' WHERE id = ?", ob.getId());
+        assertThat(post(caller(lead), "/api/v1/admin/members/" + ob.getId() + "/roles", "{\"role\":\"TREASURER\"}")).isEqualTo(403);
+        assertThat(post(caller(admin), "/api/v1/admin/members/" + ob.getId() + "/roles", "{\"role\":\"TREASURER\"}")).isEqualTo(409);
+    }
+
+    @Test void revokeRemovesRolesAndSiteAdminCannotDemoteSelf() throws Exception {
+        Member admin = member("관리자", true);
+        Member president = member("단장", false);
+        grant(president, "PRESIDENT", null, null, null, admin);
+        Member target = member("총무", false);
+        grant(target, "TREASURER", null, null, null, admin);
+        Caller byAdmin = caller(admin);
+        assertThat(put(byAdmin, "/api/v1/admin/members/" + admin.getId() + "/site-admin", "{\"admin\":false}")).isEqualTo(409);
+        assertThat(put(byAdmin, "/api/v1/admin/members/" + target.getId() + "/site-admin", "{\"admin\":true}")).isEqualTo(204);
+        assertThat(me(target)).contains("\"admin\":true");
+        assertThat(post(caller(president), "/api/v1/admin/members/" + target.getId() + "/revoke", "{\"reason\":\"활동 종료\"}")).isEqualTo(403);
+        assertThat(put(byAdmin, "/api/v1/admin/members/" + target.getId() + "/site-admin", "{\"admin\":false}")).isEqualTo(204);
+        assertThat(post(byAdmin, "/api/v1/admin/members/" + target.getId() + "/revoke", "{\"reason\":\"활동 종료\"}")).isEqualTo(204);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM member_role WHERE member_id = ?", Long.class, target.getId())).isZero();
+    }
+
+    @Test void memberListIncludesRoles() throws Exception {
+        Member admin = member("관리자", true);
+        Member lead = member("수석", false);
+        grant(lead, "SECTION_LEAD", null, null, "SOPRANO", admin);
+        String body = mvc.perform(get("/api/v1/admin/members?page=0&size=100").session(session(admin)))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(body).contains("\"role\":\"SECTION_LEAD\",\"department\":null,\"unit\":null,\"part\":\"SOPRANO\"");
+    }
+
     @Test void meListsRolesAndPermissions() throws Exception {
         Member admin = member("관리자", true);
         Member lead = member("수석", false);

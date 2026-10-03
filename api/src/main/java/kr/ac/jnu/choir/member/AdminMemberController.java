@@ -30,9 +30,11 @@ public class AdminMemberController {
     private final MemberApprovalService approvals;
     private final MemberInvitationService invitations;
     private final MemberRepository members;
+    private final MemberRoleRepository roles;
 
     public AdminMemberController(SessionMemberService sessions, MemberApprovalService approvals,
-            MemberInvitationService invitations, MemberRepository members) {
+            MemberInvitationService invitations, MemberRepository members, MemberRoleRepository roles) {
+        this.roles = roles;
         this.sessions = sessions;
         this.approvals = approvals;
         this.invitations = invitations;
@@ -47,9 +49,14 @@ public class AdminMemberController {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_PAGE", "조회 조건을 확인해 주세요.");
         }
         Page<Member> result = members.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size));
+        var rolesByMember = roles.findByMemberIdIn(result.getContent().stream().map(Member::getId).toList()).stream()
+                .collect(java.util.stream.Collectors.groupingBy(role -> role.getMember().getId()));
         return new MemberPage(result.getContent().stream().map(member -> new MemberItem(member.getId(),
                 member.getName(), member.getEmail(), member.getStatus(), member.getMemberType(),
-                member.isAdmin(), member.getGoogleSubject() != null, member.getCreatedAt())).toList(), page, size, result.getTotalElements());
+                member.isAdmin(), member.getGoogleSubject() != null, member.getCreatedAt(),
+                member.getPart(), member.getCohort(),
+                rolesByMember.getOrDefault(member.getId(), List.of()).stream()
+                        .map(AdminMemberRoleController::item).toList())).toList(), page, size, result.getTotalElements());
     }
 
     @PostMapping("/members/invitations")
@@ -105,7 +112,8 @@ public class AdminMemberController {
             @NotBlank @Size(max = 100) String name, @NotNull MemberType memberType) {}
     public record ReasonRequest(@NotBlank @Size(max = 500) String reason) {}
     public record MemberItem(Long id, String name, String email, AccountStatus status,
-            MemberType memberType, boolean admin, boolean googleLinked, Instant createdAt) {}
+            MemberType memberType, boolean admin, boolean googleLinked, Instant createdAt,
+            Part part, Integer cohort, List<AdminMemberRoleController.RoleItem> roles) {}
     public record MemberPage(List<MemberItem> items, int page, int size, long total) {}
     public record ApplicationItem(Long id, String name, String email, AccountStatus status, Instant createdAt) {}
     public record ApplicationPage(List<ApplicationItem> items, int page, int size, long total) {}

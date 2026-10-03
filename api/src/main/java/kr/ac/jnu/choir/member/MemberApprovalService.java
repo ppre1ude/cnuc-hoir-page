@@ -19,11 +19,13 @@ public class MemberApprovalService {
     private final MemberRepository members;
     private final AdminActionLogRepository logs;
     private final PermissionService permissions;
+    private final MemberRoleRepository roles;
     private final Clock clock;
     private final EntityManager entityManager;
 
     public MemberApprovalService(MemberRepository members, AdminActionLogRepository logs,
-            PermissionService permissions, Clock clock, EntityManager entityManager) {
+            PermissionService permissions, MemberRoleRepository roles, Clock clock, EntityManager entityManager) {
+        this.roles = roles;
         this.members = members;
         this.logs = logs;
         this.permissions = permissions;
@@ -64,6 +66,9 @@ public class MemberApprovalService {
     public void revoke(Member actor, Long targetId, String reason) {
         LockedMembers locked = lockMembers(actor.getId(), targetId, Permission.REVOKE_ACCESS);
         Member target = locked.target();
+        if (target.isAdmin() && !permissions.of(locked.actor()).contains(Permission.MANAGE_SITE_ADMINS)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "PERMISSION_REQUIRED", "사이트 관리자 계정은 사이트 관리자만 변경할 수 있습니다.");
+        }
         if ((target.getStatus() != AccountStatus.APPROVED && target.getStatus() != AccountStatus.INVITED)
                 || target.getId().equals(locked.actor().getId())) {
             throw conflict();
@@ -73,6 +78,7 @@ public class MemberApprovalService {
         }
         AccountStatus before = target.getStatus();
         target.revoke(clock);
+        roles.deleteByMemberId(target.getId());
         logs.save(new AdminActionLog(locked.actor(), target, "REVOKE", before, target.getStatus(), reason, clock.instant()));
     }
 

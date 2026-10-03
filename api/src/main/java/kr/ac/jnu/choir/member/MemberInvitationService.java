@@ -54,6 +54,9 @@ public class MemberInvitationService {
         Member actor = permissions.require(requestedBy.getId(), Permission.APPROVE_APPLICATIONS);
         Member target = members.findByIdForUpdate(targetId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "계정을 찾을 수 없습니다."));
+        if (target.isAdmin() && !permissions.of(actor).contains(Permission.MANAGE_SITE_ADMINS)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "PERMISSION_REQUIRED", "사이트 관리자 계정은 사이트 관리자만 변경할 수 있습니다.");
+        }
         if (target.getStatus() != AccountStatus.INVITED && target.getStatus() != AccountStatus.APPROVED
                 && target.getStatus() != AccountStatus.REVOKED) {
             throw new ApiException(HttpStatus.CONFLICT, "INVALID_MEMBER_STATE", "초대 링크를 발급할 수 없는 계정입니다.");
