@@ -3,6 +3,7 @@ package kr.ac.jnu.choir.member;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import kr.ac.jnu.choir.auth.Permission;
 import kr.ac.jnu.choir.auth.SessionMemberService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,29 +26,29 @@ public class AdminMemberRoleController {
         this.service = service;
     }
 
-    // 권한은 직책 종류에 따라 다르므로 서비스가 검사합니다. 여기서는 승인된 회원인지만 봅니다.
+    // 권한은 직책 종류에 따라 다르므로 서비스가 검사합니다. 여기서는 직책 관리 권한이 있는지만 봅니다.
     @PostMapping("/roles")
     public ResponseEntity<RoleItem> assign(HttpServletRequest request, @PathVariable long id, @Valid @RequestBody RoleInput body) {
-        long actor = sessions.requireApproved(request).getId();
+        long actor = sessions.require(request, Permission.MANAGE_ROLES).getId();
         return ResponseEntity.status(HttpStatus.CREATED).body(item(service.assign(actor, id, body.role(),
                 body.department(), body.unit(), body.part())));
     }
 
     @DeleteMapping("/roles/{roleId}")
     public ResponseEntity<Void> remove(HttpServletRequest request, @PathVariable long id, @PathVariable long roleId) {
-        service.remove(sessions.requireApproved(request).getId(), id, roleId);
+        service.remove(sessions.require(request, Permission.MANAGE_ROLES).getId(), id, roleId);
         return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/profile")
     public ResponseEntity<Void> profile(HttpServletRequest request, @PathVariable long id, @RequestBody ProfileInput body) {
-        service.updateProfile(sessions.requireApproved(request).getId(), id, body.part(), body.cohort());
+        service.updateProfile(sessions.require(request, Permission.MANAGE_ROLES).getId(), id, body.part(), body.cohort());
         return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/site-admin")
     public ResponseEntity<Void> siteAdmin(HttpServletRequest request, @PathVariable long id, @Valid @RequestBody SiteAdminInput body) {
-        service.setSiteAdmin(sessions.requireApproved(request).getId(), id, body.admin());
+        service.setSiteAdmin(sessions.require(request, Permission.MANAGE_ROLES).getId(), id, body.admin());
         return ResponseEntity.noContent().build();
     }
 

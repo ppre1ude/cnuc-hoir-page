@@ -69,6 +69,11 @@ public class MemberApprovalService {
         if (target.isAdmin() && !permissions.of(locked.actor()).contains(Permission.MANAGE_SITE_ADMINS)) {
             throw new ApiException(HttpStatus.FORBIDDEN, "PERMISSION_REQUIRED", "사이트 관리자 계정은 사이트 관리자만 변경할 수 있습니다.");
         }
+        boolean leadership = roles.findByMemberIdOrderByAssignedAtAsc(target.getId()).stream()
+                .anyMatch(role -> role.getRole() == Role.PRESIDENT || role.getRole() == Role.VICE_PRESIDENT);
+        if (leadership && !permissions.of(locked.actor()).contains(Permission.MANAGE_SITE_ADMINS)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "PERMISSION_REQUIRED", "단장·부단장 계정은 사이트 관리자만 변경할 수 있습니다.");
+        }
         if ((target.getStatus() != AccountStatus.APPROVED && target.getStatus() != AccountStatus.INVITED)
                 || target.getId().equals(locked.actor().getId())) {
             throw conflict();

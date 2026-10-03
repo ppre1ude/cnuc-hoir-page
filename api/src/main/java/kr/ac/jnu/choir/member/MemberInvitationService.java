@@ -51,9 +51,15 @@ public class MemberInvitationService {
 
     @Transactional
     public IssuedInvitation reissue(Member requestedBy, long targetId) {
-        Member actor = permissions.require(requestedBy.getId(), Permission.APPROVE_APPLICATIONS);
-        Member target = members.findByIdForUpdate(targetId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "계정을 찾을 수 없습니다."));
+        // 다른 변경 경로와 같이 id가 작은 계정부터 잠급니다.
+        long actorId = requestedBy.getId();
+        Member first = lock(Math.min(actorId, targetId));
+        Member second = actorId == targetId ? first : lock(Math.max(actorId, targetId));
+        Member actor = first.getId().equals(actorId) ? first : second;
+        Member target = first.getId().equals(targetId) ? first : second;
+        if (!permissions.of(actor).contains(Permission.APPROVE_APPLICATIONS)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "PERMISSION_REQUIRED", "이 기능을 쓸 권한이 없습니다.");
+        }
         if (target.isAdmin() && !permissions.of(actor).contains(Permission.MANAGE_SITE_ADMINS)) {
             throw new ApiException(HttpStatus.FORBIDDEN, "PERMISSION_REQUIRED", "사이트 관리자 계정은 사이트 관리자만 변경할 수 있습니다.");
         }
@@ -70,6 +76,11 @@ public class MemberInvitationService {
         logs.save(new AdminActionLog(actor, target, "REISSUE_SETUP", before,
                 target.getStatus(), null, clock.instant()));
         return new IssuedInvitation(target.getId(), token);
+    }
+
+    private Member lock(long id) {
+        return members.findByIdForUpdate(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "계정을 찾을 수 없습니다."));
     }
 
     public record IssuedInvitation(Long memberId, String token) {}

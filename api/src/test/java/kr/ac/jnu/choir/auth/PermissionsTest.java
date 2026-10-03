@@ -22,19 +22,20 @@ class PermissionsTest {
         assertThat(Permissions.of(false, null, List.of())).isEmpty();
     }
 
+    @Test void obHoldingLeadershipRoleStillHasNothing() {
+        assertThat(Permissions.of(false, MemberType.OB, List.of(Role.PRESIDENT))).isEmpty();
+    }
+
     @Test void presidentManagesRolesButNotSiteAdmins() {
         var permissions = Permissions.of(false, MemberType.ACTIVE, List.of(Role.PRESIDENT));
-        assertThat(permissions).contains(Permission.MANAGE_ROLES, Permission.REVOKE_ACCESS, Permission.MANAGE_ALLOWLIST,
-                Permission.APPROVE_APPLICATIONS, Permission.MANAGE_FULL_REHEARSALS, Permission.MANAGE_PART_REHEARSALS,
-                Permission.MANAGE_EVENTS, Permission.WRITE_MINUTES, Permission.VIEW_MEMBERS, Permission.VIEW_MINUTES);
-        assertThat(permissions).doesNotContain(Permission.MANAGE_SITE_ADMINS, Permission.DELETE_MINUTES);
+        assertThat(permissions).isEqualTo(EnumSet.complementOf(EnumSet.of(Permission.MANAGE_SITE_ADMINS, Permission.DELETE_MINUTES)));
     }
 
     @Test void vicePresidentApprovesAndRunsRehearsalsButCannotAssignRoles() {
         var permissions = Permissions.of(false, MemberType.ACTIVE, List.of(Role.VICE_PRESIDENT));
-        assertThat(permissions).contains(Permission.APPROVE_APPLICATIONS, Permission.MANAGE_FULL_REHEARSALS,
-                Permission.MANAGE_PART_REHEARSALS, Permission.MANAGE_EVENTS);
-        assertThat(permissions).doesNotContain(Permission.MANAGE_ROLES, Permission.REVOKE_ACCESS, Permission.MANAGE_ALLOWLIST);
+        assertThat(permissions).isEqualTo(EnumSet.of(Permission.APPROVE_APPLICATIONS, Permission.MANAGE_FULL_REHEARSALS,
+                Permission.MANAGE_PART_REHEARSALS, Permission.MANAGE_EVENTS, Permission.WRITE_MINUTES,
+                Permission.VIEW_MEMBERS, Permission.VIEW_MINUTES));
     }
 
     @Test void staffRolesShareTheSameSet() {

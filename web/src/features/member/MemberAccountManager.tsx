@@ -154,17 +154,19 @@ function MemberRow({ item, busy, session, onChanged, onRenew, onRevoke }: {
   const status = item.status === "INVITED" ? "초대 대기" : item.status === "APPROVED" ? "사용 중"
     : item.status === "REVOKED" ? "접근 해제" : item.status === "EMAIL_PENDING" ? "이전 가입 확인 대기"
     : item.status === "APPROVAL_PENDING" ? "이전 가입 승인 대기" : "가입 반려";
+  // 사이트 관리자·단장·부단장 계정의 접근 해제는 사이트 관리자만 할 수 있습니다.
+  const leadership = item.admin || item.roles.some((role) => role.role === "PRESIDENT" || role.role === "VICE_PRESIDENT");
   const type = item.memberType === "OB" ? "OB" : item.memberType === "ACTIVE" ? "활동 단원" : "구분 미지정";
   return <article className={styles.row}>
     <h2>{item.name}</h2>
-    <p>{item.email} · {type} · {status}</p>
+    <p>{[item.email, type, status].filter(Boolean).join(" · ")}</p>
     <MemberRoles item={item} session={session} onChanged={onChanged} />
     {can(session, "APPROVE_APPLICATIONS") && (item.status === "REVOKED" || !item.googleLinked && (item.status === "INVITED" || item.status === "APPROVED")) && <div className={styles.actions}>
       <Button variant="secondary" type="button" disabled={busy} onClick={onRenew}>
         {item.status === "INVITED" ? "초대 링크 다시 발급" : item.status === "REVOKED" ? "다시 초대" : "계정 연결 링크 발급"}
       </Button>
     </div>}
-    {can(session, "REVOKE_ACCESS") && (item.status === "APPROVED" || item.status === "INVITED")
+    {can(session, "REVOKE_ACCESS") && (!leadership || can(session, "MANAGE_SITE_ADMINS")) && (item.status === "APPROVED" || item.status === "INVITED")
       && item.id !== session.id && <div className={styles.fieldGroup}>
       <label htmlFor={`revoke-${item.id}`}>접근 해제 이유</label>
       <Input id={`revoke-${item.id}`} value={reason} maxLength={500} onChange={(event) => setReason(event.target.value)} />

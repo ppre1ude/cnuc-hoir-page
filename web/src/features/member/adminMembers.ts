@@ -36,7 +36,7 @@ export function revokeMember(id: number, reason: string): Promise<void> {
 export type MemberItem = {
   id: number;
   name: string;
-  email: string;
+  email: string | null;
   status: "INVITED" | "EMAIL_PENDING" | "APPROVAL_PENDING" | "APPROVED" | "REJECTED" | "REVOKED";
   memberType: "ACTIVE" | "OB" | null;
   admin: boolean;

@@ -23,12 +23,12 @@ export type MemberSession = {
 
 // 사이트 관리자는 모든 권한을 가집니다. 서버가 권한 목록을 함께 주지만 화면은 이 함수로만 판단합니다.
 export function can(session: MemberSession | null | undefined, permission: Permission): boolean {
-  return Boolean(session && (session.admin || session.permissions?.includes(permission)));
+  return Boolean(session && session.status === "APPROVED" && (session.admin || session.permissions?.includes(permission)));
 }
 
 // 회원 메뉴에 "운영진"을 보여 줄지 정합니다. 회의록 보기는 모든 활동 단원의 권한이라 제외합니다.
 export function isStaff(session: MemberSession | null | undefined): boolean {
-  return Boolean(session && (session.admin || session.permissions?.some((permission) => permission !== "VIEW_MINUTES")));
+  return Boolean(session && session.status === "APPROVED" && (session.admin || session.permissions?.some((permission) => permission !== "VIEW_MINUTES")));
 }
 
 export function getGoogleNonce(): Promise<{ nonce: string }> {

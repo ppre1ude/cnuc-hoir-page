@@ -169,11 +169,23 @@ class MemberRoleTest {
         Member vice = member("부단장", false);
         grant(vice, "VICE_PRESIDENT", null, null, null, admin);
         Member target = member("관리자 계정", true);
-        jdbc.update("UPDATE member SET status = 'REVOKED' WHERE id = ?", target.getId());
         String path = "/api/v1/admin/members/" + target.getId() + "/account-setup";
 
         assertThat(post(caller(vice), path, "")).isEqualTo(403);
         assertThat(post(caller(admin), path, "")).isEqualTo(200);
+    }
+
+    @Test void revokingLeadershipNeedsSiteAdmin() throws Exception {
+        Member admin = member("관리자", true);
+        Member president = member("단장", false);
+        grant(president, "PRESIDENT", null, null, null, admin);
+        Member vice = member("부단장", false);
+        grant(vice, "VICE_PRESIDENT", null, null, null, admin);
+        Member ordinary = member("단원", false);
+        Caller byPresident = caller(president);
+
+        assertThat(post(byPresident, "/api/v1/admin/members/" + vice.getId() + "/revoke", "{\"reason\":\"활동 종료\"}")).isEqualTo(403);
+        assertThat(post(byPresident, "/api/v1/admin/members/" + ordinary.getId() + "/revoke", "{\"reason\":\"활동 종료\"}")).isEqualTo(204);
     }
 
     @Test void profileRejectsNonPositiveCohort() throws Exception {
@@ -189,6 +201,20 @@ class MemberRoleTest {
         String body = mvc.perform(get("/api/v1/admin/members?page=0&size=100").session(session(admin)))
                 .andReturn().getResponse().getContentAsString();
         assertThat(body).contains("\"role\":\"SECTION_LEAD\",\"department\":null,\"unit\":null,\"part\":\"SOPRANO\"");
+    }
+
+    @Test void memberListHidesEmailFromStaffWithoutManagementPermissions() throws Exception {
+        Member admin = member("관리자", true);
+        Member lead = member("수석", false);
+        grant(lead, "SECTION_LEAD", null, null, "SOPRANO", admin);
+        Member president = member("단장", false);
+        grant(president, "PRESIDENT", null, null, null, admin);
+        String path = "/api/v1/admin/members?page=0&size=100";
+
+        String hidden = mvc.perform(get(path).session(session(lead))).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String shown = mvc.perform(get(path).session(session(president))).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(hidden).doesNotContain("@example.org").contains("\"googleLinked\":false");
+        assertThat(shown).contains("@example.org");
     }
 
     @Test void meListsRolesAndPermissions() throws Exception {

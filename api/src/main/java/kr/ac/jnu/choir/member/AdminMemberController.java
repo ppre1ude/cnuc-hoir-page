@@ -9,6 +9,7 @@ import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.Email;
 import java.time.Instant;
 import java.util.List;
+import kr.ac.jnu.choir.auth.PermissionService;
 import kr.ac.jnu.choir.auth.SessionMemberService;
 import kr.ac.jnu.choir.common.ApiException;
 import org.springframework.data.domain.Page;
@@ -31,9 +32,12 @@ public class AdminMemberController {
     private final MemberInvitationService invitations;
     private final MemberRepository members;
     private final MemberRoleRepository roles;
+    private final PermissionService permissions;
 
     public AdminMemberController(SessionMemberService sessions, MemberApprovalService approvals,
-            MemberInvitationService invitations, MemberRepository members, MemberRoleRepository roles) {
+            MemberInvitationService invitations, MemberRepository members, MemberRoleRepository roles,
+            PermissionService permissions) {
+        this.permissions = permissions;
         this.roles = roles;
         this.sessions = sessions;
         this.approvals = approvals;
@@ -44,7 +48,10 @@ public class AdminMemberController {
     @GetMapping("/members")
     public MemberPage members(HttpServletRequest request, @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        sessions.require(request, Permission.VIEW_MEMBERS);
+        Member actor = sessions.require(request, Permission.VIEW_MEMBERS);
+        var held = permissions.of(actor);
+        // 이메일과 구글 연결 여부는 승인·직책 관리 권한이 있는 사람에게만 보입니다.
+        boolean reveal = held.contains(Permission.APPROVE_APPLICATIONS) || held.contains(Permission.MANAGE_ROLES);
         if (page < 0 || size < 1 || size > 100) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_PAGE", "조회 조건을 확인해 주세요.");
         }
@@ -52,8 +59,8 @@ public class AdminMemberController {
         var rolesByMember = roles.findByMemberIdIn(result.getContent().stream().map(Member::getId).toList()).stream()
                 .collect(java.util.stream.Collectors.groupingBy(role -> role.getMember().getId()));
         return new MemberPage(result.getContent().stream().map(member -> new MemberItem(member.getId(),
-                member.getName(), member.getEmail(), member.getStatus(), member.getMemberType(),
-                member.isAdmin(), member.getGoogleSubject() != null, member.getCreatedAt(),
+                member.getName(), reveal ? member.getEmail() : null, member.getStatus(), member.getMemberType(),
+                member.isAdmin(), reveal && member.getGoogleSubject() != null, member.getCreatedAt(),
                 member.getPart(), member.getCohort(),
                 rolesByMember.getOrDefault(member.getId(), List.of()).stream()
                         .map(AdminMemberRoleController::item).toList())).toList(), page, size, result.getTotalElements());
@@ -111,7 +118,7 @@ public class AdminMemberController {
     public record InviteRequest(@NotBlank @Email @Size(max = 254) String email,
             @NotBlank @Size(max = 100) String name, @NotNull MemberType memberType) {}
     public record ReasonRequest(@NotBlank @Size(max = 500) String reason) {}
-    public record MemberItem(Long id, String name, String email, AccountStatus status,
+    public record MemberItem(Long id, String name, String email /* 권한 없으면 null */, AccountStatus status,
             MemberType memberType, boolean admin, boolean googleLinked, Instant createdAt,
             Part part, Integer cohort, List<AdminMemberRoleController.RoleItem> roles) {}
     public record MemberPage(List<MemberItem> items, int page, int size, long total) {}
