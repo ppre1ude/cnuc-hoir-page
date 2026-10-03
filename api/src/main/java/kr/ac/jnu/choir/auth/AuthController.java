@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import java.util.List;
 import kr.ac.jnu.choir.member.Member;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.web.csrf.CsrfToken;
@@ -22,16 +23,18 @@ public class AuthController {
     private final GoogleMemberService googleMembers;
     private final GoogleLoginNonceService nonces;
     private final ClientIpResolver clientIps;
+    private final PermissionService permissions;
 
     public AuthController(SessionMemberService sessions, LoginAttemptLimiter limiter,
             GoogleIdentityVerifier google, GoogleMemberService googleMembers,
-            GoogleLoginNonceService nonces, ClientIpResolver clientIps) {
+            GoogleLoginNonceService nonces, ClientIpResolver clientIps, PermissionService permissions) {
         this.sessions = sessions;
         this.limiter = limiter;
         this.google = google;
         this.googleMembers = googleMembers;
         this.nonces = nonces;
         this.clientIps = clientIps;
+        this.permissions = permissions;
     }
 
     @GetMapping("/csrf")
@@ -88,14 +91,22 @@ public class AuthController {
         session.setAttribute("authVersion", member.getAuthVersion());
     }
 
-    private static MeResponse response(Member member) {
+    private MeResponse response(Member member) {
+        List<RoleItem> roles = permissions.rolesOf(member).stream().map(role -> new RoleItem(role.getId(),
+                role.getRole().name(), role.getDepartment() == null ? null : role.getDepartment().name(),
+                role.getUnit() == null ? null : role.getUnit().name(),
+                role.getPart() == null ? null : role.getPart().name())).toList();
+        List<String> granted = permissions.of(member).stream().map(Enum::name).sorted().toList();
         return new MeResponse(member.getId(), member.getName(), member.getStatus().name(),
-                member.getMemberType() == null ? null : member.getMemberType().name(), member.isAdmin());
+                member.getMemberType() == null ? null : member.getMemberType().name(), member.isAdmin(),
+                member.getPart() == null ? null : member.getPart().name(), member.getCohort(), roles, granted);
     }
 
     public record CsrfResponse(String token) {}
     public record NonceResponse(String nonce) {}
     public record GoogleRequest(@NotBlank String credential) {}
     public record CompleteSetupRequest(@NotBlank String token, @NotBlank String credential) {}
-    public record MeResponse(Long id, String name, String status, String memberType, boolean admin) {}
+    public record RoleItem(Long id, String role, String department, String unit, String part) {}
+    public record MeResponse(Long id, String name, String status, String memberType, boolean admin,
+            String part, Integer cohort, List<RoleItem> roles, List<String> permissions) {}
 }

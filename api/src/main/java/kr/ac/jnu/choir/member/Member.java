@@ -43,6 +43,13 @@ public class Member {
     @Column(nullable = false)
     private boolean admin;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 16)
+    private Part part;
+
+    @Column
+    private Integer cohort;
+
     @Column(name = "auth_version", nullable = false)
     private long authVersion;
 
@@ -132,6 +139,25 @@ public class Member {
 
     public boolean isAdmin() {
         return admin;
+    }
+
+    public Part getPart() {
+        return part;
+    }
+
+    public Integer getCohort() {
+        return cohort;
+    }
+
+    public void updateProfile(Part part, Integer cohort, Clock clock) {
+        this.part = part;
+        this.cohort = cohort;
+        updatedAt = clock.instant();
+    }
+
+    public void setSiteAdmin(boolean siteAdmin, Clock clock) {
+        admin = siteAdmin;
+        updatedAt = clock.instant();
     }
 
     public long getAuthVersion() {
