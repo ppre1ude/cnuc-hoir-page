@@ -6,7 +6,7 @@ const getSession = vi.fn();
 const getEvents = vi.fn();
 const updateEvent = vi.fn();
 const router = vi.hoisted(() => ({ replace: vi.fn() }));
-vi.mock("../auth/session", () => ({ getSession: () => getSession() }));
+vi.mock("../auth/session", async (importOriginal) => ({ ...await importOriginal<typeof import("../auth/session")>(), getSession: () => getSession() }));
 vi.mock("./events", async (importOriginal) => ({
   ...await importOriginal<typeof import("./events")>(),
   getEvents: (...args: unknown[]) => getEvents(...args),

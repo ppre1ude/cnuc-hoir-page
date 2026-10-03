@@ -12,7 +12,7 @@ vi.mock("./attendance", async (importOriginal) => {
     ...original, getCheckInSession: vi.fn(), getAdminAttendance: vi.fn(), openCheckIn: vi.fn(),
   };
 });
-vi.mock("../auth/session", () => ({ getSession: vi.fn() }));
+vi.mock("../auth/session", async (importOriginal) => ({ ...await importOriginal<typeof import("../auth/session")>(), getSession: vi.fn() }));
 vi.mock("../event/events", async (importOriginal) => {
   const original = await importOriginal<typeof events>();
   return { ...original, getEvent: vi.fn() };

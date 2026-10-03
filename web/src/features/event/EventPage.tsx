@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ApiRequestError } from "../../lib/api";
-import { getSession, type MemberSession } from "../auth/session";
+import { can, getSession, type MemberSession } from "../auth/session";
 import { getEvent, getMyEventRsvp, type ChoirEvent, type EventRsvpChoice } from "./events";
 import { EventDetail } from "./EventDetail";
 import { EventRsvp } from "./EventRsvp";
@@ -76,7 +76,7 @@ export function EventPage() {
         }}>다시 시도</Button></Feedback>}
         <div className={styles.eventAttendance}><strong>내 출석</strong>{attendance ? <StatusBadge tone={attendance.status === "CHECKED_IN" ? "positive" : attendance.status === "MISSED" ? "negative" : "neutral"}>{attendanceLabel[attendance.status]}</StatusBadge> : !attendanceError && <span role="status">확인 중</span>}</div>
         {attendanceError && <Feedback tone="error">{attendanceError}</Feedback>}
-        {session.admin && <p><Link href={`/admin/events/${event.id}/attendance`}>운영진 출석 관리</Link></p>}</div>
+        {can(session, "MANAGE_EVENTS") && <p><Link href={`/admin/events/${event.id}/attendance`}>운영진 출석 관리</Link></p>}</div>
         : !error && <p role="status">행사를 불러오는 중입니다.</p>}
   </main>;
 }

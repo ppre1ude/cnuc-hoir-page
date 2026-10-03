@@ -9,7 +9,7 @@ const createNotice = vi.fn();
 const updateNotice = vi.fn();
 const getAdminNoticePoll = vi.fn();
 const router = vi.hoisted(() => ({ replace: vi.fn() }));
-vi.mock("../auth/session", () => ({ getSession: () => getSession() }));
+vi.mock("../auth/session", async (importOriginal) => ({ ...await importOriginal<typeof import("../auth/session")>(), getSession: () => getSession() }));
 vi.mock("./notices", () => ({
   getAdminNotices: (page: number) => getAdminNotices(page),
   createNotice: (input: unknown) => createNotice(input),

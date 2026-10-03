@@ -11,7 +11,7 @@ const router = { replace };
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
 vi.mock("./adminMembers", () => ({ getApplications: vi.fn(), approveApplication: vi.fn(), rejectApplication: vi.fn() }));
-vi.mock("../auth/session", () => ({ getSession: vi.fn() }));
+vi.mock("../auth/session", async (importOriginal) => ({ ...await importOriginal<typeof import("../auth/session")>(), getSession: vi.fn() }));
 
 beforeEach(() => {
   vi.mocked(getSession).mockResolvedValue({ id: 1, name: "운영진", status: "APPROVED", memberType: "ACTIVE", admin: true });
@@ -85,4 +85,11 @@ test("반려 이유를 입력하고 충돌을 안내합니다", async () => {
   await userEvent.click(screen.getByRole("button", { name: "신청자 반려" }));
   expect(rejectApplication).toHaveBeenCalledWith(2, "명단 확인 불가");
   expect(await screen.findByRole("alert")).toHaveTextContent("이미 처리된 신청");
+});
+
+test("가입 승인 권한이 없는 직책은 신청 목록을 볼 수 없습니다", async () => {
+  vi.mocked(getSession).mockResolvedValue({ id: 3, name: "수석", status: "APPROVED", memberType: "ACTIVE", admin: false, permissions: ["MANAGE_EVENTS", "VIEW_MEMBERS"] });
+  render(<ApplicationQueue />);
+  expect(await screen.findByText("운영진만 신청 목록을 볼 수 있습니다.")).toBeTruthy();
+  expect(getApplications).not.toHaveBeenCalled();
 });

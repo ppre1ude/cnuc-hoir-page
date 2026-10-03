@@ -6,7 +6,7 @@ import * as events from "./events";
 import * as attendance from "../attendance/attendance";
 
 vi.mock("next/navigation", () => ({ useParams: () => ({ id: "3" }), useRouter: () => ({ replace: vi.fn() }) }));
-vi.mock("../auth/session", () => ({ getSession: vi.fn() }));
+vi.mock("../auth/session", async (importOriginal) => ({ ...await importOriginal<typeof import("../auth/session")>(), getSession: vi.fn() }));
 vi.mock("./events", async (importOriginal) => ({ ...await importOriginal<typeof events>(), getEvent: vi.fn() }));
 vi.mock("../attendance/attendance", async (importOriginal) => ({
   ...await importOriginal<typeof attendance>(), getEventAttendance: vi.fn(),

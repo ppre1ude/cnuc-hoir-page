@@ -5,7 +5,7 @@ import { Button, Input, Select, Textarea, Feedback, PageHeader } from "../../com
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiRequestError } from "../../lib/api";
-import { getSession } from "../auth/session";
+import { can, getSession } from "../auth/session";
 import { createNotice, getAdminNoticePoll, getAdminNotices, updateNotice,
   type AdminPollView, type Notice, type NoticePage, type PollInput } from "./notices";
 import styles from "../member/AdminPages.module.css";
@@ -37,7 +37,7 @@ export function NoticeEditor() {
   useEffect(() => {
     let alive = true;
     getSession().then(async (session) => {
-      if (!session.admin || session.status !== "APPROVED") {
+      if (!can(session, "MANAGE_EVENTS") || session.status !== "APPROVED") {
         if (alive) setCanEdit(false);
         if (alive) setError("운영진만 공지를 편집할 수 있습니다.");
         return;

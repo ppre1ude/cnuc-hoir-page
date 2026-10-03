@@ -5,7 +5,7 @@ import { Button, Select, Textarea, Feedback, PageHeader } from "../../components
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiRequestError } from "../../lib/api";
-import { getSession } from "../auth/session";
+import { can, getSession } from "../auth/session";
 import { approveApplication, getApplications, rejectApplication, type ApplicationPage } from "./adminMembers";
 import styles from "./AdminPages.module.css";
 
@@ -21,7 +21,7 @@ export function ApplicationQueue() {
   useEffect(() => {
     let alive = true;
     getSession().then(async (session) => {
-      if (!session.admin || session.status !== "APPROVED") {
+      if (!can(session, "APPROVE_APPLICATIONS") || session.status !== "APPROVED") {
         if (alive) setError("운영진만 신청 목록을 볼 수 있습니다.");
         return;
       }

@@ -7,7 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import QRCode from "qrcode";
 import { ApiRequestError } from "../../lib/api";
-import { getSession } from "../auth/session";
+import { can, getSession } from "../auth/session";
 import { getEvent, type ChoirEvent, seoulDateTime } from "../event/events";
 import {
   attendanceLabel, closeCheckIn, correctAttendance, getAdminAttendance, getCheckInSession,
@@ -34,7 +34,7 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
   useEffect(() => {
     let alive = true;
     getSession().then(async (member) => {
-      if (!member.admin) throw new Error("운영진만 출석을 관리할 수 있습니다.");
+      if (!can(member, "MANAGE_EVENTS")) throw new Error("운영진만 출석을 관리할 수 있습니다.");
       const [eventResult, sessionResult, rows] = await Promise.all([
         getEvent(eventId), getCheckInSession(eventId), getAdminAttendance(eventId),
       ]);

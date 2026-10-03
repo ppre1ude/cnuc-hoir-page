@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ApiRequestError } from "../../lib/api";
-import { getSession } from "../auth/session";
+import { can, getSession } from "../auth/session";
 import { createEvent, getEvents, monthBounds, seoulDateKey, seoulDateTime, type ChoirEvent, updateEvent } from "./events";
 import styles from "./EventEditor.module.css";
 import { EventBatchCreator } from "./EventBatchCreator";
@@ -52,7 +52,7 @@ export function EventEditor() {
     const { from, to } = monthBounds(month);
     getSession().then(async (member) => {
       if (!alive || listRequestVersion.current !== requestVersion) return;
-      if (member.status !== "APPROVED" || !member.admin) {
+      if (member.status !== "APPROVED" || !can(member, "MANAGE_EVENTS")) {
         if (alive) router.replace(member.status === "APPROVED" ? "/dashboard" : "/application-status");
         return;
       }
