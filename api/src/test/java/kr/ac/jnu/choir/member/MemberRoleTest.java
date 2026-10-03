@@ -2,6 +2,7 @@ package kr.ac.jnu.choir.member;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Clock;
 import java.util.UUID;
@@ -63,7 +64,8 @@ class MemberRoleTest {
     }
 
     String me(Member member) throws Exception {
-        return mvc.perform(get("/api/v1/auth/me").session(session(member))).andReturn().getResponse().getContentAsString();
+        return mvc.perform(get("/api/v1/auth/me").session(session(member)))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
     }
 
     @Test void meListsRolesAndPermissions() throws Exception {
@@ -80,5 +82,14 @@ class MemberRoleTest {
                 .contains("\"MANAGE_EVENTS\"").contains("\"VIEW_MEMBERS\"").doesNotContain("\"MANAGE_ROLES\"");
         assertThat(me(member("단원", false))).contains("\"roles\":[]").contains("\"permissions\":[\"VIEW_MINUTES\"]");
         assertThat(me(admin)).contains("\"MANAGE_SITE_ADMINS\"");
+    }
+
+    @Test void unapprovedAccountHasNoPermissions() throws Exception {
+        Member admin = member("관리자", true);
+        Member pending = member("단원", false);
+        jdbc.update("UPDATE member SET status = 'APPROVAL_PENDING' WHERE id = ?", pending.getId());
+        grant(pending, "TREASURER", null, null, null, admin);
+
+        assertThat(me(pending)).contains("\"permissions\":[]");
     }
 }
