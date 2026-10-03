@@ -1,4 +1,5 @@
 import { apiRequest } from "../../lib/api";
+import type { Department, MemberRoleItem, Part, Role, Unit } from "../auth/session";
 
 export type ApplicationItem = {
   id: number;
@@ -41,6 +42,9 @@ export type MemberItem = {
   admin: boolean;
   googleLinked: boolean;
   createdAt: string;
+  part: Part | null;
+  cohort: number | null;
+  roles: MemberRoleItem[];
 };
 
 export type MemberPage = { items: MemberItem[]; page: number; size: number; total: number };
@@ -113,4 +117,26 @@ export function addOperatorPreapproval(input: {
 
 export function removeOperatorPreapproval(id: number): Promise<void> {
   return apiRequest<void>(`/admin/operator-preapprovals/${id}`, { method: "DELETE" });
+}
+
+export function updateMemberProfile(id: number, input: { part: Part | null; cohort: number | null }): Promise<void> {
+  return apiRequest<void>(`/admin/members/${id}/profile`, {
+    method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
+  });
+}
+
+export function assignMemberRole(id: number, input: { role: Role; department?: Department; unit?: Unit; part?: Part }): Promise<MemberRoleItem> {
+  return apiRequest<MemberRoleItem>(`/admin/members/${id}/roles`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
+  });
+}
+
+export function removeMemberRole(id: number, roleId: number): Promise<void> {
+  return apiRequest<void>(`/admin/members/${id}/roles/${roleId}`, { method: "DELETE" });
+}
+
+export function setSiteAdmin(id: number, admin: boolean): Promise<void> {
+  return apiRequest<void>(`/admin/members/${id}/site-admin`, {
+    method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ admin }),
+  });
 }

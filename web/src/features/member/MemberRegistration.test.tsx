@@ -31,7 +31,7 @@ test("마지막 페이지의 유일한 항목을 지우면 이전 페이지로 �
     items.splice(index, 1);
   });
 
-  render(<MemberRegistration />);
+  render(<MemberRegistration session={{ id: 1, name: "관리자", status: "APPROVED", memberType: "ACTIVE", admin: true }} />);
   await screen.findByRole("heading", { name: "member1@gmail.com" });
   await userEvent.click(screen.getByRole("button", { name: "다음" }));
   await screen.findByRole("heading", { name: "member21@gmail.com" });
@@ -43,7 +43,7 @@ test("마지막 페이지의 유일한 항목을 지우면 이전 페이지로 �
 });
 
 test("운영진 권한을 선택하면 운영진으로, 아니면 일반 단원으로 등록합니다", async () => {
-  render(<MemberRegistration />);
+  render(<MemberRegistration session={{ id: 1, name: "관리자", status: "APPROVED", memberType: "ACTIVE", admin: true }} />);
   await screen.findByText("등록된 단원 이메일이 없습니다.");
 
   await userEvent.type(screen.getByLabelText("구글 계정 이메일"), "member@gmail.com");
@@ -54,7 +54,7 @@ test("운영진 권한을 선택하면 운영진으로, 아니면 일반 단원�
   await waitFor(() => expect(screen.getByLabelText("구글 계정 이메일")).toHaveValue(""));
   await userEvent.clear(screen.getByLabelText("구글 계정 이메일"));
   await userEvent.type(screen.getByLabelText("구글 계정 이메일"), "operator@gmail.com");
-  await userEvent.click(screen.getByLabelText("운영진 권한도 부여"));
+  await userEvent.click(screen.getByLabelText("사이트 관리자 권한도 부여"));
   await userEvent.click(screen.getByRole("button", { name: "등록" }));
   expect(addOperatorPreapproval).toHaveBeenCalledWith({ email: "operator@gmail.com", memberType: "ACTIVE" });
   expect(addAllowlist).toHaveBeenCalledTimes(1);

@@ -4,6 +4,7 @@ import { Button, Input, Select, Feedback } from "../../components/ui";
 
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { ApiRequestError } from "../../lib/api";
+import { can, type MemberSession } from "../auth/session";
 import { addAllowlist, addOperatorPreapproval, getAllowlist, getOperatorPreapprovals,
   removeAllowlist, removeOperatorPreapproval } from "./adminMembers";
 import styles from "./AdminPages.module.css";
@@ -11,7 +12,7 @@ import styles from "./AdminPages.module.css";
 type Pending = { id: number; email: string; memberType: "ACTIVE" | "OB"; name?: string | null };
 type PendingPage = { items: Pending[]; page: number; size: number; total: number };
 
-export function MemberRegistration({ children }: { children?: ReactNode }) {
+export function MemberRegistration({ session, children }: { session: MemberSession; children?: ReactNode }) {
   const [revision, setRevision] = useState(0);
   const [admin, setAdmin] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -40,7 +41,7 @@ export function MemberRegistration({ children }: { children?: ReactNode }) {
   return <div className={styles.grid}>
     <section className={styles.panel} aria-labelledby="register-title">
       <div className={styles.panelHeader}><h2 id="register-title">단원 추가</h2></div>
-      <form className={styles.form} onSubmit={add}>
+      {can(session, "MANAGE_ALLOWLIST") && <form className={styles.form} onSubmit={add}>
         <label htmlFor="register-email">구글 계정 이메일</label>
         <Input id="register-email" name="email" type="email" maxLength={254} required />
         <label htmlFor="register-name">이름 (선택)</label>
@@ -49,19 +50,19 @@ export function MemberRegistration({ children }: { children?: ReactNode }) {
         <Select id="register-type" name="memberType" defaultValue="ACTIVE">
           <option value="ACTIVE">활동 단원</option><option value="OB">OB</option>
         </Select>
-        <label className={styles.check}><Input type="checkbox" checked={admin} onChange={(event) => setAdmin(event.target.checked)} /> 운영진 권한도 부여</label>
+        {can(session, "MANAGE_SITE_ADMINS") && <label className={styles.check}><Input type="checkbox" checked={admin} onChange={(event) => setAdmin(event.target.checked)} /> 사이트 관리자 권한도 부여</label>}
         <Button variant="primary" type="submit" disabled={busy}>등록</Button>
-        <p className={styles.hint}>등록한 이메일의 구글 계정으로 로그인하면 바로 승인됩니다. 등록 전에 이메일 소유자를 확인해 주세요.</p>
-      </form>
+        <p className={styles.hint}>등록한 이메일의 구글 계정으로 로그인하면 바로 승인됩니다. 사이트 관리자 권한은 사이트 관리자만 줄 수 있습니다.</p>
+      </form>}
       {error && <Feedback tone="error">{error}</Feedback>}
-      {children}
+      {can(session, "APPROVE_APPLICATIONS") && children}
     </section>
-    <section className={styles.panel} aria-labelledby="pending-title">
+    {can(session, "MANAGE_ALLOWLIST") && <section className={styles.panel} aria-labelledby="pending-title">
       <div className={styles.panelHeader}><h2 id="pending-title">로그인을 기다리는 등록</h2></div>
       <p className={styles.hint}>등록을 삭제해도 이미 승인된 계정과 권한은 유지됩니다. 필요하면 계정 목록에서 접근을 해제해 주세요.</p>
-      <PendingList key={`admin-${revision}`} admin load={getOperatorPreapprovals} remove={removeOperatorPreapproval} />
+      {can(session, "MANAGE_SITE_ADMINS") && <PendingList key={`admin-${revision}`} admin load={getOperatorPreapprovals} remove={removeOperatorPreapproval} />}
       <PendingList key={`member-${revision}`} load={getAllowlist} remove={removeAllowlist} />
-    </section>
+    </section>}
   </div>;
 }
 
@@ -102,7 +103,7 @@ function PendingList({ admin = false, load, remove }: {
     {data?.items.map((item) => <article className={styles.pendingRow} key={item.id}>
       <div>
         <h2>{item.name || item.email}</h2>
-        <p>{item.name ? `${item.email} · ` : ""}{item.memberType === "OB" ? "OB" : "활동 단원"}{admin ? " · 운영진" : ""}</p>
+        <p>{item.name ? `${item.email} · ` : ""}{item.memberType === "OB" ? "OB" : "활동 단원"}{admin ? " · 사이트 관리자" : ""}</p>
       </div>
       <Button variant="danger" size="small" type="button" disabled={busy} aria-label={`${item.email} 등록 삭제`}
         onClick={() => removeItem(item.id)}>삭제</Button>
