@@ -1,5 +1,6 @@
 package kr.ac.jnu.choir.event;
 
+import kr.ac.jnu.choir.auth.Permission;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -47,14 +48,14 @@ public class EventController {
 
     @PostMapping("/admin/events")
     public ResponseEntity<EventItem> create(HttpServletRequest request, @Valid @RequestBody EventInput body) {
-        sessions.requireAdmin(request);
+        sessions.require(request, Permission.MANAGE_EVENTS);
         return ResponseEntity.status(HttpStatus.CREATED).body(item(events.create(body.title(), body.description(),
                 body.startAt(), body.endAt(), body.obEligible(), body.publicVisible())));
     }
 
     @PostMapping("/admin/events/batch")
     public ResponseEntity<List<EventItem>> createBatch(HttpServletRequest request, @Valid @RequestBody EventBatchInput body) {
-        sessions.requireAdmin(request);
+        sessions.require(request, Permission.MANAGE_EVENTS);
         return ResponseEntity.status(HttpStatus.CREATED).body(events.createBatch(body.events()).stream().map(this::item).toList());
     }
 
@@ -77,13 +78,13 @@ public class EventController {
 
     @GetMapping("/admin/events/{id}/rsvps")
     public EventRsvpService.AdminRsvps adminRsvps(HttpServletRequest request, @PathVariable long id) {
-        sessions.requireAdmin(request);
+        sessions.require(request, Permission.MANAGE_EVENTS);
         return rsvps.adminView(id);
     }
 
     @PutMapping("/admin/events/{id}")
     public EventItem update(HttpServletRequest request, @PathVariable long id, @Valid @RequestBody EventInput body) {
-        sessions.requireAdmin(request);
+        sessions.require(request, Permission.MANAGE_EVENTS);
         return item(events.update(id, body.title(), body.description(), body.startAt(), body.endAt(),
                 body.obEligible(), body.publicVisible()));
     }

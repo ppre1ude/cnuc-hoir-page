@@ -1,5 +1,6 @@
 package kr.ac.jnu.choir.attendance;
 
+import kr.ac.jnu.choir.auth.Permission;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -38,27 +39,27 @@ public class AttendanceController {
 
     @PostMapping("/admin/events/{id}/check-in-session")
     public ResponseEntity<CheckInService.IssuedSession> open(HttpServletRequest request, @PathVariable long id) {
-        sessions.requireAdmin(request);
+        sessions.require(request, Permission.MANAGE_EVENTS);
         return ResponseEntity.status(HttpStatus.CREATED).body(checkIns.open(id));
     }
 
     @PostMapping("/admin/events/{id}/check-in-session/{sessionId}/rotate")
     public CheckInService.IssuedSession rotate(HttpServletRequest request, @PathVariable long id,
             @PathVariable long sessionId) {
-        sessions.requireAdmin(request);
+        sessions.require(request, Permission.MANAGE_EVENTS);
         return checkIns.rotate(id, sessionId);
     }
 
     @PostMapping("/admin/events/{id}/check-in-session/close")
     public ResponseEntity<Void> close(HttpServletRequest request, @PathVariable long id) {
-        sessions.requireAdmin(request);
+        sessions.require(request, Permission.MANAGE_EVENTS);
         checkIns.close(id);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/admin/events/{id}/check-in-session")
     public CheckInService.SessionStatus session(HttpServletRequest request, @PathVariable long id) {
-        sessions.requireAdmin(request);
+        sessions.require(request, Permission.MANAGE_EVENTS);
         return checkIns.sessionStatus(id);
     }
 
@@ -85,14 +86,14 @@ public class AttendanceController {
 
     @GetMapping("/admin/events/{id}/attendance")
     public List<CheckInService.AdminAttendance> adminList(HttpServletRequest request, @PathVariable long id) {
-        sessions.requireAdmin(request);
+        sessions.require(request, Permission.MANAGE_EVENTS);
         return checkIns.adminList(id);
     }
 
     @PutMapping("/admin/events/{id}/attendance/{memberId}")
     public ResponseEntity<Void> correct(HttpServletRequest request, @PathVariable long id,
             @PathVariable long memberId, @Valid @RequestBody CorrectionInput input) {
-        Member actor = sessions.requireAdmin(request);
+        Member actor = sessions.require(request, Permission.MANAGE_EVENTS);
         checkIns.correct(id, memberId, actor, input.status(), input.reason());
         return ResponseEntity.noContent().build();
     }

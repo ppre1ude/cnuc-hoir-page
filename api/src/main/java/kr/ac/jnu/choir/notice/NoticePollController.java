@@ -1,5 +1,6 @@
 package kr.ac.jnu.choir.notice;
 
+import kr.ac.jnu.choir.auth.Permission;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -35,7 +36,7 @@ public class NoticePollController {
 
     @GetMapping("/admin/notices/{id}/poll")
     public NoticePollService.AdminPollView adminGet(HttpServletRequest request, @PathVariable long id) {
-        sessions.requireAdmin(request);
+        sessions.require(request, Permission.MANAGE_EVENTS);
         return polls.adminView(id);
     }
 

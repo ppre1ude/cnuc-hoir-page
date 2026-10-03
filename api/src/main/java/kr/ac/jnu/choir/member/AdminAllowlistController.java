@@ -1,5 +1,6 @@
 package kr.ac.jnu.choir.member;
 
+import kr.ac.jnu.choir.auth.Permission;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -35,7 +36,7 @@ public class AdminAllowlistController {
     @GetMapping
     public AllowlistPage list(HttpServletRequest request, @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        sessions.requireAdmin(request);
+        sessions.require(request, Permission.MANAGE_ALLOWLIST);
         if (page < 0 || size < 1 || size > 100) throw invalidPage();
         var result = service.list(page, size);
         return new AllowlistPage(result.getContent().stream().map(AdminAllowlistController::item).toList(),
@@ -44,12 +45,12 @@ public class AdminAllowlistController {
 
     @PostMapping
     public AllowlistItem add(HttpServletRequest request, @Valid @RequestBody AddRequest body) {
-        return item(service.add(sessions.requireAdmin(request).getId(), body.email(), body.memberType(), body.name()));
+        return item(service.add(sessions.require(request, Permission.MANAGE_ALLOWLIST).getId(), body.email(), body.memberType(), body.name()));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> remove(HttpServletRequest request, @PathVariable long id) {
-        service.remove(sessions.requireAdmin(request).getId(), id);
+        service.remove(sessions.require(request, Permission.MANAGE_ALLOWLIST).getId(), id);
         return ResponseEntity.noContent().build();
     }
 

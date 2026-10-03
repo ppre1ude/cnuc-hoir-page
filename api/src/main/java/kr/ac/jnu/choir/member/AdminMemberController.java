@@ -1,5 +1,6 @@
 package kr.ac.jnu.choir.member;
 
+import kr.ac.jnu.choir.auth.Permission;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -41,7 +42,7 @@ public class AdminMemberController {
     @GetMapping("/members")
     public MemberPage members(HttpServletRequest request, @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        sessions.requireAdmin(request);
+        sessions.require(request, Permission.VIEW_MEMBERS);
         if (page < 0 || size < 1 || size > 100) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_PAGE", "조회 조건을 확인해 주세요.");
         }
@@ -54,12 +55,12 @@ public class AdminMemberController {
     @PostMapping("/members/invitations")
     public MemberInvitationService.IssuedInvitation invite(HttpServletRequest request,
             @Valid @RequestBody InviteRequest body) {
-        return invitations.create(sessions.requireAdmin(request), body.email(), body.name(), body.memberType());
+        return invitations.create(sessions.require(request, Permission.APPROVE_APPLICATIONS), body.email(), body.name(), body.memberType());
     }
 
     @PostMapping("/members/{id}/account-setup")
     public MemberInvitationService.IssuedInvitation reissue(HttpServletRequest request, @PathVariable long id) {
-        return invitations.reissue(sessions.requireAdmin(request), id);
+        return invitations.reissue(sessions.require(request, Permission.APPROVE_APPLICATIONS), id);
     }
 
     @GetMapping("/applications")
@@ -67,7 +68,7 @@ public class AdminMemberController {
             @RequestParam(defaultValue = "APPROVAL_PENDING") AccountStatus status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        sessions.requireAdmin(request);
+        sessions.require(request, Permission.APPROVE_APPLICATIONS);
         if (status != AccountStatus.APPROVAL_PENDING || page < 0 || size < 1 || size > 100) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_PAGE", "조회 조건을 확인해 주세요.");
         }
@@ -81,21 +82,21 @@ public class AdminMemberController {
     @PostMapping("/applications/{id}/approve")
     public ResponseEntity<Void> approve(HttpServletRequest request, @PathVariable Long id,
             @Valid @RequestBody ApproveRequest body) {
-        approvals.approve(sessions.requireAdmin(request), id, body.memberType());
+        approvals.approve(sessions.require(request, Permission.APPROVE_APPLICATIONS), id, body.memberType());
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/applications/{id}/reject")
     public ResponseEntity<Void> reject(HttpServletRequest request, @PathVariable Long id,
             @Valid @RequestBody ReasonRequest body) {
-        approvals.reject(sessions.requireAdmin(request), id, body.reason().strip());
+        approvals.reject(sessions.require(request, Permission.APPROVE_APPLICATIONS), id, body.reason().strip());
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/members/{id}/revoke")
     public ResponseEntity<Void> revoke(HttpServletRequest request, @PathVariable Long id,
             @Valid @RequestBody ReasonRequest body) {
-        approvals.revoke(sessions.requireAdmin(request), id, body.reason().strip());
+        approvals.revoke(sessions.require(request, Permission.REVOKE_ACCESS), id, body.reason().strip());
         return ResponseEntity.noContent().build();
     }
 

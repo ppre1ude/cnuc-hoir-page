@@ -1,5 +1,6 @@
 package kr.ac.jnu.choir.member;
 
+import kr.ac.jnu.choir.auth.Permission;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -35,7 +36,7 @@ public class AdminOperatorPreapprovalController {
     @GetMapping
     public PreapprovalPage list(HttpServletRequest request, @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        sessions.requireAdmin(request);
+        sessions.require(request, Permission.MANAGE_SITE_ADMINS);
         if (page < 0 || size < 1 || size > 100) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_PAGE", "조회 조건을 확인해 주세요.");
         }
@@ -46,12 +47,12 @@ public class AdminOperatorPreapprovalController {
 
     @PostMapping
     public PreapprovalItem add(HttpServletRequest request, @Valid @RequestBody AddRequest body) {
-        return item(service.add(sessions.requireAdmin(request).getId(), body.email(), body.memberType()));
+        return item(service.add(sessions.require(request, Permission.MANAGE_SITE_ADMINS).getId(), body.email(), body.memberType()));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> remove(HttpServletRequest request, @PathVariable long id) {
-        service.remove(sessions.requireAdmin(request).getId(), id);
+        service.remove(sessions.require(request, Permission.MANAGE_SITE_ADMINS).getId(), id);
         return ResponseEntity.noContent().build();
     }
 

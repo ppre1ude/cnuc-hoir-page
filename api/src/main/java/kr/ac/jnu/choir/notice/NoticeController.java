@@ -1,5 +1,6 @@
 package kr.ac.jnu.choir.notice;
 
+import kr.ac.jnu.choir.auth.Permission;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -52,25 +53,25 @@ public class NoticeController {
     @GetMapping("/admin/notices")
     public NoticePage adminList(HttpServletRequest request, @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        sessions.requireAdmin(request);
+        sessions.require(request, Permission.MANAGE_EVENTS);
         return page(notices.list(page, size, true), page, size);
     }
 
     @GetMapping("/admin/notices/{id}")
     public NoticeItem adminGet(HttpServletRequest request, @PathVariable long id) {
-        sessions.requireAdmin(request);
+        sessions.require(request, Permission.MANAGE_EVENTS);
         return item(notices.get(id, true));
     }
 
     @PostMapping("/admin/notices")
     public ResponseEntity<NoticeItem> create(HttpServletRequest request, @Valid @RequestBody NoticeInput body) {
         return ResponseEntity.status(HttpStatus.CREATED).body(item(notices.create(body.title(), body.body(),
-                body.published(), sessions.requireAdmin(request), poll(body.poll()))));
+                body.published(), sessions.require(request, Permission.MANAGE_EVENTS), poll(body.poll()))));
     }
 
     @PutMapping("/admin/notices/{id}")
     public NoticeItem update(HttpServletRequest request, @PathVariable long id, @Valid @RequestBody NoticeInput body) {
-        sessions.requireAdmin(request);
+        sessions.require(request, Permission.MANAGE_EVENTS);
         return item(notices.update(id, body.title(), body.body(), body.published(), poll(body.poll())));
     }
 

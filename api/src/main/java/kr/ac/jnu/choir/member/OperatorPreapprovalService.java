@@ -3,6 +3,8 @@ package kr.ac.jnu.choir.member;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.util.Locale;
+import kr.ac.jnu.choir.auth.Permission;
+import kr.ac.jnu.choir.auth.PermissionService;
 import kr.ac.jnu.choir.common.AdminActionLog;
 import kr.ac.jnu.choir.common.AdminActionLogRepository;
 import kr.ac.jnu.choir.common.ApiException;
@@ -20,14 +22,16 @@ public class OperatorPreapprovalService {
     private final MemberRepository members;
     private final AdminActionLogRepository actionLogs;
     private final JdbcTemplate jdbc;
+    private final PermissionService permissions;
     private final Clock clock;
 
     public OperatorPreapprovalService(OperatorPreapprovalRepository preapprovals, MemberRepository members,
-            AdminActionLogRepository actionLogs, JdbcTemplate jdbc, Clock clock) {
+            AdminActionLogRepository actionLogs, JdbcTemplate jdbc, PermissionService permissions, Clock clock) {
         this.preapprovals = preapprovals;
         this.members = members;
         this.actionLogs = actionLogs;
         this.jdbc = jdbc;
+        this.permissions = permissions;
         this.clock = clock;
     }
 
@@ -38,7 +42,7 @@ public class OperatorPreapprovalService {
 
     @Transactional
     public OperatorPreapproval add(long actorId, String email, MemberType type) {
-        Member actor = requireAdmin(actorId);
+        Member actor = permissions.require(actorId, Permission.MANAGE_SITE_ADMINS);
         String normalized = email.strip().toLowerCase(Locale.ROOT);
         lockEmail(normalized);
         if (preapprovals.findByEmailIgnoreCase(normalized).isPresent()) throw duplicate();
@@ -62,7 +66,7 @@ public class OperatorPreapprovalService {
 
     @Transactional
     public void remove(long actorId, long entryId) {
-        requireAdmin(actorId);
+        permissions.require(actorId, Permission.MANAGE_SITE_ADMINS);
         OperatorPreapproval candidate = preapprovals.findById(entryId)
                 .orElseThrow(OperatorPreapprovalService::notFound);
         lockEmail(candidate.getEmail());
@@ -88,13 +92,6 @@ public class OperatorPreapprovalService {
         return true;
     }
 
-    private Member requireAdmin(long id) {
-        Member actor = members.findByIdForUpdate(id)
-                .orElseThrow(OperatorPreapprovalService::adminRequired);
-        if (!actor.isAdmin() || actor.getStatus() != AccountStatus.APPROVED) throw adminRequired();
-        return actor;
-    }
-
     private void lockEmail(String email) {
         jdbc.query("SELECT pg_advisory_xact_lock(hashtextextended(?, 0))", rs -> { }, email);
     }
@@ -104,10 +101,6 @@ public class OperatorPreapprovalService {
                 INSERT INTO operator_preapproval_log (actor_member_id, email, action, member_type, acted_at)
                 VALUES (?, ?, ?, ?, ?)
                 """, actorId, email, action, type.name(), Timestamp.from(clock.instant()));
-    }
-
-    private static ApiException adminRequired() {
-        return new ApiException(HttpStatus.FORBIDDEN, "ADMIN_REQUIRED", "운영진만 이용할 수 있습니다.");
     }
 
     private static ApiException duplicate() {

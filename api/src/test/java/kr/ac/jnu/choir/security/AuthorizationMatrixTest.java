@@ -62,6 +62,15 @@ class AuthorizationMatrixTest {
         return session;
     }
 
+    // 직책을 DB에 직접 넣은 활동 단원 세션입니다.
+    private MockHttpSession staff(String role) {
+        MockHttpSession session = session("APPROVED", "ACTIVE", false);
+        Long id = (Long) session.getAttribute("memberId");
+        jdbc.update("INSERT INTO member_role (member_id, role, assigned_by_member_id, assigned_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP(6))",
+                id, role, id);
+        return session;
+    }
+
     private int getStatus(String path, MockHttpSession session) throws Exception {
         var request = get(path);
         if (session != null) request.session(session);
@@ -80,14 +89,16 @@ class AuthorizationMatrixTest {
                 new Role("접근 해제", session("REVOKED", "ACTIVE", false), 401, 401),
                 new Role("활동 단원", session("APPROVED", "ACTIVE", false), 200, 403),
                 new Role("OB", session("APPROVED", "OB", false), 200, 403),
-                new Role("운영진", session("APPROVED", "ACTIVE", true), 200, 200));
+                new Role("운영진", session("APPROVED", "ACTIVE", true), 200, 200),
+                new Role("수석", staff("SECTION_LEAD"), 200, 200),
+                new Role("단장", staff("PRESIDENT"), 200, 200));
         List<String> memberPaths = List.of(
                 "/api/v1/notices", "/api/v1/notices/" + noticeId,
                 "/api/v1/events?from=2026-09-01T00:00:00Z&to=2026-10-01T00:00:00Z",
                 "/api/v1/events/" + eventId, "/api/v1/events/" + eventId + "/attendance/me",
                 "/api/v1/attendance/me");
         List<String> adminPaths = List.of(
-                "/api/v1/admin/applications", "/api/v1/admin/notices",
+                "/api/v1/admin/notices",
                 "/api/v1/admin/events/" + eventId + "/attendance",
                 "/api/v1/admin/events/" + eventId + "/check-in-session");
         for (Role role : roles) {
@@ -98,6 +109,14 @@ class AuthorizationMatrixTest {
                 assertThat(getStatus(path, role.session())).as(role.name() + " " + path).isEqualTo(role.adminStatus());
             }
         }
+        // 회원 목록과 접근 해제는 직책에 따라 갈립니다.
+        assertThat(getStatus("/api/v1/admin/members", staff("SECTION_LEAD"))).isEqualTo(200);
+        assertThat(getStatus("/api/v1/admin/allowlist", staff("SECTION_LEAD"))).isEqualTo(403);
+        assertThat(getStatus("/api/v1/admin/allowlist", staff("PRESIDENT"))).isEqualTo(200);
+        assertThat(getStatus("/api/v1/admin/operator-preapprovals", staff("PRESIDENT"))).isEqualTo(403);
+        assertThat(getStatus("/api/v1/admin/operator-preapprovals", session("APPROVED", "ACTIVE", true))).isEqualTo(200);
+        assertThat(getStatus("/api/v1/admin/applications", staff("SECTION_LEAD"))).isEqualTo(403);
+        assertThat(getStatus("/api/v1/admin/applications", staff("VICE_PRESIDENT"))).isEqualTo(200);
     }
 
     @Test void publicBoundaryAndAdminWritesRequireAuthenticationAndCsrf() throws Exception {

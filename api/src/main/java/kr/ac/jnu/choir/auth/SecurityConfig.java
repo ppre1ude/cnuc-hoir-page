@@ -24,7 +24,7 @@ public class SecurityConfig {
                         "/api/v1/auth/account-setup/confirm").permitAll()
                 .requestMatchers("/api/v1/auth/me", "/api/v1/auth/logout").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/v1/public/events").permitAll()
-                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/v1/admin/**").hasRole("MEMBER")
                 .requestMatchers("/api/v1/**").hasRole("MEMBER")
                 .anyRequest().denyAll())
                 .exceptionHandling(errors -> errors

@@ -16,9 +16,11 @@ import org.springframework.stereotype.Service;
 @Service
 public class SessionMemberService {
     private final MemberRepository members;
+    private final PermissionService permissions;
 
-    public SessionMemberService(MemberRepository members) {
+    public SessionMemberService(MemberRepository members, PermissionService permissions) {
         this.members = members;
+        this.permissions = permissions;
     }
 
     public Member current(HttpServletRequest request) {
@@ -43,10 +45,10 @@ public class SessionMemberService {
         return member;
     }
 
-    public Member requireAdmin(HttpServletRequest request) {
+    public Member require(HttpServletRequest request, Permission permission) {
         Member member = requireApproved(request);
-        if (!member.isAdmin()) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "ADMIN_REQUIRED", "운영진만 이용할 수 있습니다.");
+        if (!permissions.of(member).contains(permission)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "PERMISSION_REQUIRED", "이 기능을 쓸 권한이 없습니다.");
         }
         return member;
     }
@@ -58,7 +60,6 @@ public class SessionMemberService {
             var authorities = new java.util.ArrayList<SimpleGrantedAuthority>();
             if (member.getStatus() == AccountStatus.APPROVED) {
                 authorities.add(new SimpleGrantedAuthority("ROLE_MEMBER"));
-                if (member.isAdmin()) authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
             }
             SecurityContextHolder.getContext().setAuthentication(
                     new UsernamePasswordAuthenticationToken(member.getId(), null, List.copyOf(authorities)));

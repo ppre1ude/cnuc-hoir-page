@@ -3,6 +3,8 @@ package kr.ac.jnu.choir.member;
 import java.time.Clock;
 import java.sql.Timestamp;
 import java.util.Locale;
+import kr.ac.jnu.choir.auth.Permission;
+import kr.ac.jnu.choir.auth.PermissionService;
 import kr.ac.jnu.choir.common.ApiException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -15,14 +17,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class MemberAllowlistService {
     private final MemberAllowlistRepository allowlist;
-    private final MemberRepository members;
+    private final PermissionService permissions;
     private final JdbcTemplate jdbc;
     private final Clock clock;
 
-    public MemberAllowlistService(MemberAllowlistRepository allowlist, MemberRepository members,
+    public MemberAllowlistService(MemberAllowlistRepository allowlist, PermissionService permissions,
             JdbcTemplate jdbc, Clock clock) {
         this.allowlist = allowlist;
-        this.members = members;
+        this.permissions = permissions;
         this.jdbc = jdbc;
         this.clock = clock;
     }
@@ -34,7 +36,7 @@ public class MemberAllowlistService {
 
     @Transactional
     public MemberAllowlist add(long actorId, String email, MemberType type, String name) {
-        Member actor = requireAdmin(actorId);
+        Member actor = permissions.require(actorId, Permission.MANAGE_ALLOWLIST);
         String normalized = email.strip().toLowerCase(Locale.ROOT);
         if (allowlist.findByEmailIgnoreCase(normalized).isPresent()) throw duplicate();
         String displayName = name == null || name.isBlank() ? null : name.strip();
@@ -50,20 +52,11 @@ public class MemberAllowlistService {
 
     @Transactional
     public void remove(long actorId, long entryId) {
-        requireAdmin(actorId);
+        permissions.require(actorId, Permission.MANAGE_ALLOWLIST);
         MemberAllowlist entry = allowlist.findByIdForUpdate(entryId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ALLOWLIST_NOT_FOUND", "명단 항목을 찾을 수 없습니다."));
         audit(actorId, entry.getEmail(), "REMOVE", entry.getMemberType());
         allowlist.delete(entry);
-    }
-
-    private Member requireAdmin(long id) {
-        Member actor = members.findByIdForUpdate(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, "ADMIN_REQUIRED", "운영진만 이용할 수 있습니다."));
-        if (!actor.isAdmin() || actor.getStatus() != AccountStatus.APPROVED) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "ADMIN_REQUIRED", "운영진만 이용할 수 있습니다.");
-        }
-        return actor;
     }
 
     private void audit(long actorId, String email, String action, MemberType type) {
