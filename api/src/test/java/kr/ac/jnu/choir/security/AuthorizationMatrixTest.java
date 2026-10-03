@@ -168,6 +168,21 @@ class AuthorizationMatrixTest {
         }
     }
 
+    @Test void vicePresidentApprovesApplicationsButCannotRevoke() throws Exception {
+        MockHttpSession vice = staff("VICE_PRESIDENT");
+        String token = csrf(vice);
+        Member applicant = members.save(new Member(UUID.randomUUID() + "@example.org", "신청자", "{noop}password", Clock.systemUTC()));
+        jdbc.update("UPDATE member SET status = 'APPROVAL_PENDING', email_verified_at = CURRENT_TIMESTAMP(6) WHERE id = ?", applicant.getId());
+        Member target = members.save(new Member(UUID.randomUUID() + "@example.org", "대상자", "{noop}password", Clock.systemUTC()));
+        jdbc.update("UPDATE member SET status = 'APPROVED', member_type = 'ACTIVE', email_verified_at = CURRENT_TIMESTAMP(6) WHERE id = ?", target.getId());
+        assertThat(mvc.perform(post("/api/v1/admin/applications/" + applicant.getId() + "/approve")
+                .session(vice).header("X-CSRF-TOKEN", token).contentType("application/json")
+                .content("{\"memberType\":\"ACTIVE\"}")).andReturn().getResponse().getStatus()).isEqualTo(204);
+        assertThat(mvc.perform(post("/api/v1/admin/members/" + target.getId() + "/revoke")
+                .session(vice).header("X-CSRF-TOKEN", token).contentType("application/json")
+                .content("{\"reason\":\"권한 확인\"}")).andReturn().getResponse().getStatus()).isEqualTo(403);
+    }
+
     private String csrf(MockHttpSession session) throws Exception {
         String body = mvc.perform(get("/api/v1/auth/csrf").session(session)).andReturn().getResponse().getContentAsString();
         return body.split("\"token\":\"", 2)[1].split("\"", 2)[0];

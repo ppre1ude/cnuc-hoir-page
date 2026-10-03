@@ -3,6 +3,8 @@ package kr.ac.jnu.choir.member;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import java.time.Clock;
+import kr.ac.jnu.choir.auth.Permission;
+import kr.ac.jnu.choir.auth.PermissionService;
 import kr.ac.jnu.choir.common.AdminActionLog;
 import kr.ac.jnu.choir.common.AdminActionLogRepository;
 import kr.ac.jnu.choir.common.ApiException;
@@ -16,13 +18,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class MemberApprovalService {
     private final MemberRepository members;
     private final AdminActionLogRepository logs;
+    private final PermissionService permissions;
     private final Clock clock;
     private final EntityManager entityManager;
 
-    public MemberApprovalService(MemberRepository members, AdminActionLogRepository logs, Clock clock,
-            EntityManager entityManager) {
+    public MemberApprovalService(MemberRepository members, AdminActionLogRepository logs,
+            PermissionService permissions, Clock clock, EntityManager entityManager) {
         this.members = members;
         this.logs = logs;
+        this.permissions = permissions;
         this.clock = clock;
         this.entityManager = entityManager;
     }
@@ -34,7 +38,7 @@ public class MemberApprovalService {
 
     @Transactional
     public void approve(Member actor, Long targetId, MemberType type) {
-        LockedMembers locked = lockMembers(actor.getId(), targetId);
+        LockedMembers locked = lockMembers(actor.getId(), targetId, Permission.APPROVE_APPLICATIONS);
         Member target = locked.target();
         if (target.getStatus() != AccountStatus.APPROVAL_PENDING || target.getEmailVerifiedAt() == null) {
             throw conflict();
@@ -46,7 +50,7 @@ public class MemberApprovalService {
 
     @Transactional
     public void reject(Member actor, Long targetId, String reason) {
-        LockedMembers locked = lockMembers(actor.getId(), targetId);
+        LockedMembers locked = lockMembers(actor.getId(), targetId, Permission.APPROVE_APPLICATIONS);
         Member target = locked.target();
         if (target.getStatus() != AccountStatus.APPROVAL_PENDING || target.getEmailVerifiedAt() == null) {
             throw conflict();
@@ -58,7 +62,7 @@ public class MemberApprovalService {
 
     @Transactional
     public void revoke(Member actor, Long targetId, String reason) {
-        LockedMembers locked = lockMembers(actor.getId(), targetId);
+        LockedMembers locked = lockMembers(actor.getId(), targetId, Permission.REVOKE_ACCESS);
         Member target = locked.target();
         if ((target.getStatus() != AccountStatus.APPROVED && target.getStatus() != AccountStatus.INVITED)
                 || target.getId().equals(locked.actor().getId())) {
@@ -72,13 +76,13 @@ public class MemberApprovalService {
         logs.save(new AdminActionLog(locked.actor(), target, "REVOKE", before, target.getStatus(), reason, clock.instant()));
     }
 
-    private LockedMembers lockMembers(Long actorId, Long targetId) {
+    private LockedMembers lockMembers(Long actorId, Long targetId, Permission required) {
         Member first = locked(Math.min(actorId, targetId));
         Member second = actorId.equals(targetId) ? first : locked(Math.max(actorId, targetId));
         Member actor = first.getId().equals(actorId) ? first : second;
         Member target = first.getId().equals(targetId) ? first : second;
-        if (actor.getStatus() != AccountStatus.APPROVED || !actor.isAdmin()) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "ADMIN_REQUIRED", "운영진만 이용할 수 있습니다.");
+        if (!permissions.of(actor).contains(required)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "PERMISSION_REQUIRED", "이 기능을 쓸 권한이 없습니다.");
         }
         return new LockedMembers(actor, target);
     }
