@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ApiRequestError } from "../../lib/api";
-import { getSession, logout, type MemberSession } from "../auth/session";
+import { getSession, isStaff, logout, type MemberSession } from "../auth/session";
 import styles from "./MemberNavigation.module.css";
 
 const links = [
@@ -57,7 +57,7 @@ export function MemberNavigation() {
           aria-current={pathname === link.href || link.href === "/dashboard" && pathname.startsWith("/events/") ? "page" : undefined}>
           {link.label}
         </Link>)}
-        {session?.admin && <Link href="/admin/events" aria-current={pathname.startsWith("/admin/") ? "page" : undefined}>운영진</Link>}
+        {isStaff(session) && <Link href="/admin/events" aria-current={pathname.startsWith("/admin/") ? "page" : undefined}>운영진</Link>}
       </nav>
       <div className={styles.account}>
         {logoutError && <span className={styles.error} role="alert">{logoutError}</span>}
