@@ -1,0 +1,14 @@
+.waiting { position: relative; }
+.slow {
+  position: absolute; top: var(--space-20); left: 50%; transform: translateX(-50%);
+  display: grid; justify-items: center; gap: var(--space-4);
+  width: min(calc(100% - var(--page-gutter) * 2), 420px);
+  padding: var(--space-8) var(--space-6);
+  border: 1px solid var(--color-line); border-radius: var(--radius-panel); background: var(--color-surface);
+  text-align: center;
+}
+.slow p { margin: 0; color: var(--color-muted); font-size: var(--text-label); line-height: 1.6; word-break: keep-all; }
+.message { composes: readingPage from "../../components/ui/ui.module.css"; display: grid; justify-items: start; gap: var(--space-4); }
+.message p { margin: 0; }
+.srOnly { composes: srOnly from "../../components/ui/ui.module.css"; }
+@media (max-width: 760px) { .slow { top: var(--space-12); } }

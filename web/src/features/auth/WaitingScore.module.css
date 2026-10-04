@@ -1,0 +1,9 @@
+.score { display: block; width: 200px; max-width: 100%; height: auto; color: var(--color-brand); overflow: visible; }
+.staff path { fill: none; stroke: currentColor; stroke-width: 1.5; opacity: .45; }
+.note { fill: currentColor; stroke: currentColor; stroke-width: 2; animation: travel 2.8s ease-in-out infinite alternate; }
+@keyframes travel {
+  0% { transform: translate(36px, 43px); }
+  50% { transform: translate(120px, 33px); }
+  100% { transform: translate(204px, 43px); }
+}
+@media (prefers-reduced-motion: reduce) { .note { animation: none; transform: translate(120px, 33px); } }

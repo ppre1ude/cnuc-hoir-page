@@ -61,6 +61,12 @@
 .surface { min-width: 0; padding: var(--space-6); border: 1px solid var(--color-line); border-radius: var(--radius-panel); background: var(--color-surface); }
 .logo { display: block; width: var(--logo-width, 210px); height: auto; }
 .mark { width: var(--logo-width, 168px); }
+.skeleton { display: block; height: 1em; border-radius: var(--radius-small); background: var(--color-neutral-background); animation: skeletonPulse 1.6s ease-in-out infinite; }
+.skeletonRows { display: grid; }
+.skeletonRow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); min-height: var(--control-large); padding-block: var(--space-4); border-bottom: 1px solid var(--color-line); }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@keyframes skeletonPulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
 @media (max-width: 760px) {
   .pageHeader { align-items: flex-start; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-6); }
   .logo { width: var(--logo-width, 188px); }

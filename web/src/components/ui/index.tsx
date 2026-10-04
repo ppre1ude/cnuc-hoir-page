@@ -56,3 +56,19 @@ export function BrandLogo({ mark = false, className, alt = "전남대학교 합�
     width={mark ? 168 : 280} height={mark ? 130 : 61} alt={alt} priority={priority}
     className={join(styles.logo, mark ? styles.mark : undefined, className)} />;
 }
+
+// 내용 자리를 잡는 막대입니다. 화면 읽기 프로그램에는 감춥니다.
+export function Skeleton({ className, width, height }: { className?: string; width?: string; height?: string }) {
+  return <span aria-hidden="true" className={join(styles.skeleton, className)} style={{ width, height }} />;
+}
+
+// 목록 행 모양의 자리 표시입니다. 데이터를 받는 동안 목록 자리에 두며, label이 있으면 그 문구를 알립니다.
+export function SkeletonRows({ count = 4, label, className }: { count?: number; label?: string; className?: string }) {
+  return <div className={join(styles.skeletonRows, className)} role={label ? "status" : undefined}>
+    {label && <span className={styles.srOnly}>{label}</span>}
+    {Array.from({ length: count }, (_, index) => <div key={index} className={styles.skeletonRow} aria-hidden="true">
+      <span className={styles.skeleton} style={{ width: `${48 + ((index * 17) % 36)}%` }} />
+      <span className={styles.skeleton} style={{ width: "18%" }} />
+    </div>)}
+  </div>;
+}
