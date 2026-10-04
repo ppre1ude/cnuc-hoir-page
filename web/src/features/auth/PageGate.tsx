@@ -8,6 +8,7 @@ import { WaitingScore } from "./WaitingScore";
 import styles from "./PageGate.module.css";
 
 const SLOW_AFTER_MS = 3000;
+const SLOW_MESSAGE = "서버를 깨우고 있습니다. 오랜만에 접속하면 1분 정도 걸릴 수 있어요.";
 
 // 각 라우트 페이지가 본문을 감쌉니다. 대기·느린 대기·실패·권한 없음 화면은 여기서만 그립니다.
 export function PageGate({ skeleton, permission, children }: {
@@ -31,12 +32,13 @@ export function PageGate({ skeleton, permission, children }: {
     </div>;
   }
   if (status === "loading" || !session) {
-    return <div className={styles.waiting} aria-busy="true">
-      <span className={styles.srOnly} role="status">불러오는 중입니다.</span>
+    // 알림 영역은 대기 내내 한 개만 두고 글자만 바꿔야 화면 읽기 프로그램이 3초 뒤 안내를 놓치지 않습니다.
+    return <div className={styles.waiting}>
+      <span className={styles.srOnly} role="status">{slow ? SLOW_MESSAGE : "불러오는 중입니다."}</span>
       {skeleton}
       {slow && <div className={styles.slow}>
         <WaitingScore />
-        <p role="status">서버를 깨우고 있습니다. 오랜만에 접속하면 1분 정도 걸릴 수 있어요.</p>
+        <p>{SLOW_MESSAGE}</p>
       </div>}
     </div>;
   }

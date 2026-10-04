@@ -20,11 +20,15 @@ test("세션을 기다리는 동안 스켈레톤을 보여 주고 3초 뒤 대�
   vi.mocked(getSession).mockReturnValue(new Promise(() => undefined));
   render(<SessionProvider><PageGate skeleton={skeleton}><Body /></PageGate></SessionProvider>);
   expect(screen.getByText("스켈레톤")).toBeInTheDocument();
-  expect(screen.getByText("불러오는 중입니다.")).toBeInTheDocument();
+  const status = screen.getByRole("status");
+  expect(status).toHaveTextContent("불러오는 중입니다.");
   act(() => { vi.advanceTimersByTime(2999); });
   expect(screen.queryByText(/서버를 깨우고 있습니다/)).not.toBeInTheDocument();
   act(() => { vi.advanceTimersByTime(1); });
-  expect(screen.getByText("서버를 깨우고 있습니다. 오랜만에 접속하면 1분 정도 걸릴 수 있어요.")).toBeInTheDocument();
+  // 같은 알림 영역이 글자만 바꿔 알리고, 화면에도 같은 안내가 보입니다.
+  expect(screen.getByRole("status")).toBe(status);
+  expect(status).toHaveTextContent("서버를 깨우고 있습니다. 오랜만에 접속하면 1분 정도 걸릴 수 있어요.");
+  expect(screen.getAllByText("서버를 깨우고 있습니다. 오랜만에 접속하면 1분 정도 걸릴 수 있어요.")).toHaveLength(2);
   expect(screen.getByText("스켈레톤")).toBeInTheDocument();
 });
 
