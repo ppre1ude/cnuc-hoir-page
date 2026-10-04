@@ -1,45 +1,30 @@
 "use client";
 
-import { Button, Select, Textarea, Feedback, PageHeader } from "../../components/ui";
+import { Button, Select, Textarea, Feedback, PageHeader, SkeletonRows } from "../../components/ui";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { ApiRequestError } from "../../lib/api";
-import { can, getSession } from "../auth/session";
 import { approveApplication, getApplications, rejectApplication, type ApplicationPage } from "./adminMembers";
 import styles from "./AdminPages.module.css";
 
 export function ApplicationQueue() {
-  const router = useRouter();
   const [data, setData] = useState<ApplicationPage | null>(null);
   const [page, setPage] = useState(0);
   const [retry, setRetry] = useState(0);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<number | null>(null);
-  const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
     let alive = true;
-    getSession().then(async (session) => {
-      if (!can(session, "APPROVE_APPLICATIONS") || session.status !== "APPROVED") {
-        if (alive) setError("운영진만 신청 목록을 볼 수 있습니다.");
-        return;
-      }
-      if (alive) setAuthorized(true);
-      const result = await getApplications(page);
-      if (alive) {
-        if (page > 0 && result.items.length === 0 && result.total <= page * result.size) {
-          setData(null);
-          setPage(Math.max(0, Math.ceil(result.total / result.size) - 1));
-        } else setData(result);
-      }
-    }).catch((caught) => {
+    getApplications(page).then((result) => {
       if (!alive) return;
-      if (caught instanceof ApiRequestError && caught.status === 401) router.replace("/login");
-      else setError("신청 목록을 불러오지 못했습니다.");
-    });
+      if (page > 0 && result.items.length === 0 && result.total <= page * result.size) {
+        setData(null);
+        setPage(Math.max(0, Math.ceil(result.total / result.size) - 1));
+      } else setData(result);
+    }).catch(() => { if (alive) setError("신청 목록을 불러오지 못했습니다."); });
     return () => { alive = false; };
-  }, [page, retry, router]);
+  }, [page, retry]);
 
   async function update(id: number, action: () => Promise<void>) {
     if (busy !== null) return;
@@ -53,8 +38,7 @@ export function ApplicationQueue() {
         setPage(Math.max(0, Math.ceil(result.total / result.size) - 1));
       } else setData(result);
     } catch (caught) {
-      if (caught instanceof ApiRequestError && caught.status === 401) router.replace("/login");
-      else setError(caught instanceof ApiRequestError && caught.status === 409
+      setError(caught instanceof ApiRequestError && caught.status === 409
         ? "이미 처리된 신청입니다. 목록을 새로 확인해 주세요."
         : "처리하지 못했습니다. 잠시 후 다시 시도해 주세요.");
     } finally {
@@ -67,10 +51,10 @@ export function ApplicationQueue() {
       <PageHeader title="가입 승인" />
       <p>구글 로그인 신청자의 이메일을 단원 명단과 대조해 주세요.</p>
       {error && <Feedback tone="error">{error}</Feedback>}
-      {authorized && !data && error && <Button variant="secondary" type="button" onClick={() => { setError(""); setRetry((value) => value + 1); }}>다시 시도</Button>}
-      {authorized && !data && !error && <p role="status">신청 목록을 불러오는 중입니다.</p>}
+      {!data && error && <Button variant="secondary" type="button" onClick={() => { setError(""); setRetry((value) => value + 1); }}>다시 시도</Button>}
       {data?.items.length === 0 && <p>승인 대기 신청이 없습니다.</p>}
-      <div className={styles.list}>{data?.items.map((item) => <ApplicationRow key={item.id} item={item} busy={busy === item.id}
+      <div className={styles.list}>{!data && !error && <SkeletonRows count={3} label="신청 목록을 불러오는 중입니다." />}
+        {data?.items.map((item) => <ApplicationRow key={item.id} item={item} busy={busy === item.id}
         onApprove={(type) => update(item.id, () => approveApplication(item.id, type))}
         onReject={(reason) => update(item.id, () => rejectApplication(item.id, reason))} />)}</div>
       {data && data.total > data.size && <nav className={styles.pagination} aria-label="신청 목록 페이지">

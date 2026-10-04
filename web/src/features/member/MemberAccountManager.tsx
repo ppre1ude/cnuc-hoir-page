@@ -1,11 +1,11 @@
 "use client";
 
-import { Button, Input, Select, Feedback, PageHeader } from "../../components/ui";
+import { Button, Input, Select, Feedback, PageHeader, SkeletonRows } from "../../components/ui";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import { ApiRequestError } from "../../lib/api";
-import { can, getSession, type MemberSession } from "../auth/session";
+import { can, type MemberSession } from "../auth/session";
+import { useSession, useSessionState } from "../auth/SessionProvider";
 import { getMembers, inviteMember, reissueAccountSetup, revokeMember,
   type IssuedInvitation, type MemberItem, type MemberPage } from "./adminMembers";
 import styles from "./AdminPages.module.css";
@@ -13,28 +13,21 @@ import { MemberRegistration } from "./MemberRegistration";
 import { MemberRoles } from "./MemberRoles";
 
 export function MemberAccountManager() {
-  const router = useRouter();
+  const session = useSession();
+  const { refresh: refreshSession } = useSessionState();
   const [data, setData] = useState<MemberPage | null>(null);
   const [page, setPage] = useState(0);
   const [refresh, setRefresh] = useState(0);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [issued, setIssued] = useState<IssuedInvitation | null>(null);
-  const [session, setSession] = useState<MemberSession | null>(null);
 
   useEffect(() => {
     let alive = true;
-    getSession().then((current) => {
-      if (!can(current, "VIEW_MEMBERS") || current.status !== "APPROVED") throw new Error("PERMISSION_REQUIRED");
-      if (alive) setSession(current);
-      return getMembers(page);
-    }).then((result) => { if (alive) setData(result); }).catch((caught) => {
-      if (!alive) return;
-      if (caught instanceof ApiRequestError && caught.status === 401) router.replace("/login");
-      else setError("단원 계정을 불러오지 못했습니다.");
-    });
+    getMembers(page).then((result) => { if (alive) setData(result); })
+      .catch(() => { if (alive) setError("단원 계정을 불러오지 못했습니다."); });
     return () => { alive = false; };
-  }, [page, refresh, router]);
+  }, [page, refresh]);
 
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -95,13 +88,6 @@ export function MemberAccountManager() {
   const link = issued && typeof window !== "undefined"
     ? `${window.location.origin}/activate#token=${issued.token}` : "";
 
-  if (!session) return <section className={styles.page}>
-    <PageHeader title="단원 계정" />
-    {error ? <><Feedback tone="error">{error}</Feedback>
-      <Button variant="secondary" type="button" onClick={() => { setError(""); setRefresh((value) => value + 1); }}>다시 시도</Button></>
-      : <p role="status">계정 목록을 불러오는 중입니다.</p>}
-  </section>;
-
   return <section className={styles.page}>
     <PageHeader title="단원 계정" />
     {(can(session, "MANAGE_ALLOWLIST") || can(session, "APPROVE_APPLICATIONS")) && <MemberRegistration session={session}>
@@ -132,11 +118,14 @@ export function MemberAccountManager() {
     </section>}
     <section aria-labelledby="members-title" className={styles.memberSection}>
       <h2 id="members-title">계정 목록</h2>
-      {!data && !error && <p role="status">계정 목록을 불러오는 중입니다.</p>}
       {!data && error && <Button variant="secondary" type="button" onClick={() => { setError(""); setRefresh((value) => value + 1); }}>다시 시도</Button>}
       {data?.items.length === 0 && <p>등록된 계정이 없습니다.</p>}
-      <div className={styles.list}>{data?.items.map((item) => <MemberRow key={item.id} item={item} busy={busy}
-        session={session} onChanged={() => setRefresh((value) => value + 1)} onRenew={() => renew(item.id)} onRevoke={(reason) => revoke(item.id, reason)} />)}</div>
+      <div className={styles.list}>{!data && !error && <SkeletonRows count={4} label="계정 목록을 불러오는 중입니다." />}
+        {data?.items.map((item) => <MemberRow key={item.id} item={item} busy={busy} session={session} onChanged={() => {
+          setRefresh((value) => value + 1);
+          // 자기 직책·파트가 바뀌면 권한과 메뉴가 달라지므로 세션도 다시 받습니다.
+          if (item.id === session.id) refreshSession();
+        }} onRenew={() => renew(item.id)} onRevoke={(reason) => revoke(item.id, reason)} />)}</div>
       {data && data.total > data.size && <nav className={styles.pagination} aria-label="계정 목록 페이지">
         <Button variant="secondary" type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>이전</Button>
         <span>{page + 1} / {Math.ceil(data.total / data.size)}</span>
