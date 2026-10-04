@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PageGate } from "./PageGate";
 import { SessionProvider, useSession } from "./SessionProvider";
@@ -59,4 +59,12 @@ test("권한이 있으면 본문을 그립니다", () => {
 test("권한이 필요 없는 페이지는 준비되면 바로 본문을 그립니다", () => {
   renderWithSession(<PageGate skeleton={skeleton}><Body /></PageGate>);
   expect(screen.getByText("본문:단원")).toBeInTheDocument();
+});
+
+test("다시 시도가 또 실패하면 다시 시도 버튼에 포커스를 돌려줍니다", async () => {
+  vi.mocked(getSession).mockRejectedValue(new TypeError("Failed to fetch"));
+  render(<SessionProvider><PageGate skeleton={skeleton}><Body /></PageGate></SessionProvider>);
+  await userEvent.click(await screen.findByRole("button", { name: "다시 시도" }));
+  await waitFor(() => expect(screen.getByRole("button", { name: "다시 시도" })).toHaveFocus());
+  expect(getSession).toHaveBeenCalledTimes(2);
 });

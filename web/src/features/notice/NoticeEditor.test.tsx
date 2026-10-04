@@ -26,6 +26,12 @@ describe("공지 편집기", () => {
     createNotice.mockResolvedValue({ id: 2 });
   });
 
+  it("목록을 받는 동안 불러오는 중이라고 알린다", () => {
+    getAdminNotices.mockReturnValue(new Promise(() => undefined));
+    renderWithSession(<NoticeEditor />, sessionFixture({ admin: true }));
+    expect(screen.getByRole("status")).toHaveTextContent("공지 목록을 불러오는 중입니다.");
+  });
+
   it("저장 성공 뒤 목록 조회 실패를 저장 실패로 표시하지 않고 재시도한다", async () => {
     getAdminNotices.mockResolvedValueOnce({ items: [], page: 0, size: 20, total: 0 })
       .mockRejectedValueOnce(new Error("목록 오류"))

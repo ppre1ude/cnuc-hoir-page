@@ -111,3 +111,12 @@ test("준비되기 전에 useSession을 부르면 예외를 던집니다", () =>
   vi.spyOn(console, "error").mockImplementation(() => undefined);
   expect(() => render(<SessionProvider><Reader /></SessionProvider>)).toThrow();
 });
+
+test("레이아웃이 바뀌어 사라진 provider의 늦은 응답은 리다이렉트하지 않습니다", async () => {
+  let resolve!: (value: ReturnType<typeof sessionFixture>) => void;
+  vi.mocked(getSession).mockReturnValue(new Promise((done) => { resolve = done; }));
+  const { unmount } = render(<SessionProvider requireStaff><Probe /></SessionProvider>);
+  unmount();
+  await act(async () => { resolve(sessionFixture()); });
+  expect(redirectTo).not.toHaveBeenCalled();
+});

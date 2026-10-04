@@ -129,7 +129,8 @@ export function NoticeEditor() {
     {error && <Feedback tone="error">{error}</Feedback>}
     {saved && <Feedback tone="success">공지를 저장했습니다.</Feedback>}
     {listError && <><Feedback tone="error">{listError}</Feedback><Button variant="secondary" type="button" onClick={() => { setListError(""); setData(null); setRetry(retry + 1); }}>다시 시도</Button></>}
-    <div className={styles.grid}><div className={styles.list}>{visibleData && <>
+    <div className={styles.grid}><div className={styles.list}>{!visibleData && !listError && <SkeletonRows count={4} label="공지 목록을 불러오는 중입니다." />}
+      {visibleData && <>
       {visibleData.items.length === 0 && <p>작성된 공지가 없습니다.</p>}
       {visibleData.items.map((notice) => <Button variant="unstyled" className={styles.rowButton} type="button" key={notice.id} onClick={() => edit(notice)}>
         <strong>{notice.title}</strong><span>{notice.published ? "게시" : "초안"}</span>

@@ -18,6 +18,7 @@ export function PageGate({ skeleton, permission, children }: {
 }) {
   const { status, session, refresh } = useSessionState();
   const [slow, setSlow] = useState(false);
+  const [retried, setRetried] = useState(false);
 
   useEffect(() => {
     if (status !== "loading") return;
@@ -28,7 +29,8 @@ export function PageGate({ skeleton, permission, children }: {
   if (status === "failed") {
     return <div className={styles.message}>
       <Feedback tone="error">서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.</Feedback>
-      <Button variant="secondary" onClick={() => { setSlow(false); refresh(); }}>다시 시도</Button>
+      {/* 다시 시도가 또 실패하면 새로 그린 버튼으로 포커스를 돌려줍니다. */}
+      <Button variant="secondary" autoFocus={retried} onClick={() => { setSlow(false); setRetried(true); refresh(); }}>다시 시도</Button>
     </div>;
   }
   if (status === "loading" || !session) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Input, Feedback, PageHeader } from "../../components/ui";
+import { Button, Input, Feedback, PageHeader, SkeletonRows } from "../../components/ui";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -19,7 +19,7 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
   const [session, setSession] = useState<SessionStatus | null>(null);
   const [issued, setIssued] = useState<IssuedSession | null>(null);
   const [qrImage, setQrImage] = useState("");
-  const [members, setMembers] = useState<AdminAttendance[]>([]);
+  const [members, setMembers] = useState<AdminAttendance[] | null>(null);
   const [reasons, setReasons] = useState<Record<number, string>>({});
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -103,8 +103,9 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
     </section>}
     <section className={styles.panel} aria-label="단원 출석 기록">
       <h2>단원별 상태</h2>
-      {members.length === 0 && <p>출석 대상 단원이 없습니다.</p>}
-      {members.map((member) => <div className={styles.row} key={member.memberId}>
+      {members === null && !message && <SkeletonRows count={3} label="출석 기록을 불러오는 중입니다." />}
+      {members?.length === 0 && <p>출석 대상 단원이 없습니다.</p>}
+      {members?.map((member) => <div className={styles.row} key={member.memberId}>
         <strong>{member.name}</strong> <span>{member.email}</span> · {attendanceLabel[member.status]}
         <div className={styles.fieldGroup}><label htmlFor={`reason-${member.memberId}`}>정정 이유</label> <Input id={`reason-${member.memberId}`}
           value={reasons[member.memberId] ?? ""} maxLength={500}

@@ -42,3 +42,12 @@ test("출석 창 열기 성공 후 목록 갱신 실패는 조회만 재시도�
   expect(attendance.openCheckIn).toHaveBeenCalledTimes(1);
   expect(QRCode.toDataURL).toHaveBeenCalledWith(expect.stringMatching(/^http:\/\/localhost.*\/events\/3\/check-in#token=secret$/), expect.any(Object));
 });
+
+test("출석 기록을 받는 동안 빈 목록 안내 대신 불러오는 중이라고 알립니다", async () => {
+  vi.mocked(events.getEvent).mockReturnValue(new Promise(() => undefined));
+  vi.mocked(attendance.getCheckInSession).mockReturnValue(new Promise(() => undefined));
+  vi.mocked(attendance.getAdminAttendance).mockReturnValue(new Promise(() => undefined));
+  renderWithSession(<AdminAttendancePanel eventId={3} />, sessionFixture({ admin: true }));
+  expect(screen.getByRole("status")).toHaveTextContent("출석 기록을 불러오는 중입니다.");
+  expect(screen.queryByText("출석 대상 단원이 없습니다.")).not.toBeInTheDocument();
+});

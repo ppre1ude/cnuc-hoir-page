@@ -45,7 +45,10 @@ export function SessionProvider({ children, requireStaff = false, initialSession
   useEffect(() => {
     // 처음 값이 있으면 받지 않습니다. StrictMode가 effect를 다시 실행해도 같습니다.
     if (!hasSession.current) load();
-    return onPermissionDenied(load);
+    const unsubscribe = onPermissionDenied(load);
+    // 레이아웃이 바뀌어 사라진 provider의 늦은 응답이 사용자가 고른 페이지를 덮지 않게 합니다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- DOM ref가 아니라 요청 번호이고, 정리 시점의 최신 값을 무효로 만드는 것이 목적이다.
+    return () => { unsubscribe(); latest.current++; };
   }, [load]);
 
   const value = useMemo(() => ({ status, session, refresh }), [status, session, refresh]);
