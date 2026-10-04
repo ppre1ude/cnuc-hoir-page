@@ -1,0 +1,113 @@
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { SessionProvider, useSession, useSessionState } from "./SessionProvider";
+import { getSession } from "./session";
+import { ApiRequestError, apiRequest, redirectTo } from "../../lib/api";
+import { sessionFixture } from "../../test/session";
+
+vi.mock("./session", async (importOriginal) => ({ ...await importOriginal<typeof import("./session")>(), getSession: vi.fn() }));
+vi.mock("../../lib/api", async (importOriginal) => ({ ...await importOriginal<typeof import("../../lib/api")>(), redirectTo: vi.fn() }));
+
+function Probe() {
+  const { status, session, refresh } = useSessionState();
+  return <div>
+    <p>상태:{status}</p>
+    <p>이름:{session?.name ?? "없음"}</p>
+    <button type="button" onClick={refresh}>새로 받기</button>
+  </div>;
+}
+
+beforeEach(() => { vi.mocked(getSession).mockReset(); vi.mocked(redirectTo).mockReset(); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+
+test("승인된 세션을 받으면 준비 상태가 됩니다", async () => {
+  vi.mocked(getSession).mockResolvedValue(sessionFixture({ name: "단원" }));
+  render(<SessionProvider><Probe /></SessionProvider>);
+  expect(screen.getByText("상태:loading")).toBeInTheDocument();
+  expect(await screen.findByText("상태:ready")).toBeInTheDocument();
+  expect(screen.getByText("이름:단원")).toBeInTheDocument();
+  expect(getSession).toHaveBeenCalledTimes(1);
+});
+
+test("승인되지 않은 계정은 가입 상태 화면으로 보냅니다", async () => {
+  vi.mocked(getSession).mockResolvedValue(sessionFixture({ status: "APPROVAL_PENDING", memberType: null }));
+  render(<SessionProvider><Probe /></SessionProvider>);
+  await waitFor(() => expect(redirectTo).toHaveBeenCalledWith("/application-status"));
+  expect(screen.getByText("상태:loading")).toBeInTheDocument();
+});
+
+test("401이면 로그인으로 보냅니다", async () => {
+  vi.mocked(getSession).mockRejectedValue(new ApiRequestError(401, "UNAUTHENTICATED", "로그인이 필요합니다."));
+  render(<SessionProvider><Probe /></SessionProvider>);
+  await waitFor(() => expect(redirectTo).toHaveBeenCalledWith("/login"));
+});
+
+test("그 밖의 실패는 실패 상태가 되고, 다시 받으면 준비 상태가 됩니다", async () => {
+  vi.mocked(getSession).mockRejectedValueOnce(new TypeError("Failed to fetch"))
+    .mockResolvedValueOnce(sessionFixture({ name: "단원" }));
+  render(<SessionProvider><Probe /></SessionProvider>);
+  expect(await screen.findByText("상태:failed")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "새로 받기" }));
+  expect(await screen.findByText("상태:ready")).toBeInTheDocument();
+  expect(redirectTo).not.toHaveBeenCalled();
+});
+
+test("운영진 영역은 운영진이 아니면 일정으로 보냅니다", async () => {
+  vi.mocked(getSession).mockResolvedValue(sessionFixture());
+  render(<SessionProvider requireStaff><Probe /></SessionProvider>);
+  await waitFor(() => expect(redirectTo).toHaveBeenCalledWith("/dashboard"));
+});
+
+test("운영진 영역은 운영진이면 준비 상태가 됩니다", async () => {
+  vi.mocked(getSession).mockResolvedValue(sessionFixture({ permissions: ["MANAGE_EVENTS", "VIEW_MINUTES"] }));
+  render(<SessionProvider requireStaff><Probe /></SessionProvider>);
+  expect(await screen.findByText("상태:ready")).toBeInTheDocument();
+  expect(redirectTo).not.toHaveBeenCalled();
+});
+
+test("처음 값을 받으면 요청하지 않고 바로 준비 상태입니다", () => {
+  render(<SessionProvider initialSession={sessionFixture({ name: "관리자" })}><Probe /></SessionProvider>);
+  expect(screen.getByText("상태:ready")).toBeInTheDocument();
+  expect(screen.getByText("이름:관리자")).toBeInTheDocument();
+  expect(getSession).not.toHaveBeenCalled();
+});
+
+test("다시 받다 실패해도 이미 받은 세션을 유지합니다", async () => {
+  vi.mocked(getSession).mockRejectedValue(new TypeError("Failed to fetch"));
+  render(<SessionProvider initialSession={sessionFixture({ name: "단원" })}><Probe /></SessionProvider>);
+  await userEvent.click(screen.getByRole("button", { name: "새로 받기" }));
+  await waitFor(() => expect(getSession).toHaveBeenCalledTimes(1));
+  expect(screen.getByText("상태:ready")).toBeInTheDocument();
+  expect(screen.getByText("이름:단원")).toBeInTheDocument();
+});
+
+test("권한 부족 응답을 받으면 세션을 다시 받고, 운영진이 아니게 되면 일정으로 보냅니다", async () => {
+  vi.mocked(getSession).mockResolvedValue(sessionFixture());
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+    ok: false, status: 403, json: async () => ({ code: "PERMISSION_REQUIRED", message: "권한 없음" }),
+  }));
+  render(<SessionProvider requireStaff initialSession={sessionFixture({ permissions: ["MANAGE_EVENTS", "VIEW_MINUTES"] })}><Probe /></SessionProvider>);
+  await act(async () => { await apiRequest("/admin/notices").catch(() => undefined); });
+  await waitFor(() => expect(getSession).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(redirectTo).toHaveBeenCalledWith("/dashboard"));
+});
+
+test("늦게 도착한 이전 응답은 버립니다", async () => {
+  let resolveFirst: (value: ReturnType<typeof sessionFixture>) => void = () => undefined;
+  vi.mocked(getSession)
+    .mockImplementationOnce(() => new Promise((resolve) => { resolveFirst = resolve; }))
+    .mockResolvedValueOnce(sessionFixture({ name: "새 세션" }));
+  render(<SessionProvider><Probe /></SessionProvider>);
+  await userEvent.click(screen.getByRole("button", { name: "새로 받기" }));
+  expect(await screen.findByText("이름:새 세션")).toBeInTheDocument();
+  await act(async () => { resolveFirst(sessionFixture({ name: "이전 세션" })); });
+  expect(screen.getByText("이름:새 세션")).toBeInTheDocument();
+});
+
+test("준비되기 전에 useSession을 부르면 예외를 던집니다", () => {
+  vi.mocked(getSession).mockReturnValue(new Promise(() => undefined));
+  function Reader() { useSession(); return null; }
+  vi.spyOn(console, "error").mockImplementation(() => undefined);
+  expect(() => render(<SessionProvider><Reader /></SessionProvider>)).toThrow();
+});
