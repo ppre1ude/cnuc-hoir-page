@@ -1,31 +1,26 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NoticeList } from "./NoticeList";
+import { renderWithSession } from "../../test/session";
 
-const getSession = vi.fn();
 const getNotices = vi.fn();
 const getNotice = vi.fn();
-const router = vi.hoisted(() => ({ replace: vi.fn() }));
-vi.mock("../auth/session", () => ({ getSession: () => getSession() }));
 vi.mock("./notices", () => ({ getNotices: (page: number) => getNotices(page), getNotice: (id: number) => getNotice(id) }));
 vi.mock("./NoticePoll", () => ({ NoticePoll: () => <div>공지 투표</div> }));
-vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
 describe("공지 목록", () => {
   afterEach(cleanup);
   beforeEach(() => {
-    getSession.mockReset();
     getNotices.mockReset();
     getNotice.mockReset();
     window.history.replaceState(null, "", "/notices");
-    getSession.mockResolvedValue({ status: "APPROVED" });
   });
 
   it("제목 바로 아래 본문을 펼치고 닫으면 제목으로 초점을 돌린다", async () => {
     const notice = { id: 3, title: "참여 조사", body: "조사 본문", author: "운영진", publishedAt: "2026-09-02T00:00:00Z" };
     getNotices.mockResolvedValue({ items: [notice], page: 0, size: 20, total: 1 });
     getNotice.mockResolvedValue(notice);
-    render(<NoticeList />);
+    renderWithSession(<NoticeList />);
     const trigger = await screen.findByRole("button", { name: "참여 조사" });
     expect(trigger).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(trigger);
@@ -44,7 +39,7 @@ describe("공지 목록", () => {
     const second = { id: 2, title: "둘째 공지", body: "현재 본문", author: "운영진" };
     getNotices.mockResolvedValue({ items: [first, second], page: 0, size: 20, total: 2 });
     getNotice.mockImplementation((id: number) => id === 1 ? new Promise((resolve) => { resolveFirst = resolve; }) : Promise.resolve(second));
-    render(<NoticeList />);
+    renderWithSession(<NoticeList />);
     fireEvent.click(await screen.findByRole("button", { name: "첫 공지" }));
     await waitFor(() => expect(getNotice).toHaveBeenCalledWith(1));
     fireEvent.click(screen.getByRole("button", { name: "둘째 공지" }));
@@ -58,7 +53,7 @@ describe("공지 목록", () => {
     window.history.replaceState(null, "", "/notices?notice=30");
     getNotices.mockResolvedValue({ items: [], page: 0, size: 20, total: 0 });
     getNotice.mockResolvedValue({ id: 30, title: "연결한 공지", body: "연결한 본문" });
-    render(<NoticeList initialNoticeId={30} />);
+    renderWithSession(<NoticeList initialNoticeId={30} />);
     expect(await screen.findByText("연결한 본문")).toBeInTheDocument();
     expect(getNotice).toHaveBeenCalledWith(30);
   });
@@ -67,7 +62,7 @@ describe("공지 목록", () => {
     getNotices.mockImplementation((page: number) => Promise.resolve(page === 0
       ? { items: [{ id: 2, title: "최근", body: "본문", author: "운영진", published: true, createdAt: "2026-09-02T00:00:00Z", updatedAt: "2026-09-02T00:00:00Z", publishedAt: "2026-09-02T00:00:00Z" }], page, size: 1, total: 2 }
       : { items: [{ id: 1, title: "이전", body: "본문", author: "운영진", published: true, createdAt: "2026-09-01T00:00:00Z", updatedAt: "2026-09-01T00:00:00Z", publishedAt: "2026-09-01T00:00:00Z" }], page, size: 1, total: 2 }));
-    render(<NoticeList />);
+    renderWithSession(<NoticeList />);
     expect(await screen.findByText("최근")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "다음" }));
     expect(await screen.findByRole("heading", { name: "이전" })).toBeInTheDocument();
@@ -76,7 +71,7 @@ describe("공지 목록", () => {
 
   it("공지 목록이 비면 빈 상태를 표시한다", async () => {
     getNotices.mockResolvedValue({ items: [], page: 0, size: 20, total: 0 });
-    render(<NoticeList />);
+    renderWithSession(<NoticeList />);
     expect(await screen.findByText("게시된 공지가 없습니다.")).toBeInTheDocument();
   });
 
@@ -86,7 +81,7 @@ describe("공지 목록", () => {
       : getNotices.mock.calls.filter(([requested]) => requested === 1).length === 1
         ? Promise.reject(new Error("네트워크 오류"))
         : Promise.resolve({ items: [{ id: 2, title: "둘째 페이지", author: "운영진", publishedAt: "2026-09-02T00:00:00Z" }], page, size: 1, total: 2 }));
-    render(<NoticeList />);
+    renderWithSession(<NoticeList />);
     await screen.findByText("첫 페이지");
     fireEvent.click(screen.getByRole("button", { name: "다음" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("공지 목록을 불러오지 못했습니다.");

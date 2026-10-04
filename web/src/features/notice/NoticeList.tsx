@@ -1,11 +1,8 @@
 "use client";
 
-import { Button, Feedback, PageHeader } from "../../components/ui";
+import { Button, Feedback, PageHeader, SkeletonRows } from "../../components/ui";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { ApiRequestError } from "../../lib/api";
-import { getSession } from "../auth/session";
 import { getNotice, getNotices, type Notice, type NoticePage, type PollView } from "./notices";
 import { NoticePoll } from "./NoticePoll";
 import { NoticePollPreview } from "./NoticePollPreview";
@@ -16,12 +13,10 @@ function dateTime(value: string) {
 }
 
 export function NoticeList({ initialNoticeId = null }: { initialNoticeId?: number | null }) {
-  const router = useRouter();
   const [page, setPage] = useState(0);
   const [data, setData] = useState<NoticePage | null>(null);
   const [selected, setSelected] = useState<Notice | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(initialNoticeId);
-  const [approved, setApproved] = useState(false);
   const [detailRetry, setDetailRetry] = useState(0);
   const [listError, setListError] = useState("");
   const [detailError, setDetailError] = useState("");
@@ -34,34 +29,23 @@ export function NoticeList({ initialNoticeId = null }: { initialNoticeId?: numbe
 
   useEffect(() => {
     let alive = true;
-    getSession().then(async (session) => {
-      if (session.status !== "APPROVED") {
-        if (alive) router.replace("/application-status");
-        return;
-      }
-      if (!alive) return;
-      setApproved(true);
-      const result = await getNotices(page);
+    getNotices(page).then((result) => {
       if (alive) {
         setData(result);
         setListError("");
       }
-    }).catch((caught) => {
-      if (!alive) return;
-      if (caught instanceof ApiRequestError && caught.status === 401) router.replace("/login");
-      else setListError("공지 목록을 불러오지 못했습니다.");
-    });
+    }).catch(() => { if (alive) setListError("공지 목록을 불러오지 못했습니다."); });
     return () => { alive = false; };
-  }, [page, retry, router]);
+  }, [page, retry]);
 
   useEffect(() => {
-    if (!approved || selectedId === null) return;
+    if (selectedId === null) return;
     let alive = true;
     getNotice(selectedId).then((notice) => {
       if (alive) { setSelected(notice); setDetailError(""); }
     }).catch(() => { if (alive) setDetailError("공지를 불러오지 못했습니다."); });
     return () => { alive = false; };
-  }, [approved, selectedId, detailRetry]);
+  }, [selectedId, detailRetry]);
 
   function open(id: number | null) {
     setSelected(null);
@@ -80,7 +64,7 @@ export function NoticeList({ initialNoticeId = null }: { initialNoticeId?: numbe
   function detail() {
     return <section aria-label="공지 본문" className={styles.detail}>
       {detailError ? <><Feedback tone="error">{detailError}</Feedback><Button variant="secondary" onClick={() => { setDetailError(""); setDetailRetry((value) => value + 1); }}>다시 시도</Button></>
-        : !visibleNotice ? <p role="status">공지를 불러오는 중입니다.</p>
+        : !visibleNotice ? <SkeletonRows count={3} label="공지를 불러오는 중입니다." />
         : <><p className={styles.body}>{visibleNotice.body}</p><NoticePoll key={visibleNotice.id} noticeId={visibleNotice.id} onChanged={updatePoll} /></>}
       <Button variant="ghost" className={styles.close} onClick={close}>닫기</Button>
     </section>;
@@ -89,13 +73,13 @@ export function NoticeList({ initialNoticeId = null }: { initialNoticeId?: numbe
   return <main id="member-content" tabIndex={-1} className={styles.page}>
     <PageHeader title="공지" />
     {listError && <><Feedback tone="error">{listError}</Feedback><Button variant="secondary" type="button" onClick={() => { setListError(""); setData(null); setRetry(retry + 1); }}>다시 시도</Button></>}
-    {!visibleData && !listError && <p role="status">공지를 불러오는 중입니다.</p>}
     {visibleData?.items.length === 0 && <p>게시된 공지가 없습니다.</p>}
-    {approved && visibleData && selectedId !== null && !isInList && <article className={styles.standalone}>
+    {visibleData && selectedId !== null && !isInList && <article className={styles.standalone}>
       <h2>{visibleNotice?.title ?? "선택한 공지"}</h2>
       {detail()}
     </article>}
-    <div className={styles.list}>{visibleData?.items.map((notice) => <article key={notice.id} className={`${styles.row} ${selectedId === notice.id ? styles.expanded : ""}`}>
+    <div className={styles.list}>{!visibleData && !listError && <SkeletonRows count={5} label="공지를 불러오는 중입니다." />}
+      {visibleData?.items.map((notice) => <article key={notice.id} className={`${styles.row} ${selectedId === notice.id ? styles.expanded : ""}`}>
       <h2><Button variant="unstyled" id={`notice-trigger-${notice.id}`} aria-expanded={selectedId === notice.id}
         aria-controls={`notice-body-${notice.id}`} aria-describedby={notice.poll ? `notice-poll-status-${notice.id}` : undefined} onClick={() => open(notice.id)}>
         <span>{notice.title}</span><span className={styles.chevron} aria-hidden="true">{selectedId === notice.id ? "−" : "+"}</span>

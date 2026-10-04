@@ -17,6 +17,7 @@
 .standalone { margin-bottom: var(--space-8); padding: var(--space-6); border: 1px solid var(--color-line); border-radius: var(--radius-control); }
 .standalone h2 { margin: 0; overflow-wrap: anywhere; }
 .pagination { display: flex; align-items: center; justify-content: center; gap: var(--space-4); margin-top: var(--space-8); font-size: var(--text-label); }
+.skeletonHeader { composes: pageHeader from "../../components/ui/ui.module.css"; }
 @media (max-width: 760px) {
   .row h2 { font-size: 18px; }
   .row h2 button, .detail { padding-inline: 0; }

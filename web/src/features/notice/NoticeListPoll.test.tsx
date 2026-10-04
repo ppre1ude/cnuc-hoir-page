@@ -2,13 +2,11 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NoticeList } from "./NoticeList";
 import { NoticePollPreview } from "./NoticePollPreview";
+import { renderWithSession } from "../../test/session";
 import type { PollView } from "./notices";
 
 const api = vi.hoisted(() => ({ getNotices: vi.fn(), getNotice: vi.fn(), getNoticePoll: vi.fn(), voteNoticePoll: vi.fn() }));
-const router = vi.hoisted(() => ({ replace: vi.fn() }));
 vi.mock("./notices", () => api);
-vi.mock("../auth/session", () => ({ getSession: async () => ({ status: "APPROVED" }) }));
-vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
 const poll: PollView = { question: "연습에 참석하시나요?", firstOption: "참석", secondOption: "불참",
   closesAt: "2099-01-01T00:00:00Z", closed: false, firstCount: 0, secondCount: 0, myChoice: null };
@@ -28,7 +26,7 @@ describe("공지 목록 투표 미리보기", () => {
       { ...notice, id: 2, title: "참여한 조사", poll: { ...poll, myChoice: 2 } },
       { ...notice, id: 3, title: "끝난 조사", poll: { ...poll, closed: true, myChoice: 1 } },
       { ...notice, id: 4, title: "일반 공지", poll: null }], page: 0, size: 20, total: 4 });
-    render(<NoticeList />);
+    renderWithSession(<NoticeList />);
     const trigger = await screen.findByRole("button", { name: "연습 참여 조사" });
     expect(trigger).toHaveAccessibleDescription("미참여");
     expect(screen.getByText("미참여").className).toContain("neutral");
@@ -42,7 +40,7 @@ describe("공지 목록 투표 미리보기", () => {
   it("저장에 성공한 선택만 목록에 반영하고 변경 후 닫아도 새 선택을 유지한다", async () => {
     api.voteNoticePoll.mockResolvedValueOnce({ ...poll, myChoice: 1, firstCount: 1 })
       .mockResolvedValueOnce({ ...poll, myChoice: 2, secondCount: 1 });
-    render(<NoticeList />);
+    renderWithSession(<NoticeList />);
     const trigger = await screen.findByRole("button", { name: "연습 참여 조사" });
     fireEvent.click(trigger);
     fireEvent.click(await screen.findByRole("radio", { name: /^참석/ }));
@@ -61,7 +59,7 @@ describe("공지 목록 투표 미리보기", () => {
 
   it("저장 실패 시 선택을 목록에 반영하지 않고 재시도할 수 있다", async () => {
     api.voteNoticePoll.mockRejectedValueOnce(new Error("연결 실패"));
-    render(<NoticeList />);
+    renderWithSession(<NoticeList />);
     const trigger = await screen.findByRole("button", { name: "연습 참여 조사" });
     fireEvent.click(trigger);
     fireEvent.click(await screen.findByRole("radio", { name: /^참석/ }));
@@ -73,7 +71,7 @@ describe("공지 목록 투표 미리보기", () => {
 
   it("상세 조회에서 마감을 확인하면 목록에서도 마감 상태와 선택을 유지한다", async () => {
     api.getNoticePoll.mockResolvedValue({ ...poll, closed: true, myChoice: 2, secondCount: 1 });
-    render(<NoticeList />);
+    renderWithSession(<NoticeList />);
     const trigger = await screen.findByRole("button", { name: "연습 참여 조사" });
     fireEvent.click(trigger);
     await screen.findByText("마감 · 불참");

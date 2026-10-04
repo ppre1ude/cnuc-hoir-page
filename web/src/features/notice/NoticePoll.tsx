@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Input, Feedback, StatusBadge } from "../../components/ui";
+import { Button, Input, Feedback, SkeletonRows, StatusBadge } from "../../components/ui";
 
 import { useEffect, useState } from "react";
 import { ApiRequestError } from "../../lib/api";
@@ -63,7 +63,7 @@ export function NoticePoll({ noticeId, onChanged }: {
   }
 
   if (missing) return null;
-  if (!poll && !error) return <p role="status">투표를 불러오는 중입니다.</p>;
+  if (!poll && !error) return <SkeletonRows count={2} label="투표를 불러오는 중입니다." />;
   if (!poll) return <div role="alert">{error} <Button variant="secondary" type="button" onClick={() => { setError(""); setRetry((value) => value + 1); }}>다시 시도</Button></div>;
 
   const total = poll.firstCount + poll.secondCount;
