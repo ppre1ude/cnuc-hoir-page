@@ -1,12 +1,10 @@
 "use client";
 
-import { Button, Feedback, PageHeader, StatusBadge } from "../../components/ui";
+import { Button, Feedback, PageHeader, SkeletonRows, StatusBadge } from "../../components/ui";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ApiRequestError } from "../../lib/api";
-import { getSession, type MemberSession } from "../auth/session";
+import { useSession } from "../auth/SessionProvider";
 import { getNotices, type Notice } from "../notice/notices";
 import { type ChoirEvent, type EventRsvpChoice, getEvents, getMyEventRsvps, monthBounds, seoulDateKey } from "./events";
 import { EventDetail } from "./EventDetail";
@@ -31,11 +29,10 @@ function mondayOffset(month: string) {
 }
 
 export function EventCalendar() {
-  const router = useRouter();
+  const session = useSession();
   const [month, setMonth] = useState(() => seoulDateKey(new Date()).slice(0, 7));
   const [selectedDate, setSelectedDate] = useState(() => seoulDateKey(new Date()));
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
-  const [session, setSession] = useState<MemberSession | null>(null);
   const [events, setEvents] = useState<ChoirEvent[]>([]);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [attendance, setAttendance] = useState<AttendanceState[]>([]);
@@ -57,25 +54,16 @@ export function EventCalendar() {
   useEffect(() => {
     let alive = true;
     const { from, to } = monthBounds(month);
-    getSession().then(async (member) => {
-      if (!alive) return;
-      if (member.status !== "APPROVED") { router.replace("/application-status"); return; }
-      setSession(member);
-      const monthEvents = await getEvents(from, to);
+    getEvents(from, to).then((monthEvents) => {
       if (!alive) return;
       setEvents(monthEvents);
       setLoadedMonth(month);
       setError("");
-    }).catch((caught) => {
-      if (!alive) return;
-      if (caught instanceof ApiRequestError && caught.status === 401) router.replace("/login");
-      else setError("일정을 불러오지 못했습니다.");
-    });
+    }).catch(() => { if (alive) setError("일정을 불러오지 못했습니다."); });
     return () => { alive = false; };
-  }, [month, retry, router]);
+  }, [month, retry]);
 
   useEffect(() => {
-    if (session?.status !== "APPROVED") return;
     let alive = true;
     const { from, to } = monthBounds(month);
     getMyEventRsvps(from, to).then((items) => {
@@ -85,34 +73,29 @@ export function EventCalendar() {
       setRsvpLoadedMonth(month); setRsvpError("");
     }).catch(() => { if (alive) { setRsvpLoadedMonth(""); setRsvpError("참석 응답을 불러오지 못했습니다."); } });
     return () => { alive = false; };
-  }, [month, session?.status, rsvpRetry]);
+  }, [month, rsvpRetry]);
 
   useEffect(() => {
-    if (session?.status !== "APPROVED") return;
     let alive = true;
     getNotices(0).then((recent) => {
       if (!alive) return;
       setNotices(recent.items.slice(0, 3));
       setNoticesLoaded(true);
       setNoticeError("");
-    }).catch((caught) => {
+    }).catch(() => {
       if (!alive) return;
-      if (caught instanceof ApiRequestError && caught.status === 401) router.replace("/login");
-      else {
-        setNotices([]);
-        setNoticeError("공지를 불러오지 못했습니다.");
-      }
+      setNotices([]);
+      setNoticeError("공지를 불러오지 못했습니다.");
     });
     return () => { alive = false; };
-  }, [session?.status, noticeRetry, router]);
+  }, [noticeRetry]);
 
   useEffect(() => {
-    if (session?.status !== "APPROVED") return;
     let alive = true;
     getMyAttendance().then((value) => { if (alive) { setAttendance(value); setAttendanceLoaded(true); setAttendanceError(""); } })
       .catch(() => { if (alive) setAttendanceError("출석 기록을 불러오지 못했습니다."); });
     return () => { alive = false; };
-  }, [session?.status, attendanceRetry]);
+  }, [attendanceRetry]);
 
   function changeMonth(offset: number) {
     const next = moveMonth(month, offset);
@@ -136,7 +119,7 @@ export function EventCalendar() {
     ?? dayEvents[0] ?? upcomingEvent ?? sortedEvents[sortedEvents.length - 1];
   const selectedId = selected?.id;
   useEffect(() => {
-    if (session?.status !== "APPROVED" || selectedId == null) return;
+    if (selectedId == null) return;
     let alive = true;
     const refresh = () => getEventAttendance(selectedId)
       .then((value) => { if (alive) setSelectedAttendance(value); })
@@ -144,7 +127,7 @@ export function EventCalendar() {
     void refresh();
     const timer = window.setInterval(refresh, 15000);
     return () => { alive = false; window.clearInterval(timer); };
-  }, [selectedId, session?.status]);
+  }, [selectedId]);
   const offset = mondayOffset(month);
   const weeks = Array.from({ length: Math.ceil((offset + daysInMonth(month)) / 7) }, (_, week) =>
     Array.from({ length: 7 }, (_, weekday) => {
@@ -190,7 +173,7 @@ export function EventCalendar() {
         </table>
         <div className={styles.dayList}>
           <h3>{Number(selectedDate.slice(-2))}일 일정</h3>
-          {!eventsLoaded && !error && <p role="status">일정을 불러오는 중입니다.</p>}
+          {!eventsLoaded && !error && <SkeletonRows count={1} label="일정을 불러오는 중입니다." className={styles.skeletonDayList} />}
           {eventsLoaded && dayEvents.length === 0 && <p>일정 없음</p>}
           {dayEvents.map((event) => <Button variant="unstyled" key={event.id} type="button" className={styles.eventButton}
             aria-pressed={selected?.id === event.id} onClick={() => setSelectedEventId(event.id)}>{event.title}</Button>)}
@@ -213,21 +196,21 @@ export function EventCalendar() {
                 <span className={styles.eventTitle}>{event.title}</span>
               </Button>
               {rsvpLoadedMonth === month && <EventRsvp key={`${event.id}-${event.startAt}`} compact event={event}
-                memberType={session?.memberType ?? null} choice={rsvpByEvent[event.id] ?? null}
+                memberType={session.memberType} choice={rsvpByEvent[event.id] ?? null}
                 onSaved={(choice) => setRsvpByEvent((current) => ({ ...current, [event.id]: choice }))} />}
             </li>;
           })}
         </ul>}
-        {selected && <div className={styles.selectedEvent}><EventDetail event={selected} memberType={session?.memberType ?? null}
+        {selected && <div className={styles.selectedEvent}><EventDetail event={selected} memberType={session.memberType}
           checkInOpen={selectedAttendance?.eventId === selected.id && selectedAttendance.checkInOpen} link />
-          {rsvpLoadedMonth === month && <EventRsvp key={`${selected.id}-${selected.startAt}`} event={selected} memberType={session?.memberType ?? null}
+          {rsvpLoadedMonth === month && <EventRsvp key={`${selected.id}-${selected.startAt}`} event={selected} memberType={session.memberType}
             choice={rsvpByEvent[selected.id] ?? null} onSaved={(choice) => setRsvpByEvent((current) => ({ ...current, [selected.id]: choice }))} />}
         </div>}
       </section>
       <section aria-label="최근 공지" className={`${styles.card} ${styles.notices}`}>
         <div className={styles.sectionHeader}><h2>공지</h2><Link href="/notices">전체 보기 <span aria-hidden="true">→</span></Link></div>
         {noticeError && <Feedback tone="error">{noticeError} <Button variant="secondary" type="button" onClick={() => { setNoticeError(""); setNoticesLoaded(false); setNoticeRetry(noticeRetry + 1); }}>다시 시도</Button></Feedback>}
-        {!noticeError && !noticesLoaded && <p role="status">공지를 불러오는 중입니다.</p>}
+        {!noticeError && !noticesLoaded && <SkeletonRows count={3} label="공지를 불러오는 중입니다." />}
         {!noticeError && noticesLoaded && notices.length === 0 && <p>게시된 공지가 없습니다.</p>}
         {!noticeError && notices.map((notice) => <Link key={notice.id} href={`/notices?notice=${notice.id}`} className={styles.noticeItem}><span>{notice.title}</span><span aria-hidden="true">→</span></Link>)}
       </section>
@@ -235,7 +218,7 @@ export function EventCalendar() {
       <section aria-label="내 출석 요약" className={`${styles.card} ${styles.attendance}`}>
         <div className={styles.sectionHeader}><h2>내 출석</h2><Link href="/attendance">전체 보기 <span aria-hidden="true">→</span></Link></div>
         {attendanceError && <Feedback tone="error">{attendanceError} <Button variant="secondary" onClick={() => { setAttendanceError(""); setAttendanceLoaded(false); setAttendanceRetry((value) => value + 1); }}>다시 시도</Button></Feedback>}
-        {!attendanceError && !attendanceLoaded && <p role="status">출석 기록을 불러오는 중입니다.</p>}
+        {!attendanceError && !attendanceLoaded && <SkeletonRows count={3} label="출석 기록을 불러오는 중입니다." />}
         {!attendanceError && attendanceLoaded && attendance.length === 0 && <p className={styles.empty}>출석 기록이 없습니다.</p>}
         {!attendanceError && attendanceLoaded && attendance.slice(0, 3).map((item) => <Link key={item.eventId} href={`/events/${item.eventId}`} className={styles.attendanceRow}>
           <span>{item.eventTitle}</span><StatusBadge tone={item.status === "CHECKED_IN" ? "positive" : item.status === "MISSED" ? "negative" : "neutral"}>{attendanceLabel[item.status]}</StatusBadge>

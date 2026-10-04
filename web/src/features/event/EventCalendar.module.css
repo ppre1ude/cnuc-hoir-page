@@ -70,7 +70,14 @@
 .eventPageCard > p:last-child a { color: var(--color-primary); font-size: var(--text-label); font-weight: var(--weight-label); text-decoration: none; }
 .eventPageCard > p:last-child a:hover { text-decoration: underline; }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.skeletonHeader { composes: pageHeader from "../../components/ui/ui.module.css"; }
+.skeletonCalendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); justify-items: center; gap: var(--space-2); margin-top: var(--space-5); }
+.skeletonDay { width: 100%; height: var(--space-20); }
+.skeletonStack { display: grid; gap: var(--space-4); }
+.skeletonDayList { flex: 1 1 0; min-width: 0; }
+.skeletonDayList > div { min-height: var(--control-medium); padding-block: 0; border-bottom: 0; }
 @media (max-width: 850px) {
+  .skeletonDay { height: var(--control-large); }
   .grid { display: flex; flex-direction: column; gap: var(--space-8); }
   .card { width: 100%; }
   .detail { padding: var(--space-8) 0 0; border-left: 0; border-top: 1px solid var(--color-line); }

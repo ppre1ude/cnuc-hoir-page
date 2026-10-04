@@ -1,12 +1,12 @@
 "use client";
 
-import { Button, Feedback, PageHeader, StatusBadge } from "../../components/ui";
+import { Button, Feedback, PageHeader, SkeletonRows, StatusBadge } from "../../components/ui";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { ApiRequestError } from "../../lib/api";
-import { can, getSession, type MemberSession } from "../auth/session";
+import { useParams } from "next/navigation";
+import { can } from "../auth/session";
+import { useSession } from "../auth/SessionProvider";
 import { getEvent, getMyEventRsvp, type ChoirEvent, type EventRsvpChoice } from "./events";
 import { EventDetail } from "./EventDetail";
 import { EventRsvp } from "./EventRsvp";
@@ -14,10 +14,9 @@ import { attendanceLabel, getEventAttendance, type AttendanceState } from "../at
 import styles from "./EventCalendar.module.css";
 
 export function EventPage() {
+  const session = useSession();
   const { id } = useParams<{ id: string }>();
-  const router = useRouter();
   const [event, setEvent] = useState<ChoirEvent | null>(null);
-  const [session, setSession] = useState<MemberSession | null>(null);
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
   const [attendance, setAttendance] = useState<AttendanceState | null>(null);
@@ -32,12 +31,8 @@ export function EventPage() {
     if (!Number.isSafeInteger(eventId) || eventId < 1) return;
     let alive = true;
     let timer: number | undefined;
-    getSession().then(async (member) => {
+    getEvent(eventId).then((item) => {
       if (!alive) return;
-      if (member.status !== "APPROVED") { router.replace("/application-status"); return; }
-      const item = await getEvent(eventId);
-      if (!alive) return;
-      setSession(member);
       setEvent(item);
       const refreshAttendance = () => getEventAttendance(eventId).then((state) => {
         if (alive) { setAttendance(state); setAttendanceError(""); }
@@ -46,29 +41,25 @@ export function EventPage() {
       });
       void refreshAttendance();
       timer = window.setInterval(refreshAttendance, 15000);
-    }).catch((caught) => {
-      if (!alive) return;
-      if (caught instanceof ApiRequestError && caught.status === 401) router.replace("/login");
-      else setError("행사를 불러오지 못했습니다.");
-    });
+    }).catch(() => { if (alive) setError("행사를 불러오지 못했습니다."); });
     return () => { alive = false; if (timer !== undefined) window.clearInterval(timer); };
-  }, [id, router, retry]);
+  }, [id, retry]);
 
   useEffect(() => {
-    if (!event || session?.status !== "APPROVED") return;
+    if (!event) return;
     let alive = true;
     getMyEventRsvp(event.id).then((response) => {
       if (alive) { setRsvpChoice(response.choice); setRsvpLoaded(true); setRsvpError(""); }
     }).catch(() => { if (alive) setRsvpError("참석 응답을 불러오지 못했습니다."); });
     return () => { alive = false; };
-  }, [event, session?.status, rsvpRetry]);
+  }, [event, rsvpRetry]);
 
   return <main id="member-content" tabIndex={-1} className={styles.eventPage}>
     <Link className={styles.backLink} href="/dashboard">← 일정</Link>
     <PageHeader title="행사" />
     {error && <Feedback tone="error">{error} <Button variant="secondary" onClick={() => { setError(""); setRetry((value) => value + 1); }}>다시 시도</Button></Feedback>}
     {!Number.isSafeInteger(Number(id)) || Number(id) < 1 ? <p>행사 주소를 확인해 주세요.</p> :
-      event && session ? <div className={styles.eventPageCard}><EventDetail event={event} memberType={session.memberType}
+      event ? <div className={styles.eventPageCard}><EventDetail event={event} memberType={session.memberType}
         checkInOpen={attendance?.checkInOpen ?? false} />
         {rsvpLoaded && <EventRsvp key={`${event.id}-${event.startAt}`} event={event} memberType={session.memberType} choice={rsvpChoice} onSaved={setRsvpChoice} />}
         {rsvpError && <Feedback tone="error">{rsvpError} <Button variant="secondary" type="button" onClick={() => {
@@ -77,6 +68,6 @@ export function EventPage() {
         <div className={styles.eventAttendance}><strong>내 출석</strong>{attendance ? <StatusBadge tone={attendance.status === "CHECKED_IN" ? "positive" : attendance.status === "MISSED" ? "negative" : "neutral"}>{attendanceLabel[attendance.status]}</StatusBadge> : !attendanceError && <span role="status">확인 중</span>}</div>
         {attendanceError && <Feedback tone="error">{attendanceError}</Feedback>}
         {can(session, "MANAGE_EVENTS") && <p><Link href={`/admin/events/${event.id}/attendance`}>운영진 출석 관리</Link></p>}</div>
-        : !error && <p role="status">행사를 불러오는 중입니다.</p>}
+        : !error && <SkeletonRows count={4} label="행사를 불러오는 중입니다." />}
   </main>;
 }
