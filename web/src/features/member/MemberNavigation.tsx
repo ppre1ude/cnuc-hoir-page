@@ -2,11 +2,11 @@
 
 import { BrandLogo, Button } from "../../components/ui";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ApiRequestError } from "../../lib/api";
-import { getSession, isStaff, logout, type MemberSession } from "../auth/session";
+import { isStaff, logout } from "../auth/session";
+import { useSessionState } from "../auth/SessionProvider";
 import styles from "./MemberNavigation.module.css";
 
 const links = [
@@ -16,23 +16,11 @@ const links = [
 ];
 
 export function MemberNavigation() {
+  const { session } = useSessionState();
   const pathname = usePathname();
   const router = useRouter();
-  const [session, setSession] = useState<MemberSession | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
-
-  useEffect(() => {
-    let active = true;
-    getSession().then((value) => {
-      if (!active) return;
-      if (value.status !== "APPROVED") { router.replace("/application-status"); return; }
-      setSession(value);
-    }).catch((error) => {
-      if (active && error instanceof ApiRequestError && error.status === 401) router.replace("/login");
-    });
-    return () => { active = false; };
-  }, [router]);
 
   async function handleLogout() {
     if (loggingOut) return;

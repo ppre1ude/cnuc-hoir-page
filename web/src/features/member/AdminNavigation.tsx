@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { can, getSession, type MemberSession, type Permission } from "../auth/session";
+import { can, type Permission } from "../auth/session";
+import { useSessionState } from "../auth/SessionProvider";
 import styles from "./MemberNavigation.module.css";
 
 const links: { href: string; label: string; permission: Permission }[] = [
@@ -14,14 +14,8 @@ const links: { href: string; label: string; permission: Permission }[] = [
 ];
 
 export function AdminNavigation() {
+  const { session } = useSessionState();
   const pathname = usePathname();
-  const [session, setSession] = useState<MemberSession | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    getSession().then((value) => { if (active) setSession(value); }).catch(() => {});
-    return () => { active = false; };
-  }, []);
 
   return <nav className={styles.subnav} aria-label="운영진 메뉴">
     <div className={styles.subnavInner}>{links.filter((link) => can(session, link.permission)).map(({ href, label }) => <Link key={href} href={href}
