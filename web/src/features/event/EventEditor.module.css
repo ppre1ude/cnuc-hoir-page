@@ -44,3 +44,6 @@
   .grid { display: flex; flex-direction: column; }
   .batchFields { display: block; }
 }
+
+.skeletonHeader { composes: pageHeader from "../../components/ui/ui.module.css"; }
+.skeletonHeading { margin-bottom: var(--space-5); }

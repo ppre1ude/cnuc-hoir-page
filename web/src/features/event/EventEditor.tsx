@@ -1,12 +1,9 @@
 "use client";
 
-import { Button, Input, Textarea, Feedback, PageHeader, ActionLink } from "../../components/ui";
+import { Button, Input, Textarea, Feedback, PageHeader, ActionLink, SkeletonRows } from "../../components/ui";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ApiRequestError } from "../../lib/api";
-import { can, getSession } from "../auth/session";
 import { createEvent, getEvents, monthBounds, seoulDateKey, seoulDateTime, type ChoirEvent, updateEvent } from "./events";
 import styles from "./EventEditor.module.css";
 import { EventBatchCreator } from "./EventBatchCreator";
@@ -26,7 +23,6 @@ function utcInput(value: string) {
 }
 
 export function EventEditor() {
-  const router = useRouter();
   const [month, setMonth] = useState(() => seoulDateKey(new Date()).slice(0, 7));
   const currentMonth = useRef(month);
   const listRequestVersion = useRef(0);
@@ -40,7 +36,6 @@ export function EventEditor() {
   const [endAt, setEndAt] = useState("");
   const [obEligible, setObEligible] = useState(false);
   const [publicVisible, setPublicVisible] = useState(false);
-  const [authorized, setAuthorized] = useState(false);
   const [busy, setBusy] = useState(false);
   const [listError, setListError] = useState("");
   const [error, setError] = useState("");
@@ -50,24 +45,16 @@ export function EventEditor() {
     let alive = true;
     const requestVersion = ++listRequestVersion.current;
     const { from, to } = monthBounds(month);
-    getSession().then(async (member) => {
-      if (!alive || listRequestVersion.current !== requestVersion) return;
-      if (member.status !== "APPROVED" || !can(member, "MANAGE_EVENTS")) {
-        if (alive) router.replace(member.status === "APPROVED" ? "/dashboard" : "/application-status");
-        return;
-      }
-      if (alive) setAuthorized(true);
-      const result = await getEvents(from, to);
+    getEvents(from, to).then((result) => {
       if (alive && listRequestVersion.current === requestVersion && currentMonth.current === month) {
         setEvents(result); setLoadedMonth(month); setListError("");
       }
-    }).catch((caught) => {
+    }).catch(() => {
       if (!alive || listRequestVersion.current !== requestVersion || currentMonth.current !== month) return;
-      if (caught instanceof ApiRequestError && caught.status === 401) router.replace("/login");
-      else setListError("행사 목록을 불러오지 못했습니다.");
+      setListError("행사 목록을 불러오지 못했습니다.");
     });
     return () => { alive = false; };
-  }, [month, retry, router]);
+  }, [month, retry]);
 
   function clear() {
     setSelected(null); setTitle(""); setDescription(""); setStartAt(""); setEndAt("");
@@ -121,13 +108,13 @@ export function EventEditor() {
     <PageHeader title="행사 관리" actions={<ActionLink variant="secondary" href="/dashboard">회원 달력으로 돌아가기</ActionLink>} />
     {listError && <Feedback tone="error">{listError} <Button variant="secondary" type="button" onClick={() => { setListError(""); setRetry(retry + 1); }}>다시 시도</Button></Feedback>}
     {saved && <p role="status">행사를 저장했습니다.</p>}
-    {authorized && <EventBatchCreator onCreated={refreshList} />}
-    {authorized && <div className={`${styles.grid} ${!selected ? styles.singleColumn : ""}`}>
+    <EventBatchCreator onCreated={refreshList} />
+    <div className={`${styles.grid} ${!selected ? styles.singleColumn : ""}`}>
       <section className={styles.card}>
         <div className={styles.listHeader}><h2>{month.replace("-", "년 ")}월 행사</h2>
           <label>조회 월 <Input type="month" value={month} onChange={(change) => { currentMonth.current = change.target.value; setMonth(change.target.value); setLoadedMonth(""); }} /></label>
         </div>
-        {!visible && !listError && <p role="status">행사를 불러오는 중입니다.</p>}
+        {!visible && !listError && <SkeletonRows count={5} label="행사를 불러오는 중입니다." />}
         {visible?.length === 0 && <p>이번 달 등록된 행사가 없습니다.</p>}
         {visible?.map((event) => <Button variant="unstyled" type="button" key={event.id} className={styles.eventRow} aria-pressed={selected?.id === event.id} onClick={() => edit(event)}>
           <strong>{event.title}</strong><span>{seoulDateTime(event.startAt)}</span>
@@ -150,6 +137,6 @@ export function EventEditor() {
         </form>
         <AdminEventRsvps key={selected.id} eventId={selected.id} />
       </section>}
-    </div>}
+    </div>
   </div>;
 }

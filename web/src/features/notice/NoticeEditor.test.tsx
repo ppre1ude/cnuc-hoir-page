@@ -1,33 +1,28 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NoticeEditor } from "./NoticeEditor";
 import { ApiRequestError } from "../../lib/api";
+import { renderWithSession, sessionFixture } from "../../test/session";
 
-const getSession = vi.fn();
 const getAdminNotices = vi.fn();
 const createNotice = vi.fn();
 const updateNotice = vi.fn();
 const getAdminNoticePoll = vi.fn();
-const router = vi.hoisted(() => ({ replace: vi.fn() }));
-vi.mock("../auth/session", async (importOriginal) => ({ ...await importOriginal<typeof import("../auth/session")>(), getSession: () => getSession() }));
 vi.mock("./notices", () => ({
   getAdminNotices: (page: number) => getAdminNotices(page),
   createNotice: (input: unknown) => createNotice(input),
   updateNotice: (id: number, input: unknown) => updateNotice(id, input),
   getAdminNoticePoll: (id: number) => getAdminNoticePoll(id),
 }));
-vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
 describe("공지 편집기", () => {
   afterEach(cleanup);
   beforeEach(() => {
-    getSession.mockReset();
     getAdminNotices.mockReset();
     createNotice.mockReset();
     updateNotice.mockReset();
     getAdminNoticePoll.mockReset();
     getAdminNoticePoll.mockRejectedValue(new ApiRequestError(404, "POLL_NOT_FOUND", "투표가 없습니다."));
-    getSession.mockResolvedValue({ status: "APPROVED", admin: true });
     createNotice.mockResolvedValue({ id: 2 });
   });
 
@@ -35,7 +30,7 @@ describe("공지 편집기", () => {
     getAdminNotices.mockResolvedValueOnce({ items: [], page: 0, size: 20, total: 0 })
       .mockRejectedValueOnce(new Error("목록 오류"))
       .mockResolvedValueOnce({ items: [{ id: 2, title: "새 공지", body: "본문", published: false }], page: 0, size: 20, total: 1 });
-    render(<NoticeEditor />);
+    renderWithSession(<NoticeEditor />, sessionFixture({ admin: true }));
     await screen.findByText("작성된 공지가 없습니다.");
     fireEvent.change(screen.getByLabelText("제목"), { target: { value: "새 공지" } });
     fireEvent.change(screen.getByLabelText("본문"), { target: { value: "본문" } });
@@ -55,7 +50,7 @@ describe("공지 편집기", () => {
     getAdminNotices.mockResolvedValueOnce({
       items: [{ id: 1, title: "기존 공지", body: "이전 본문", published: false }], page: 0, size: 20, total: 1,
     }).mockRejectedValueOnce(new Error("목록 오류"));
-    render(<NoticeEditor />);
+    renderWithSession(<NoticeEditor />, sessionFixture({ admin: true }));
     fireEvent.click(await screen.findByRole("button", { name: /기존 공지\s*초안/ }));
     fireEvent.change(screen.getByLabelText("본문"), { target: { value: "수정 본문" } });
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
@@ -71,7 +66,7 @@ describe("공지 편집기", () => {
       : getAdminNotices.mock.calls.filter(([requested]) => requested === 1).length === 1
         ? Promise.reject(new Error("목록 오류"))
         : Promise.resolve({ items: [{ id: 2, title: "다음 공지", body: "본문", published: false }], page, size: 1, total: 2 }));
-    render(<NoticeEditor />);
+    renderWithSession(<NoticeEditor />, sessionFixture({ admin: true }));
     await screen.findByRole("button", { name: /첫 공지\s*게시/ });
     fireEvent.click(screen.getByRole("button", { name: "다음" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("공지 목록을 불러오지 못했습니다.");
@@ -83,7 +78,7 @@ describe("공지 편집기", () => {
 
   it("공지와 참석 여부 투표를 한 번에 등록한다", async () => {
     getAdminNotices.mockResolvedValue({ items: [], page: 0, size: 20, total: 0 });
-    render(<NoticeEditor />);
+    renderWithSession(<NoticeEditor />, sessionFixture({ admin: true }));
     await screen.findByText("작성된 공지가 없습니다.");
     fireEvent.change(screen.getByLabelText("제목"), { target: { value: "연습 참여 조사" } });
     fireEvent.change(screen.getByLabelText("본문"), { target: { value: "참석 여부를 선택해 주세요." } });

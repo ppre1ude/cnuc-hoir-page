@@ -1,18 +1,15 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EventEditor } from "./EventEditor";
+import { renderWithSession, sessionFixture } from "../../test/session";
 
-const getSession = vi.fn();
 const getEvents = vi.fn();
 const updateEvent = vi.fn();
-const router = vi.hoisted(() => ({ replace: vi.fn() }));
-vi.mock("../auth/session", async (importOriginal) => ({ ...await importOriginal<typeof import("../auth/session")>(), getSession: () => getSession() }));
 vi.mock("./events", async (importOriginal) => ({
   ...await importOriginal<typeof import("./events")>(),
   getEvents: (...args: unknown[]) => getEvents(...args),
   updateEvent: (...args: unknown[]) => updateEvent(...args),
 }));
-vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
 const septemberEvent = {
   id: 1, title: "정기 연습", description: "연습실", startAt: "2026-09-20T10:00:00Z",
@@ -26,8 +23,7 @@ describe("운영진 행사 편집", () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date("2026-09-27T03:00:00Z"));
-    getSession.mockReset(); getEvents.mockReset(); updateEvent.mockReset(); router.replace.mockReset();
-    getSession.mockResolvedValue({ status: "APPROVED", admin: true });
+    getEvents.mockReset(); updateEvent.mockReset();
     updateEvent.mockResolvedValue(septemberEvent);
   });
   afterEach(() => { cleanup(); vi.useRealTimers(); });
@@ -38,7 +34,7 @@ describe("운영진 행사 편집", () => {
     getEvents.mockResolvedValueOnce([septemberEvent])
       .mockReturnValueOnce(oldMonthRefresh)
       .mockResolvedValueOnce([octoberEvent]);
-    render(<EventEditor />);
+    renderWithSession(<EventEditor />, sessionFixture({ admin: true }));
     fireEvent.click(await screen.findByRole("button", { name: /정기 연습/ }));
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
     await waitFor(() => expect(getEvents).toHaveBeenCalledTimes(2));
@@ -56,7 +52,7 @@ describe("운영진 행사 편집", () => {
     getEvents.mockResolvedValueOnce([septemberEvent])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([octoberEvent]);
-    render(<EventEditor />);
+    renderWithSession(<EventEditor />, sessionFixture({ admin: true }));
     fireEvent.click(await screen.findByRole("button", { name: /정기 연습/ }));
     fireEvent.change(screen.getByLabelText("시작 시각 (한국 시간)"), { target: { value: "2026-10-20T19:00" } });
     fireEvent.change(screen.getByLabelText("종료 시각 (한국 시간)"), { target: { value: "2026-10-20T21:00" } });
@@ -78,7 +74,7 @@ describe("운영진 행사 편집", () => {
     getEvents.mockResolvedValueOnce([septemberEvent])
       .mockReturnValueOnce(staleList)
       .mockResolvedValueOnce([octoberEvent]);
-    render(<EventEditor />);
+    renderWithSession(<EventEditor />, sessionFixture({ admin: true }));
     fireEvent.click(await screen.findByRole("button", { name: /정기 연습/ }));
     fireEvent.change(screen.getByLabelText("시작 시각 (한국 시간)"), { target: { value: "2026-10-20T19:00" } });
     fireEvent.change(screen.getByLabelText("종료 시각 (한국 시간)"), { target: { value: "2026-10-20T21:00" } });

@@ -7,7 +7,6 @@ import Link from "next/link";
 import Image from "next/image";
 import QRCode from "qrcode";
 import { ApiRequestError } from "../../lib/api";
-import { can, getSession } from "../auth/session";
 import { getEvent, type ChoirEvent, seoulDateTime } from "../event/events";
 import {
   attendanceLabel, closeCheckIn, correctAttendance, getAdminAttendance, getCheckInSession,
@@ -33,18 +32,13 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
 
   useEffect(() => {
     let alive = true;
-    getSession().then(async (member) => {
-      if (!can(member, "MANAGE_EVENTS")) throw new Error("운영진만 출석을 관리할 수 있습니다.");
-      const [eventResult, sessionResult, rows] = await Promise.all([
-        getEvent(eventId), getCheckInSession(eventId), getAdminAttendance(eventId),
-      ]);
-      if (!alive) return;
-      setEvent(eventResult); setSession(sessionResult); setMembers(rows);
-    }).catch((error) => {
-      if (!alive) return;
-      setMessage(error instanceof ApiRequestError && error.status === 401
-        ? "로그인이 필요합니다." : error instanceof Error ? error.message : "출석 정보를 불러오지 못했습니다.");
-    });
+    Promise.all([getEvent(eventId), getCheckInSession(eventId), getAdminAttendance(eventId)])
+      .then(([eventResult, sessionResult, rows]) => {
+        if (!alive) return;
+        setEvent(eventResult); setSession(sessionResult); setMembers(rows);
+      }).catch((error) => {
+        if (alive) setMessage(error instanceof Error ? error.message : "출석 정보를 불러오지 못했습니다.");
+      });
     return () => { alive = false; };
   }, [eventId]);
 

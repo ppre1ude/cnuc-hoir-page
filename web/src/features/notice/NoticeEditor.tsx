@@ -1,17 +1,14 @@
 "use client";
 
-import { Button, Input, Select, Textarea, Feedback, PageHeader } from "../../components/ui";
+import { Button, Input, Select, Textarea, Feedback, PageHeader, SkeletonRows } from "../../components/ui";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { ApiRequestError } from "../../lib/api";
-import { can, getSession } from "../auth/session";
 import { createNotice, getAdminNoticePoll, getAdminNotices, updateNotice,
   type AdminPollView, type Notice, type NoticePage, type PollInput } from "./notices";
 import styles from "../member/AdminPages.module.css";
 
 export function NoticeEditor() {
-  const router = useRouter();
   const [data, setData] = useState<NoticePage | null>(null);
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<Notice | null>(null);
@@ -23,7 +20,6 @@ export function NoticeEditor() {
   const [listError, setListError] = useState("");
   const [saved, setSaved] = useState(false);
   const [retry, setRetry] = useState(0);
-  const [canEdit, setCanEdit] = useState(false);
   const [pollStatus, setPollStatus] = useState<"none" | "loading" | "exists" | "error">("none");
   const [adminPoll, setAdminPoll] = useState<AdminPollView | null>(null);
   const [pollRetry, setPollRetry] = useState(0);
@@ -36,25 +32,13 @@ export function NoticeEditor() {
 
   useEffect(() => {
     let alive = true;
-    getSession().then(async (session) => {
-      if (!can(session, "MANAGE_EVENTS") || session.status !== "APPROVED") {
-        if (alive) setCanEdit(false);
-        if (alive) setError("운영진만 공지를 편집할 수 있습니다.");
-        return;
-      }
-      if (alive) setCanEdit(true);
-      const result = await getAdminNotices(page);
-      if (alive) {
-        setData(result);
-        setListError("");
-      }
-    }).catch((caught) => {
+    getAdminNotices(page).then((result) => {
       if (!alive) return;
-      if (caught instanceof ApiRequestError && caught.status === 401) router.replace("/login");
-      else setListError("공지 목록을 불러오지 못했습니다.");
-    });
+      setData(result);
+      setListError("");
+    }).catch(() => { if (alive) setListError("공지 목록을 불러오지 못했습니다."); });
     return () => { alive = false; };
-  }, [page, retry, router]);
+  }, [page, retry]);
 
   useEffect(() => {
     if (!selected) return;
@@ -145,7 +129,7 @@ export function NoticeEditor() {
     {error && <Feedback tone="error">{error}</Feedback>}
     {saved && <Feedback tone="success">공지를 저장했습니다.</Feedback>}
     {listError && <><Feedback tone="error">{listError}</Feedback><Button variant="secondary" type="button" onClick={() => { setListError(""); setData(null); setRetry(retry + 1); }}>다시 시도</Button></>}
-    {canEdit && <div className={styles.grid}><div className={styles.list}>{visibleData && <>
+    <div className={styles.grid}><div className={styles.list}>{visibleData && <>
       {visibleData.items.length === 0 && <p>작성된 공지가 없습니다.</p>}
       {visibleData.items.map((notice) => <Button variant="unstyled" className={styles.rowButton} type="button" key={notice.id} onClick={() => edit(notice)}>
         <strong>{notice.title}</strong><span>{notice.published ? "게시" : "초안"}</span>
@@ -163,7 +147,7 @@ export function NoticeEditor() {
         <label htmlFor="notice-body">본문</label>
         <Textarea id="notice-body" value={body} onChange={(event) => setBody(event.target.value)} maxLength={10000} required />
         <label className={styles.check} htmlFor="notice-published"><Input id="notice-published" type="checkbox" checked={published} onChange={(event) => setPublished(event.target.checked)} /> 게시</label>
-        {pollStatus === "loading" && <p role="status">투표 정보를 불러오는 중입니다.</p>}
+        {pollStatus === "loading" && <SkeletonRows count={2} label="투표 정보를 불러오는 중입니다." />}
         {pollStatus === "error" && <Feedback tone="error">투표 정보를 불러오지 못했습니다.
           <Button variant="secondary" type="button" onClick={() => { setPollStatus("loading"); setPollRetry((value) => value + 1); }}>다시 시도</Button></Feedback>}
         {adminPoll && <section className={styles.pollDetails} aria-label="투표 결과">
@@ -203,6 +187,6 @@ export function NoticeEditor() {
         </>}
         <div className={styles.actions}><Button variant="primary" type="submit" disabled={busy || !title.trim() || !body.trim()}>저장</Button>
         {selected && <Button variant="secondary" type="button" onClick={clear}>새 공지</Button>}</div>
-      </form></div>}
+      </form></div>
   </section>;
 }
