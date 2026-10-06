@@ -4,11 +4,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { ActionLink, Button, Feedback } from "../../components/ui";
 import { can, type Permission } from "./session";
 import { useSessionState } from "./SessionProvider";
-import { WaitingScore } from "./WaitingScore";
+import { SLOW_AFTER_MS, SLOW_MESSAGE, WaitingScore } from "./WaitingScore";
 import styles from "./PageGate.module.css";
-
-const SLOW_AFTER_MS = 3000;
-const SLOW_MESSAGE = "서버를 깨우고 있습니다. 오랜만에 접속하면 1분 정도 걸릴 수 있어요.";
 
 // 각 라우트 페이지가 본문을 감쌉니다. 대기·느린 대기·실패·권한 없음 화면은 여기서만 그립니다.
 export function PageGate({ skeleton, permission, children }: {

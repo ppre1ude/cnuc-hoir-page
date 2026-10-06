@@ -34,6 +34,7 @@ test("세션을 기다리는 동안 스켈레톤을 보여 주고 3초 뒤 대�
 
 test("실패하면 안내와 다시 시도 버튼을 보여 주고, 다시 시도하면 본문을 그립니다", async () => {
   vi.mocked(getSession).mockRejectedValueOnce(new TypeError("Failed to fetch"))
+    .mockRejectedValueOnce(new TypeError("Failed to fetch"))
     .mockResolvedValueOnce(sessionFixture({ name: "단원" }));
   render(<SessionProvider><PageGate skeleton={skeleton}><Body /></PageGate></SessionProvider>);
   expect(await screen.findByRole("alert")).toHaveTextContent("서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.");
@@ -66,5 +67,6 @@ test("다시 시도가 또 실패하면 다시 시도 버튼에 포커스를 돌
   render(<SessionProvider><PageGate skeleton={skeleton}><Body /></PageGate></SessionProvider>);
   await userEvent.click(await screen.findByRole("button", { name: "다시 시도" }));
   await waitFor(() => expect(screen.getByRole("button", { name: "다시 시도" })).toHaveFocus());
-  expect(getSession).toHaveBeenCalledTimes(2);
+  // 처음 요청과 자동 재시도 한 번, 사용자가 누른 다시 시도 한 번입니다. 누른 다시 시도는 자동으로 반복하지 않습니다.
+  expect(getSession).toHaveBeenCalledTimes(3);
 });

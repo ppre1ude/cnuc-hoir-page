@@ -41,13 +41,30 @@ test("401이면 로그인으로 보냅니다", async () => {
   vi.mocked(getSession).mockRejectedValue(new ApiRequestError(401, "UNAUTHENTICATED", "로그인이 필요합니다."));
   render(<SessionProvider><Probe /></SessionProvider>);
   await waitFor(() => expect(redirectTo).toHaveBeenCalledWith("/login"));
+  expect(getSession).toHaveBeenCalledTimes(1);
 });
 
-test("그 밖의 실패는 실패 상태가 되고, 다시 받으면 준비 상태가 됩니다", async () => {
+test("처음 받다 실패하면 대기 상태를 유지한 채 한 번 자동으로 다시 받아 준비 상태가 됩니다", async () => {
+  let succeed!: (value: ReturnType<typeof sessionFixture>) => void;
+  vi.mocked(getSession).mockRejectedValueOnce(new ApiRequestError(502, "BAD_GATEWAY", "서버 오류"))
+    .mockReturnValueOnce(new Promise((done) => { succeed = done; }));
+  render(<SessionProvider><Probe /></SessionProvider>);
+  await waitFor(() => expect(getSession).toHaveBeenCalledTimes(2));
+  // 자동 재시도 동안 실패 화면을 거치지 않습니다.
+  expect(screen.getByText("상태:loading")).toBeInTheDocument();
+  await act(async () => { succeed(sessionFixture({ name: "단원" })); });
+  expect(await screen.findByText("상태:ready")).toBeInTheDocument();
+  expect(getSession).toHaveBeenCalledTimes(2);
+  expect(redirectTo).not.toHaveBeenCalled();
+});
+
+test("자동으로 다시 받아도 실패하면 실패 상태가 되고, 다시 받으면 준비 상태가 됩니다", async () => {
   vi.mocked(getSession).mockRejectedValueOnce(new TypeError("Failed to fetch"))
+    .mockRejectedValueOnce(new TypeError("Failed to fetch"))
     .mockResolvedValueOnce(sessionFixture({ name: "단원" }));
   render(<SessionProvider><Probe /></SessionProvider>);
   expect(await screen.findByText("상태:failed")).toBeInTheDocument();
+  expect(getSession).toHaveBeenCalledTimes(2);
   await userEvent.click(screen.getByRole("button", { name: "새로 받기" }));
   expect(await screen.findByText("상태:ready")).toBeInTheDocument();
   expect(redirectTo).not.toHaveBeenCalled();
@@ -119,4 +136,13 @@ test("레이아웃이 바뀌어 사라진 provider의 늦은 응답은 리다이
   unmount();
   await act(async () => { resolve(sessionFixture()); });
   expect(redirectTo).not.toHaveBeenCalled();
+});
+
+test("사라진 provider는 처음 요청이 실패해도 다시 받지 않습니다", async () => {
+  let fail!: (error: unknown) => void;
+  vi.mocked(getSession).mockReturnValue(new Promise((_, reject) => { fail = reject; }));
+  const { unmount } = render(<SessionProvider><Probe /></SessionProvider>);
+  unmount();
+  await act(async () => { fail(new TypeError("Failed to fetch")); });
+  expect(getSession).toHaveBeenCalledTimes(1);
 });
