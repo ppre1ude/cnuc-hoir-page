@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Feedback, PageHeader, SkeletonRows, StatusBadge } from "../../components/ui";
+import { ActionLink, Button, Feedback, PageHeader, SkeletonRows, StatusBadge } from "../../components/ui";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -10,6 +10,7 @@ import { type ChoirEvent, type EventRsvpChoice, getEvents, getMyEventRsvps, mont
 import { EventDetail } from "./EventDetail";
 import { EventRsvp } from "./EventRsvp";
 import { attendanceLabel, getEventAttendance, getMyAttendance, type AttendanceState } from "../attendance/attendance";
+import { memberLinks } from "../member/memberLinks";
 import styles from "./EventCalendar.module.css";
 
 function moveMonth(month: string, offset: number) {
@@ -138,7 +139,8 @@ export function EventCalendar() {
   const eventsLoaded = loadedMonth === month && !error;
 
   return <main id="member-content" tabIndex={-1} className={styles.dashboard}>
-    <PageHeader title="일정" className={styles.hero} />
+    <PageHeader title="일정" className={styles.hero} actions={memberLinks.map((link) => <ActionLink key={link.href} variant="secondary"
+      href={link.href} target="_blank" rel="noopener noreferrer">{link.label} <span aria-hidden="true">↗</span></ActionLink>)} />
     {error && <div role="alert" className={styles.error}>{error} <Button variant="secondary" type="button" onClick={() => setRetry(retry + 1)}>다시 시도</Button></div>}
     <div className={styles.grid}>
       <section aria-label="행사 달력" className={`${styles.card} ${styles.calendar}`}>
