@@ -115,6 +115,13 @@ describe("일정 중심 회원 화면", () => {
     await waitFor(() => expect(setEventRsvp).toHaveBeenCalledWith(2, "ABSENT"));
   });
 
+  it("참석 응답은 목록에서만 받고 선택한 행사 상세에서는 다시 묻지 않는다", async () => {
+    renderWithSession(<EventCalendar />, sessionFixture({ memberType: "ACTIVE" }));
+    expect(await screen.findByRole("group", { name: "정기 연습 참석 응답" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "정기 연습" })).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "참석 응답" })).not.toBeInTheDocument();
+  });
+
   it("달을 바꾸면 행사만 다시 받고 세션은 다시 받지 않는다", async () => {
     // 행사·공지·출석 요청은 모두 목이므로 fetch가 불리면 세션 요청입니다.
     const fetch = vi.spyOn(globalThis, "fetch");

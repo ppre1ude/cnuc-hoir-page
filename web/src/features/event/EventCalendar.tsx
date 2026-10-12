@@ -205,8 +205,6 @@ export function EventCalendar() {
         </ul>}
         {selected && <div className={styles.selectedEvent}><EventDetail event={selected} memberType={session.memberType}
           checkInOpen={selectedAttendance?.eventId === selected.id && selectedAttendance.checkInOpen} link />
-          {rsvpLoadedMonth === month && <EventRsvp key={`${selected.id}-${selected.startAt}`} event={selected} memberType={session.memberType}
-            choice={rsvpByEvent[selected.id] ?? null} onSaved={(choice) => setRsvpByEvent((current) => ({ ...current, [selected.id]: choice }))} />}
         </div>}
       </section>
       <section aria-label="최근 공지" className={`${styles.card} ${styles.notices}`}>
