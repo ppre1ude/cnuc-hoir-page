@@ -54,6 +54,14 @@ describe("일정 중심 회원 화면", () => {
     expect(await screen.findByRole("link", { name: "공연 안내" })).toHaveAttribute("href", "/notices?notice=9");
   });
 
+  it("단원용 자료 링크를 일정 제목 옆에서 새 탭으로 연다", () => {
+    renderWithSession(<EventCalendar />, ob);
+    const link = screen.getByRole("link", { name: "악보·자료 드라이브" });
+    expect(link).toHaveAttribute("href", "https://drive.google.com/drive/folders/1hcHWeu9WPdZbLpjncsqYOm4k8UHQJAuW?usp=drive_link");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
   it("일정과 출석을 조회하는 동안 빈 기록으로 잘못 안내하지 않는다", () => {
     getEvents.mockReturnValue(new Promise(() => {}));
     getMyAttendance.mockReturnValue(new Promise(() => {}));
@@ -105,6 +113,13 @@ describe("일정 중심 회원 화면", () => {
     expect(await screen.findByRole("button", { name: "가을 공연 참석" })).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByRole("button", { name: "가을 공연 불참" }));
     await waitFor(() => expect(setEventRsvp).toHaveBeenCalledWith(2, "ABSENT"));
+  });
+
+  it("참석 응답은 목록에서만 받고 선택한 행사 상세에서는 다시 묻지 않는다", async () => {
+    renderWithSession(<EventCalendar />, sessionFixture({ memberType: "ACTIVE" }));
+    expect(await screen.findByRole("group", { name: "정기 연습 참석 응답" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "정기 연습" })).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "참석 응답" })).not.toBeInTheDocument();
   });
 
   it("달을 바꾸면 행사만 다시 받고 세션은 다시 받지 않는다", async () => {

@@ -8,7 +8,7 @@ type Props = { event: ChoirEvent; memberType: "ACTIVE" | "OB" | null; checkInOpe
 export function EventDetail({ event, memberType, checkInOpen, link = false }: Props) {
   return <article className={styles.eventDetail}>
     <h2>{event.title}</h2>
-    <p className={styles.eventTime}><time dateTime={event.startAt}>{seoulDateTime(event.startAt)}</time><span aria-hidden="true"> — </span><time dateTime={event.endAt}>{seoulDateTime(event.endAt)}</time></p>
+    <p className={styles.eventTime}><time dateTime={event.startAt}>{seoulDateTime(event.startAt)}</time><span aria-hidden="true"> ~ </span><time dateTime={event.endAt}>{seoulDateTime(event.endAt)}</time></p>
     {event.description && <p className={styles.description}>{event.description}</p>}
     <div className={styles.eventActions}><StatusBadge tone={event.obEligible ? "positive" : "neutral"}>
       {memberType === "OB"
