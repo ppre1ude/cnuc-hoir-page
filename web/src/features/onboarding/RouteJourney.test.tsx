@@ -6,12 +6,15 @@ afterEach(cleanup);
 
 describe("RouteJourney", () => {
   it("네 문장과 무대 사진을 처음부터 읽을 수 있다", () => {
-    render(<RouteJourney />);
+    render(<RouteJourney description="전남대학교 합창단은 교내 유일의 합창 동아리입니다." />);
     const section = screen.getByRole("region", { name: "합창단의 가치" });
     expect(section).toHaveTextContent("내 목소리를 알아가고,");
     expect(section).toHaveTextContent("나를 발견하고,");
     expect(section).toHaveTextContent("함께 노래하며");
     expect(section).toHaveTextContent("우리가 됩니다.");
+    // 소개 문장은 마지막 문장 바로 아래에 옵니다.
+    const description = screen.getByText("전남대학교 합창단은 교내 유일의 합창 동아리입니다.");
+    expect(description.previousElementSibling).toHaveTextContent("우리가 됩니다.");
     expect(screen.getByRole("img", { name: "지휘자와 단원들이 무대에서 합창하는 모습" })).toBeInTheDocument();
   });
 

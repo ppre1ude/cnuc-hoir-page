@@ -31,11 +31,10 @@ export default function Home() {
           <BrandLogo mark className={styles.heroMark} alt="" priority />
           <HeroScore />
           <h1 id="hero-title">합창으로 전하는<br /><HeroEmphasis />의 이야기</h1>
-          <p className={styles.heroIntro}>전남대학교 합창단은 교내 유일의 합창 동아리입니다.</p>
         </div>
       </section>
 
-      <RouteJourney />
+      <RouteJourney description="전남대학교 합창단은 교내 유일의 합창 동아리입니다." />
 
       <section className={styles.activity} id="activity" aria-labelledby="activity-title">
         <div className={styles.container}>

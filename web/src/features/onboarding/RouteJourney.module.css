@@ -33,6 +33,7 @@
 .stageCard img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; }
 .journey[data-ready] .finale:not(.on) .stageCard { opacity: 0; transform: translateY(16px) scale(.98); }
 .finaleText { margin: 0; font-size: clamp(36px, 10.2vw, 64px); font-weight: var(--weight-heading); letter-spacing: -.06em; line-height: 1.2; word-break: keep-all; }
+.description { max-width: 32em; margin: calc(-1 * var(--space-4)) 0 0; color: var(--color-surface); opacity: .88; font-size: 1.0625rem; letter-spacing: -.02em; line-height: 1.65; word-break: keep-all; }
 
 @media (min-width: 761px) {
   .casing { stroke-width: 30px; }
@@ -53,6 +54,7 @@
   .finaleInner { gap: var(--space-10); padding-block: var(--space-20) var(--space-16); }
   .stageCard { width: min(100%, 760px); }
   .finaleText { font-size: clamp(48px, 5vw, 76px); }
+  .description { margin-top: calc(-1 * var(--space-5)); font-size: clamp(1.0625rem, 1.5vw, 1.3125rem); }
 }
 @media (prefers-reduced-motion: reduce) {
   .badge, .pict, .terminal, .terminal::after, .stageCard { transition: none; }
