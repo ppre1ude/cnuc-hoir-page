@@ -7,21 +7,23 @@
 .action { min-height: var(--control-large); padding: 18px 26px; gap: var(--space-6); font-size: 1.125rem; line-height: 1.5; }
 .login { white-space: nowrap; }
 .hero { position: relative; overflow: hidden; text-align: center; }
-.heroContent { display: flex; flex-direction: column; align-items: center; padding-block: var(--space-10); }
-.heroMark { --logo-width: 180px; flex: none; }
+.heroContent { display: flex; flex-direction: column; align-items: center; padding-block: var(--space-10) var(--space-8); }
+.heroMark { --logo-width: 160px; flex: none; }
 .hero h1 { max-width: calc(100% - 40px); margin: 0 0 var(--space-6); font-size: clamp(44px, 5vw, 72px); font-weight: var(--weight-heading); letter-spacing: -.075em; line-height: 1.23; word-break: keep-all; }
 .hero h1 strong { color: var(--color-primary); }
 .heroIntro { max-width: 760px; margin: 0; padding-inline: var(--page-gutter); color: var(--color-muted); font-size: clamp(1.0625rem, 1.5vw, 1.3125rem); letter-spacing: -.02em; line-height: 1.65; word-break: keep-all; }
-.activity { padding-block: 120px; scroll-margin-top: var(--space-6); }
-.activityHeading { display: flex; align-items: end; justify-content: space-between; gap: var(--space-5); margin-bottom: var(--space-12); }
-.activity h2 { margin: 0; font-size: clamp(42px, 5vw, 72px); font-weight: var(--weight-heading); letter-spacing: -.065em; line-height: 1.5; }
+.activity { padding-block: var(--space-20) var(--space-16); scroll-margin-top: var(--space-6); }
+.activityHeading { display: flex; align-items: end; justify-content: space-between; gap: var(--space-5); margin-bottom: var(--space-10); }
+.activity h2 { margin: 0; font-size: clamp(34px, 4.5vw, 56px); font-weight: var(--weight-heading); letter-spacing: -.06em; line-height: 1.2; }
 .activityLink { padding-block: var(--space-2); border-bottom: 1px solid var(--color-primary); color: var(--color-primary); font-size: 1.125rem; font-weight: var(--weight-label); white-space: nowrap; }
 .activityLink:hover { border-bottom-width: 2px; }
-.participate { padding-block: 112px; border-top: 1px solid var(--color-line); scroll-margin-top: var(--space-6); }
-.participateGrid { display: grid; grid-template-columns: minmax(0, 1fr) 260px; align-items: center; gap: var(--space-12); }
-.participate h2 { margin: 0 0 44px; font-size: clamp(48px, 5.5vw, 80px); font-weight: var(--weight-heading); letter-spacing: -.065em; line-height: 1.2; }
+/* 지원 문의: 진한 초록 면 위에 흰 버튼 */
+.participate { background: var(--color-primary); color: var(--color-surface); scroll-margin-top: var(--space-6); }
+.participateInner { display: flex; align-items: center; justify-content: space-between; gap: var(--space-12); padding-block: 120px; }
+.participate h2 { margin: 0; font-size: clamp(56px, 5.5vw, 80px); font-weight: var(--weight-heading); letter-spacing: -.06em; line-height: 1.15; }
 .channelActions { display: flex; flex-wrap: wrap; gap: var(--space-4); }
-.participateMark { --logo-width: 260px; }
+.participate .inverse { border-color: var(--color-surface); background: var(--color-surface); color: var(--color-primary); }
+.participate .inverse:hover:not(:disabled) { border-color: var(--color-highlight); background: var(--color-highlight); }
 .history { padding-block: 56px; border-top: 1px solid var(--color-line); }
 .historyDisclosure summary { display: flex; align-items: center; justify-content: space-between; min-height: var(--control-medium); cursor: pointer; list-style: none; }
 .historyDisclosure summary::-webkit-details-marker { display: none; }
@@ -40,15 +42,13 @@
   .brandLogo { --logo-width: min(46vw, 175px); }
   .login { min-height: var(--control-medium); padding: var(--space-3) 14px; font-size: var(--text-label); }
   .action:not(.login) { padding: var(--space-4) 18px; gap: var(--space-3); font-size: var(--text-body); }
-  .heroContent { padding-block: var(--space-8); }
-  .heroMark { --logo-width: 160px; }
-  .hero h1 { font-size: clamp(38px, 10vw, 64px); }
-  .activity { padding-block: var(--space-20); }
+  .heroContent { padding-block: var(--space-8) var(--space-6); }
+  .heroMark { --logo-width: 118px; }
+  .hero h1 { font-size: clamp(34px, 9.4vw, 46px); }
+  .activity { padding-block: var(--space-16) var(--space-12); }
   .activityHeading { flex-direction: column; align-items: start; margin-bottom: var(--space-8); }
-  .participate { padding-block: 76px; }
-  .participateGrid { grid-template-columns: minmax(0, 1fr); }
-  .participate h2 { font-size: 3.125rem; }
-  .participateMark { --logo-width: 150px; justify-self: end; }
+  .participateInner { flex-direction: column; align-items: flex-start; gap: var(--space-8); padding-block: var(--space-20); }
+  .participate h2 { font-size: clamp(40px, 11vw, 72px); }
   .history { padding-block: 36px; }
   .footerMain { flex-direction: column; align-items: start; }
   .footerLogo { --logo-width: 220px; }

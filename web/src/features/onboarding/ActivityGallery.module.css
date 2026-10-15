@@ -9,7 +9,8 @@
   position: relative;
   min-width: 0;
   overflow: hidden;
-  background: var(--color-neutral-background);
+  border-radius: var(--radius-panel);
+  background: var(--color-subtle);
 }
 
 .photo img {
@@ -21,6 +22,6 @@
 @media (max-width: 760px) {
   .gallery {
     grid-template-columns: minmax(0, 1fr);
-    gap: 20px;
+    gap: var(--space-4);
   }
 }

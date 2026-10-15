@@ -6,7 +6,7 @@ import { activityPhotos } from "@/features/onboarding/activityPhotos";
 import { ChoirHistory } from "@/features/onboarding/ChoirHistory";
 import { HeroScore } from "@/features/onboarding/HeroScore";
 import { HeroEmphasis } from "@/features/onboarding/HeroEmphasis";
-import { ScoreJourney } from "@/features/onboarding/ScoreJourney";
+import { RouteJourney } from "@/features/onboarding/RouteJourney";
 import { PublicNews } from "@/features/onboarding/PublicNews";
 import { publicNews } from "@/features/onboarding/newsItems";
 import { choirChannels, choirMilestones } from "@/features/onboarding/choirProfile";
@@ -35,7 +35,7 @@ export default function Home() {
         </div>
       </section>
 
-      <ScoreJourney />
+      <RouteJourney />
 
       <section className={styles.activity} id="activity" aria-labelledby="activity-title">
         <div className={styles.container}>
@@ -49,15 +49,10 @@ export default function Home() {
       </section>
 
       <section className={styles.participate} id="participate" aria-labelledby="participate-title">
-        <div className={styles.container}>
-          <div className={styles.participateGrid}>
-            <div>
-              <h2 id="participate-title">함께<br />노래해요.</h2>
-              <div className={styles.channelActions}>
-                <ActionLink size="large" className={styles.action} href={choirChannels.application} target="_blank" rel="noopener noreferrer">지원서 작성하기 <span aria-hidden="true">↗</span></ActionLink>
-              </div>
-            </div>
-            <BrandLogo mark className={styles.participateMark} alt="" />
+        <div className={`${styles.container} ${styles.participateInner}`}>
+          <h2 id="participate-title">함께<br />노래해요.</h2>
+          <div className={styles.channelActions}>
+            <ActionLink size="large" className={`${styles.action} ${styles.inverse}`} href={choirChannels.application} target="_blank" rel="noopener noreferrer">지원서 작성하기 <span aria-hidden="true">↗</span></ActionLink>
           </div>
         </div>
       </section>

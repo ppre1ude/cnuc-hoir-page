@@ -3,17 +3,17 @@
   --score-height: 140px;
   width: 100%;
   height: var(--score-height);
-  margin-block: 42px;
+  margin-block: var(--space-8);
   overflow: hidden;
   color: var(--color-brand);
   pointer-events: none;
 }
 /* 반복 무늬 한 칸만큼 여분을 확보해 이동 중에도 악보 끝이 드러나지 않습니다. */
-.canvas { display: block; width: calc(100% + var(--score-period)); max-width: none; height: var(--score-height); opacity: .4; animation: scoreFlow 26s linear infinite; }
+.canvas { display: block; width: calc(100% + var(--score-period)); max-width: none; height: var(--score-height); animation: scoreFlow 26s linear infinite; }
 .mobile { display: none; }
 @keyframes scoreFlow { from { transform: translateX(calc(-1 * var(--score-period))); } to { transform: translateX(0); } }
 @media (max-width: 760px) {
-  .score { --score-period: 420px; --score-height: calc(420px * 140 / 580); margin-block: 30px; }
+  .score { --score-period: 420px; --score-height: calc(420px * 140 / 580); margin-block: var(--space-5); }
   .desktop { display: none; }
   .mobile { display: block; }
 }
