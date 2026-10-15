@@ -47,22 +47,22 @@ function routePath(width: number, height: number, railX: number, lastStopY: numb
 function Pictograms({ id }: { id: string }) {
   return <svg className={styles.defs} aria-hidden="true" focusable="false">
     <defs>
-      <symbol id={`${id}-voice`} viewBox="0 0 76 76">
-        <g className={styles.ink}><circle cx="24" cy="16" r="10" /><path d="M8 70 V46 a16 16 0 0 1 32 0 V70 Z" /></g>
-        <g className={styles.line}><path d="M48 10 a14 14 0 0 1 0 18" /><path d="M56 4 a24 24 0 0 1 0 30" /><path d="M64 -2 a34 34 0 0 1 0 42" /></g>
+      <symbol id={`${id}-voice`} viewBox="0 0 76 76" overflow="visible">
+        <g className={styles.ink}><circle cx="20" cy="24" r="10" /><path d="M4 76 V54 a16 16 0 0 1 32 0 V76 Z" /></g>
+        <g className={styles.line}><path d="M41.5 14.4 A15 15 0 0 1 41.5 33.6" /><path d="M49.2 7.9 A25 25 0 0 1 49.2 40.1" /><path d="M56.8 1.5 A35 35 0 0 1 56.8 46.5" /></g>
       </symbol>
-      <symbol id={`${id}-self`} viewBox="0 0 76 76">
-        <path className={styles.light} d="M38 0 L6 74 H70 Z" />
-        <g className={styles.ink}><circle cx="38" cy="28" r="10" /><path d="M22 76 V56 a16 16 0 0 1 32 0 V76 Z" /></g>
+      <symbol id={`${id}-self`} viewBox="0 0 76 76" overflow="visible">
+        <path className={styles.light} d="M38 2 L6 76 H70 Z" />
+        <g className={styles.ink}><circle cx="38" cy="30" r="10" /><path d="M22 76 V58 a16 16 0 0 1 32 0 V76 Z" /></g>
       </symbol>
-      <symbol id={`${id}-together`} viewBox="0 0 76 76">
+      <symbol id={`${id}-together`} viewBox="0 0 76 76" overflow="visible">
         <g className={styles.ink}>
-          <circle cx="8" cy="40" r="7" /><path d="M-2 76 V62 a10 10 0 0 1 20 0 V76 Z" />
-          <circle cx="28" cy="36" r="7" /><path d="M18 76 V58 a10 10 0 0 1 20 0 V76 Z" />
-          <circle cx="48" cy="36" r="7" /><path d="M38 76 V58 a10 10 0 0 1 20 0 V76 Z" />
-          <circle cx="68" cy="40" r="7" /><path d="M58 76 V62 a10 10 0 0 1 20 0 V76 Z" />
+          <circle cx="10" cy="44" r="7" /><path d="M0 76 V58 a10 10 0 0 1 20 0 V76 Z" />
+          <circle cx="29" cy="40" r="7" /><path d="M19 76 V54 a10 10 0 0 1 20 0 V76 Z" />
+          <circle cx="47" cy="40" r="7" /><path d="M37 76 V54 a10 10 0 0 1 20 0 V76 Z" />
+          <circle cx="66" cy="44" r="7" /><path d="M56 76 V58 a10 10 0 0 1 20 0 V76 Z" />
         </g>
-        <g className={styles.line}><path d="M20 16 a22 22 0 0 1 36 0" /><path d="M10 6 a36 36 0 0 1 56 0" /></g>
+        <g className={styles.line}><path d="M25.7 25.7 A16 16 0 0 1 50.3 25.7" /><path d="M16.6 18 A28 28 0 0 1 59.4 18" /></g>
       </symbol>
     </defs>
   </svg>;
