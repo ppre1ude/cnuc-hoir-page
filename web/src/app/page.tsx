@@ -3,13 +3,12 @@ import Link from "next/link";
 import { ActionLink, BrandLogo } from "../components/ui";
 import { ActivityGallery } from "@/features/onboarding/ActivityGallery";
 import { activityPhotos } from "@/features/onboarding/activityPhotos";
-import { ChoirHistory } from "@/features/onboarding/ChoirHistory";
 import { HeroScore } from "@/features/onboarding/HeroScore";
 import { HeroEmphasis } from "@/features/onboarding/HeroEmphasis";
 import { RouteJourney } from "@/features/onboarding/RouteJourney";
 import { PublicNews } from "@/features/onboarding/PublicNews";
 import { publicNews } from "@/features/onboarding/newsItems";
-import { choirChannels, choirMilestones } from "@/features/onboarding/choirProfile";
+import { choirChannels } from "@/features/onboarding/choirProfile";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -49,15 +48,6 @@ export default function Home() {
           </div>
           <PublicNews items={publicNews} />
           <ActivityGallery photos={activityPhotos} />
-        </div>
-      </section>
-
-      <section className={styles.history} aria-labelledby="history-title">
-        <div className={styles.container}>
-          <details className={styles.historyDisclosure}>
-            <summary><h2 id="history-title">연혁</h2><span className={styles.historyToggle} aria-hidden="true" /></summary>
-            <div className={styles.historyContent}><ChoirHistory milestones={choirMilestones} /></div>
-          </details>
         </div>
       </section>
 

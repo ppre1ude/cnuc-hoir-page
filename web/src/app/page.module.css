@@ -21,13 +21,6 @@
 .callToActionTitle { margin: 0; font-size: clamp(28px, 7vw, 40px); font-weight: var(--weight-heading); letter-spacing: -.05em; line-height: 1.2; }
 .page .inverse { border-color: var(--color-surface); background: var(--color-surface); color: var(--color-primary); }
 .page .inverse:hover:not(:disabled) { border-color: var(--color-highlight); background: var(--color-highlight); }
-.history { padding-block: 56px; border-top: 1px solid var(--color-line); }
-.historyDisclosure summary { display: flex; align-items: center; justify-content: space-between; min-height: var(--control-medium); cursor: pointer; list-style: none; }
-.historyDisclosure summary::-webkit-details-marker { display: none; }
-.history h2 { margin: 0; font-size: 2rem; font-weight: var(--weight-heading); line-height: 1.5; }
-.historyToggle::before { content: '＋'; color: var(--color-primary); font-size: 2rem; }
-.historyDisclosure[open] .historyToggle::before { content: '−'; }
-.historyContent { padding-top: var(--space-6); }
 .footer { padding-block: var(--space-10); border-top: 1px solid var(--color-line); }
 .footerMain { display: flex; align-items: center; justify-content: space-between; gap: var(--space-8); }
 .footerLogo { --logo-width: 250px; }
@@ -44,7 +37,6 @@
   .hero h1 { font-size: clamp(34px, 9.4vw, 46px); }
   .activity { padding-block: var(--space-16) var(--space-12); }
   .activityHeading { flex-direction: column; align-items: start; margin-bottom: var(--space-8); }
-  .history { padding-block: 36px; }
   .footerMain { flex-direction: column; align-items: start; }
   .footerLogo { --logo-width: 220px; }
   .channelLinks { gap: var(--space-6); font-size: var(--text-body); }
