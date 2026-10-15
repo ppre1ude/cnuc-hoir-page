@@ -44,7 +44,10 @@ export default function Home() {
         <div className={styles.container}>
           <div className={styles.activityHeading}>
             <h2 id="activity-title">소식</h2>
-            <a className={styles.activityLink} href={choirChannels.instagram} target="_blank" rel="noopener noreferrer">인스타그램 ↗</a>
+            <nav className={styles.activityLinks} aria-label="공식 채널">
+              <a href={choirChannels.instagram} target="_blank" rel="noopener noreferrer">인스타그램 ↗</a>
+              <a href={choirChannels.youtube} target="_blank" rel="noopener noreferrer">유튜브 ↗</a>
+            </nav>
           </div>
           <PublicNews items={publicNews} />
           <ActivityGallery photos={activityPhotos} />
@@ -53,13 +56,7 @@ export default function Home() {
 
       <footer className={styles.footer}>
         <div className={styles.container}>
-          <div className={styles.footerMain}>
-            <BrandLogo className={styles.footerLogo} />
-            <nav className={styles.channelLinks} aria-label="공식 채널">
-              <a href={choirChannels.instagram} target="_blank" rel="noopener noreferrer">인스타그램 ↗</a>
-              <a href={choirChannels.youtube} target="_blank" rel="noopener noreferrer">유튜브 ↗</a>
-            </nav>
-          </div>
+          <BrandLogo className={styles.footerLogo} />
         </div>
       </footer>
     </main>

@@ -14,19 +14,17 @@
 .activity { padding-block: var(--space-20) var(--space-16); scroll-margin-top: var(--space-6); }
 .activityHeading { display: flex; align-items: end; justify-content: space-between; gap: var(--space-5); margin-bottom: var(--space-10); }
 .activity h2 { margin: 0; font-size: clamp(34px, 4.5vw, 56px); font-weight: var(--weight-heading); letter-spacing: -.06em; line-height: 1.2; }
-.activityLink { padding-block: var(--space-2); border-bottom: 1px solid var(--color-primary); color: var(--color-primary); font-size: 1.125rem; font-weight: var(--weight-label); white-space: nowrap; }
-.activityLink:hover { border-bottom-width: 2px; }
+/* 소식 제목 오른쪽의 공식 채널 링크 */
+.activityLinks { display: flex; flex-wrap: wrap; gap: var(--space-6); }
+.activityLinks a { display: inline-flex; align-items: center; min-height: var(--control-medium); border-bottom: 1px solid var(--color-primary); color: var(--color-primary); font-size: 1.125rem; font-weight: var(--weight-label); white-space: nowrap; }
+.activityLinks a:hover { border-bottom-width: 2px; }
 /* 지원 문의: 종착역 초록 블록의 소개 문장 아래에 안내와 흰 버튼을 둡니다. */
 .callToAction { display: flex; flex-direction: column; align-items: center; gap: var(--space-5); margin-top: var(--space-6); scroll-margin-top: var(--space-6); }
 .callToActionTitle { margin: 0; font-size: clamp(28px, 7vw, 40px); font-weight: var(--weight-heading); letter-spacing: -.05em; line-height: 1.2; }
 .page .inverse { border-color: var(--color-surface); background: var(--color-surface); color: var(--color-primary); }
 .page .inverse:hover:not(:disabled) { border-color: var(--color-highlight); background: var(--color-highlight); }
 .footer { padding-block: var(--space-10); border-top: 1px solid var(--color-line); }
-.footerMain { display: flex; align-items: center; justify-content: space-between; gap: var(--space-8); }
 .footerLogo { --logo-width: 250px; }
-.channelLinks { display: flex; flex-wrap: wrap; gap: var(--space-8); color: var(--color-primary); font-size: 1.125rem; font-weight: var(--weight-label); }
-.channelLinks a { display: inline-flex; align-items: center; min-height: var(--control-medium); }
-.channelLinks a:hover { text-decoration: underline; text-underline-offset: 5px; }
 @media (max-width: 760px) {
   .header { height: 76px; gap: var(--space-3); padding-inline: var(--space-5); }
   .brandLogo { --logo-width: min(46vw, 175px); }
@@ -36,10 +34,10 @@
   .heroMark { --logo-width: 118px; }
   .hero h1 { font-size: clamp(34px, 9.4vw, 46px); }
   .activity { padding-block: var(--space-16) var(--space-12); }
-  .activityHeading { flex-direction: column; align-items: start; margin-bottom: var(--space-8); }
-  .footerMain { flex-direction: column; align-items: start; }
+  .activityHeading { flex-direction: column; align-items: start; gap: var(--space-2); margin-bottom: var(--space-8); }
+  .activityLinks { gap: var(--space-5); }
+  .activityLinks a { font-size: var(--text-body); }
   .footerLogo { --logo-width: 220px; }
-  .channelLinks { gap: var(--space-6); font-size: var(--text-body); }
 }
 @media (min-width: 761px) {
   .callToAction { gap: var(--space-6); margin-top: var(--space-8); }
