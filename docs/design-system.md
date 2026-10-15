@@ -39,7 +39,7 @@
 - 회원 공지·행사 DB와 공개 소식은 분리합니다. 제공된 사진에 확인되지 않은 촬영 날짜나 특정 공연명을 붙이지 않습니다.
 - ‘지원서 작성하기’는 `choirProfile.ts`의 구글 폼 지원서로 연결합니다. 단원 로그인은 헤더에만 두며 기존 `/login`으로 이동합니다. 처음 방문한 지원자용 영역에는 단원 로그인을 두지 않습니다.
 - 연혁은 기본적으로 접고 기본 HTML 펼침 동작을 사용합니다. 자바스크립트가 없어도 소개·소식·링크·연혁을 읽을 수 있습니다.
-- 스크롤 경로 구현은 [Codrops의 반응형 곡선 모션 사례](https://tympanus.net/codrops/2025/12/17/building-responsive-scroll-triggered-curved-path-animations-with-gsap/)와 [SVG 경로 좌표 API](https://developer.mozilla.org/en-US/docs/Web/API/SVGGeometryElement/getPointAtLength)를 참고합니다. 모션 라이브러리를 새로 추가하지 않습니다.
+- 스크롤 경로 구현은 [Codrops의 반응형 곡선 모션 사례](https://tympanus.net/codrops/2025/12/17/building-responsive-scroll-triggered-curved-path-animations-with-gsap/)와 [SVG 경로 좌표 API](https://developer.mozilla.org/en-US/docs/Web/API/SVGGeometryElement/getPointAtLength)를 참고합니다.
 
 ## 공통 컴포넌트
 
