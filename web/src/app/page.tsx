@@ -34,7 +34,12 @@ export default function Home() {
         </div>
       </section>
 
-      <RouteJourney description="전남대학교 합창단은 교내 유일의 합창 동아리입니다." />
+      <RouteJourney description="전남대학교 합창단은 교내 유일의 합창 동아리입니다.">
+        <div className={styles.callToAction} id="participate">
+          <h2 className={styles.callToActionTitle} id="participate-title">함께 노래해요.</h2>
+          <ActionLink size="large" className={`${styles.action} ${styles.inverse}`} href={choirChannels.application} target="_blank" rel="noopener noreferrer" aria-describedby="participate-title">지원서 작성하기 <span aria-hidden="true">↗</span></ActionLink>
+        </div>
+      </RouteJourney>
 
       <section className={styles.activity} id="activity" aria-labelledby="activity-title">
         <div className={styles.container}>
@@ -44,15 +49,6 @@ export default function Home() {
           </div>
           <PublicNews items={publicNews} />
           <ActivityGallery photos={activityPhotos} />
-        </div>
-      </section>
-
-      <section className={styles.participate} id="participate" aria-labelledby="participate-title">
-        <div className={`${styles.container} ${styles.participateInner}`}>
-          <h2 id="participate-title">함께<br />노래해요.</h2>
-          <div className={styles.channelActions}>
-            <ActionLink size="large" className={`${styles.action} ${styles.inverse}`} href={choirChannels.application} target="_blank" rel="noopener noreferrer">지원서 작성하기 <span aria-hidden="true">↗</span></ActionLink>
-          </div>
         </div>
       </section>
 

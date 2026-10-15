@@ -68,8 +68,8 @@ function Pictograms({ id }: { id: string }) {
   </svg>;
 }
 
-// description은 합창단 소개 한 문장이며 종착역 블록의 마지막 문장 아래에 둡니다.
-export function RouteJourney({ description }: { description?: ReactNode }) {
+// description은 합창단 소개 한 문장이며 종착역 블록의 마지막 문장 아래에, children은 그 아래(지원 안내)에 둡니다.
+export function RouteJourney({ description, children }: { description?: ReactNode; children?: ReactNode }) {
   const id = useId();
   const sectionRef = useRef<HTMLElement>(null);
   const areaRef = useRef<HTMLDivElement>(null);
@@ -221,6 +221,7 @@ export function RouteJourney({ description }: { description?: ReactNode }) {
         </div>
         <p className={styles.finaleText}><strong>우리가 됩니다.</strong></p>
         {description && <p className={styles.description}>{description}</p>}
+        {children}
       </div>
     </div>
   </section>;
