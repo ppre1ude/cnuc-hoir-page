@@ -6,9 +6,13 @@ import ActivatePage from "./page";
 import { completeAccountSetup } from "../../../features/auth/session";
 
 const replace = vi.fn();
+const reopenUrls: Array<string | undefined> = [];
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace }) }));
-vi.mock("../../../features/auth/GoogleButton", () => ({ GoogleButton: ({ onCredential }: { onCredential: (value: string) => void }) =>
-  <button onClick={() => onCredential("google-credential")}>구글 계정 연결</button> }));
+vi.mock("../../../features/auth/GoogleButton", () => ({ GoogleButton: ({ onCredential, reopenUrl }:
+  { onCredential: (value: string) => void; reopenUrl?: string }) => {
+  reopenUrls.push(reopenUrl);
+  return <button onClick={() => onCredential("google-credential")}>구글 계정 연결</button>;
+} }));
 vi.mock("../../../features/auth/session", () => ({ completeAccountSetup: vi.fn().mockResolvedValue({ status: "APPROVED" }) }));
 
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
@@ -17,6 +21,7 @@ test("효과 재실행 뒤에도 초대 토큰으로 구글 계정을 연결하�
   window.history.replaceState(null, "", "/activate#token=once-token");
   render(<StrictMode><ActivatePage /></StrictMode>);
   await userEvent.click(await screen.findByRole("button", { name: "구글 계정 연결" }));
+  expect(reopenUrls.at(-1)).toBe(`${window.location.origin}/activate#token=once-token`);
   expect(completeAccountSetup).toHaveBeenCalledWith("once-token", "google-credential");
   expect(replace).toHaveBeenCalledWith("/dashboard");
   expect(window.location.hash).toBe("");

@@ -1,12 +1,16 @@
+import { StrictMode } from "react";
 import { afterEach, expect, test, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { GoogleButton } from "./GoogleButton";
 import { getGoogleNonce } from "./session";
+import { openExternally } from "./inAppBrowser";
 
 vi.mock("next/script", () => ({ default: ({ onReady }: { onReady: () => void }) =>
   <button type="button" onClick={onReady}>스크립트 준비</button> }));
 vi.mock("./session", () => ({ getGoogleNonce: vi.fn() }));
+vi.mock("./inAppBrowser", async (importActual) =>
+  ({ ...await importActual<typeof import("./inAppBrowser")>(), openExternally: vi.fn() }));
 
 const previousClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 afterEach(() => {
@@ -15,6 +19,7 @@ afterEach(() => {
   window.google = undefined;
   process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID = previousClientId;
   vi.resetAllMocks();
+  vi.restoreAllMocks();
 });
 
 function fakeGoogle() {
@@ -88,4 +93,43 @@ test("늦게 끝난 준비 요청과 화면 종료 뒤 구글 응답을 무시�
   callback({ credential: "credential" });
   expect(onCredential).not.toHaveBeenCalled();
   expect(onError).not.toHaveBeenCalled();
+});
+
+const userAgents = {
+  kakao: "Mozilla/5.0 (Linux; Android 14; SM-S921N Build/UP1A.231005.007; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/129.0.6668.100 Mobile Safari/537.36;KAKAOTALK 2410850",
+  instagram: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 350.0.0.25.84 (iPhone15,2; iOS 17_6; ko_KR; ko; scale=3.00; 1179x2556; 642393245)",
+  chrome: "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36",
+};
+
+test("카카오톡에서는 안내와 함께 외부 브라우저로 한 번만 넘기고 구글 버튼도 그대로 둡니다", () => {
+  vi.spyOn(navigator, "userAgent", "get").mockReturnValue(userAgents.kakao);
+  fakeGoogle();
+  const expected = "kakaotalk://web/openExternal?url=https%3A%2F%2Fexample.com%2Factivate%23token%3Dabc";
+  render(<StrictMode><GoogleButton onCredential={vi.fn()} onError={vi.fn()} reopenUrl="https://example.com/activate#token=abc" /></StrictMode>);
+  expect(screen.getByRole("alert")).toHaveTextContent("카카오톡 안에서는 구글 로그인이 막힐 수 있습니다. 다른 브라우저에서 열어 주세요.");
+  expect(screen.getByRole("link", { name: "다른 브라우저로 열기" })).toHaveAttribute("href", expected);
+  expect(screen.getByText("버튼이 안 되면 메뉴에서 '다른 브라우저로 열기'를 눌러 주세요.")).toBeInTheDocument();
+  expect(openExternally).toHaveBeenCalledTimes(1);
+  expect(openExternally).toHaveBeenCalledWith(expected);
+  expect(screen.getByRole("button", { name: "스크립트 준비" })).toBeInTheDocument();
+});
+
+test("인스타그램에서는 메뉴로 여는 방법만 안내하고 직접 넘기지 않습니다", () => {
+  vi.spyOn(navigator, "userAgent", "get").mockReturnValue(userAgents.instagram);
+  fakeGoogle();
+  render(<GoogleButton onCredential={vi.fn()} onError={vi.fn()} />);
+  expect(screen.getByRole("alert")).toHaveTextContent("인스타그램 안에서는 구글 로그인이 막힐 수 있습니다.");
+  expect(screen.getByText("메뉴에서 '외부 브라우저로 열기'를 눌러 주세요.")).toBeInTheDocument();
+  expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  expect(openExternally).not.toHaveBeenCalled();
+  expect(screen.getByRole("button", { name: "스크립트 준비" })).toBeInTheDocument();
+});
+
+test("일반 브라우저에서는 안내 없이 구글 버튼만 보입니다", () => {
+  vi.spyOn(navigator, "userAgent", "get").mockReturnValue(userAgents.chrome);
+  fakeGoogle();
+  render(<GoogleButton onCredential={vi.fn()} onError={vi.fn()} />);
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  expect(openExternally).not.toHaveBeenCalled();
 });
