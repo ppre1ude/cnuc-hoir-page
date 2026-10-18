@@ -1,3 +1,5 @@
+import { loginPath } from "./returnPath";
+
 export type ApiError = {
   code: string;
   message: string;
@@ -50,7 +52,7 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
   if (!response.ok) {
     const error = (await response.json().catch(() => ({ code: "REQUEST_FAILED", message: "요청을 처리할 수 없습니다." }))) as ApiError;
     if (typeof window !== "undefined" && !path.startsWith("/auth/")) {
-      if (response.status === 401) redirectTo("/login");
+      if (response.status === 401) redirectTo(loginPath(window.location));
       if (response.status === 403 && error.code === "APPROVAL_REQUIRED") redirectTo("/application-status");
     }
     if (response.status === 403 && error.code === "PERMISSION_REQUIRED") {

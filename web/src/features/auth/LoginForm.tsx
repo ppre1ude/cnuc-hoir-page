@@ -5,6 +5,7 @@ import { Feedback } from "../../components/ui";
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiRequestError } from "../../lib/api";
+import { readReturnPath } from "../../lib/returnPath";
 import { loginWithGoogle } from "./session";
 import { GoogleButton } from "./GoogleButton";
 
@@ -17,7 +18,7 @@ export function LoginForm() {
     setError("");
     try {
       const session = await loginWithGoogle(credential);
-      router.replace(session.status === "APPROVED" ? "/dashboard" : "/application-status");
+      router.replace(session.status === "APPROVED" ? readReturnPath(window.location) ?? "/dashboard" : "/application-status");
     } catch (caught) {
       if (caught instanceof ApiRequestError) setError(caught.message);
       else setError("로그인을 완료하지 못했습니다. 다시 시도해 주세요.");

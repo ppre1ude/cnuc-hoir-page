@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ApiRequestError, onPermissionDenied, redirectTo } from "../../lib/api";
+import { loginPath } from "../../lib/returnPath";
 import { getSession, isStaff, type MemberSession } from "./session";
 
 export type SessionStatus = "loading" | "ready" | "failed";
@@ -33,7 +34,7 @@ export function SessionProvider({ children, requireStaff = false, initialSession
         setStatus("ready");
       }).catch((error: unknown) => {
         if (request !== latest.current) return;
-        if (error instanceof ApiRequestError && error.status === 401) { redirectTo("/login"); return; }
+        if (error instanceof ApiRequestError && error.status === 401) { redirectTo(loginPath(window.location)); return; }
         // 이미 받은 세션이 있으면 다시 받기 실패는 화면을 바꾸지 않습니다.
         if (hasSession.current) return;
         if (left > 0) { attempt(left - 1); return; }
