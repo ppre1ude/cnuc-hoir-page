@@ -14,13 +14,19 @@ export default function ActivatePage() {
   const token = useRef<string | null>(null);
   const [ready, setReady] = useState(false);
   const [hasToken, setHasToken] = useState(false);
+  const [reopenUrl, setReopenUrl] = useState<string>();
   const [message, setMessage] = useState("");
 
   useEffect(() => {
     const found = new URLSearchParams(window.location.hash.slice(1)).get("token");
     if (found && !token.current) token.current = found;
     if (found) window.history.replaceState(null, "", window.location.pathname);
-    queueMicrotask(() => { setHasToken(Boolean(token.current)); setReady(true); });
+    // 주소에서 토큰을 지웠으므로 다른 브라우저로 넘길 주소는 읽어 둔 토큰으로 다시 만듭니다.
+    queueMicrotask(() => {
+      setHasToken(Boolean(token.current));
+      if (token.current) setReopenUrl(`${window.location.origin}/activate#token=${encodeURIComponent(token.current)}`);
+      setReady(true);
+    });
   }, []);
 
   const connect = useCallback(async (credential: string) => {
@@ -41,7 +47,7 @@ export default function ActivatePage() {
   return <>
     <h1>구글 계정 연결</h1>
     {ready && !hasToken && <Feedback tone="error">유효한 계정 연결 링크가 필요합니다. 운영진에게 요청해 주세요.</Feedback>}
-    {ready && hasToken && <GoogleButton onCredential={connect} onError={fail} />}
+    {ready && hasToken && <GoogleButton onCredential={connect} onError={fail} reopenUrl={reopenUrl} />}
     {message && <Feedback tone="error">{message}</Feedback>}
     <Link href="/login">로그인으로 돌아가기</Link>
   </>;

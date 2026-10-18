@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Script from "next/script";
-import { Button, Feedback } from "../../components/ui";
+import { ActionLink, Button, Feedback } from "../../components/ui";
+import { detectInAppBrowser, openExternally } from "./inAppBrowser";
 import { getGoogleNonce } from "./session";
 import { SLOW_AFTER_MS, SLOW_MESSAGE, WaitingScore } from "./WaitingScore";
 
@@ -21,9 +22,12 @@ declare global {
 // 준비 중이면 대기 안내, 서버에서 준비값을 받지 못하면 다시 시도 버튼을 보입니다. 구글 스크립트를 못 받으면 안내를 멈추고 부모에게 알립니다.
 type Phase = "preparing" | "ready" | "failed" | "stopped";
 
-export function GoogleButton({ onCredential, onError }: {
+const neverChanges = () => () => {};
+
+export function GoogleButton({ onCredential, onError, reopenUrl }: {
   onCredential: (credential: string) => Promise<void>;
   onError: (message: string) => void;
+  reopenUrl?: string;
 }) {
   const target = useRef<HTMLDivElement>(null);
   const busy = useRef(false);
@@ -32,7 +36,17 @@ export function GoogleButton({ onCredential, onError }: {
   const [phase, setPhase] = useState<Phase>("preparing");
   const [slow, setSlow] = useState(false);
   const [retried, setRetried] = useState(false);
+  const opened = useRef(false);
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const userAgent = useSyncExternalStore(neverChanges, () => navigator.userAgent, () => "");
+  const browser = detectInAppBrowser(userAgent);
+  const reopenHref = browser?.reopen ? browser.reopen(reopenUrl ?? window.location.href) : null;
+
+  useEffect(() => {
+    if (!reopenHref || opened.current) return;
+    opened.current = true;
+    openExternally(reopenHref);
+  }, [reopenHref]);
 
   useEffect(() => {
     mounted.current = true;
@@ -87,8 +101,18 @@ export function GoogleButton({ onCredential, onError }: {
     void ready();
   }
 
-  if (!clientId) return <p role="alert">구글 로그인 설정이 필요합니다. 운영진에게 알려 주세요.</p>;
+  // 감지가 틀릴 수도 있어 안내만 덧붙이고 구글 버튼은 그대로 둡니다.
+  const notice = browser && <>
+    <Feedback tone="error">{browser.name} 안에서는 구글 로그인이 막힐 수 있습니다. 다른 브라우저에서 열어 주세요.</Feedback>
+    {reopenHref ? <>
+      <div><ActionLink href={reopenHref}>다른 브라우저로 열기</ActionLink></div>
+      <p>버튼이 안 되면 메뉴에서 &apos;다른 브라우저로 열기&apos;를 눌러 주세요.</p>
+    </> : <p>메뉴에서 &apos;외부 브라우저로 열기&apos;를 눌러 주세요.</p>}
+  </>;
+
+  if (!clientId) return <>{notice}<p role="alert">구글 로그인 설정이 필요합니다. 운영진에게 알려 주세요.</p></>;
   return <>
+    {notice}
     <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive"
       onReady={() => { void ready(); }}
       onError={() => {
