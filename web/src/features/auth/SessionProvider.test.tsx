@@ -38,10 +38,15 @@ test("승인되지 않은 계정은 가입 상태 화면으로 보냅니다", as
 });
 
 test("401이면 로그인으로 보냅니다", async () => {
-  vi.mocked(getSession).mockRejectedValue(new ApiRequestError(401, "UNAUTHENTICATED", "로그인이 필요합니다."));
-  render(<SessionProvider><Probe /></SessionProvider>);
-  await waitFor(() => expect(redirectTo).toHaveBeenCalledWith("/login"));
-  expect(getSession).toHaveBeenCalledTimes(1);
+  window.history.replaceState(null, "", "/events/12/check-in#token=abc");
+  try {
+    vi.mocked(getSession).mockRejectedValue(new ApiRequestError(401, "UNAUTHENTICATED", "로그인이 필요합니다."));
+    render(<SessionProvider><Probe /></SessionProvider>);
+    await waitFor(() => expect(redirectTo).toHaveBeenCalledWith("/login#next=%2Fevents%2F12%2Fcheck-in%23token%3Dabc"));
+    expect(getSession).toHaveBeenCalledTimes(1);
+  } finally {
+    window.history.replaceState(null, "", "/");
+  }
 });
 
 test("처음 받다 실패하면 대기 상태를 유지한 채 한 번 자동으로 다시 받아 준비 상태가 됩니다", async () => {

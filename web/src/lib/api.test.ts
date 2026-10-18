@@ -31,10 +31,10 @@ function respond(status: number, body: unknown) {
 
 test("회원 요청이 401이면 로그인으로 이동합니다", async () => {
   const replace = vi.fn();
-  vi.stubGlobal("window", { location: { origin: "https://choir.example", replace } });
+  vi.stubGlobal("window", { location: { origin: "https://choir.example", pathname: "/notices", search: "?notice=5", hash: "", replace } });
   respond(401, { code: "UNAUTHENTICATED", message: "로그인이 필요합니다." });
   await expect(apiRequest("/notices")).rejects.toMatchObject({ status: 401 });
-  expect(replace).toHaveBeenCalledWith(new URL("/login", "https://choir.example"));
+  expect(replace).toHaveBeenCalledWith(new URL("/login#next=%2Fnotices%3Fnotice%3D5", "https://choir.example"));
 });
 
 test("세션 확인 요청의 401은 transport가 이동시키지 않습니다", async () => {
