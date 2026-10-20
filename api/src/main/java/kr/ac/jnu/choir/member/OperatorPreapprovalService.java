@@ -89,6 +89,7 @@ public class OperatorPreapprovalService {
         member.approveAsAdmin(entry.getMemberType(), clock);
         actionLogs.save(new AdminActionLog(entry.getCreatedBy(), member, "OPERATOR_PREAPPROVAL", before,
                 member.getStatus(), "사전 등록된 운영진의 구글 계정 확인", clock.instant()));
+        preapprovals.delete(entry);
         return true;
     }
 

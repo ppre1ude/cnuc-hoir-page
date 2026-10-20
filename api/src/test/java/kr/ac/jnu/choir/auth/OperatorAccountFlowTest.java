@@ -183,9 +183,14 @@ class OperatorAccountFlowTest {
         assertThat(login(approvedSession, "external-credential", externalSubject, external, "승인 대기", false))
                 .contains("\"status\":\"APPROVED\"");
 
+        String pending = mvc.perform(get("/api/v1/admin/allowlist").session(adminSession))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(pending).doesNotContain(gmail);
         assertThat(mvc.perform(delete("/api/v1/admin/allowlist/" + gmailEntry)
                 .session(adminSession).header("X-CSRF-TOKEN", adminCsrf))
-                .andReturn().getResponse().getStatus()).isEqualTo(204);
+                .andReturn().getResponse().getStatus()).isEqualTo(404);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM admin_action_log a JOIN member m ON m.id = a.target_member_id "
+                + "WHERE m.email = ? AND a.action = 'ALLOWLIST_APPROVE'", Integer.class, gmail)).isEqualTo(1);
         assertThat(members.findByEmailIgnoreCase(gmail).orElseThrow().getStatus()).isEqualTo(AccountStatus.APPROVED);
     }
 
@@ -216,9 +221,11 @@ class OperatorAccountFlowTest {
                 SELECT COUNT(*) FROM admin_action_log
                 WHERE target_member_id = ? AND action = 'OPERATOR_PREAPPROVAL'
                 """, Integer.class, chair.getId())).isEqualTo(1);
+        assertThat(mvc.perform(get("/api/v1/admin/operator-preapprovals").session(adminSession))
+                .andReturn().getResponse().getContentAsString()).doesNotContain(email);
         assertThat(mvc.perform(delete("/api/v1/admin/operator-preapprovals/" + entryId)
                 .session(adminSession).header("X-CSRF-TOKEN", csrf))
-                .andReturn().getResponse().getStatus()).isEqualTo(204);
+                .andReturn().getResponse().getStatus()).isEqualTo(404);
         assertThat(members.findById(chair.getId()).orElseThrow().isAdmin()).isTrue();
         assertThat(mvc.perform(post("/api/v1/admin/members/" + chair.getId() + "/revoke")
                 .session(adminSession).header("X-CSRF-TOKEN", csrf).contentType("application/json")

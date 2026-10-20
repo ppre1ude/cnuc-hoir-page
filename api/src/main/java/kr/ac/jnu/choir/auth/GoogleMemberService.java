@@ -117,6 +117,7 @@ public class GoogleMemberService {
             member.approve(entry.getMemberType(), clock);
             logs.save(new AdminActionLog(entry.getCreatedBy(), member, "ALLOWLIST_APPROVE", before,
                     member.getStatus(), null, clock.instant()));
+            allowlist.delete(entry);
         });
     }
 
