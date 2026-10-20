@@ -62,6 +62,17 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
     return () => window.clearTimeout(timer);
   }, [session, refresh]);
 
+  const windowOpen = session?.open ?? false;
+  useEffect(() => {
+    if (!windowOpen) return;
+    const timer = window.setInterval(() => { refresh().catch(() => undefined); }, 15000);
+    return () => window.clearInterval(timer);
+  }, [windowOpen, refresh]);
+
+  function reloadList() {
+    refresh().then(() => setMessage("")).catch(() => setMessage("출석 목록을 새로고침하지 못했습니다."));
+  }
+
   async function action(operation: () => Promise<IssuedSession | null | void>) {
     if (busy) return;
     setBusy(true); setMessage("");
@@ -97,9 +108,7 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
     <Link className={styles.back} href="/admin/events">← 행사 관리로 돌아가기</Link>
     <PageHeader title={`${event?.title ?? "행사"} 출석 관리`} />
     <p>출석 창은 열 때부터 10분 동안 유효합니다. 회전하면 이전 QR과 코드는 즉시 사용할 수 없습니다.</p>
-    {message && <Feedback tone="error">{message} {message.includes("새로고침") &&
-      <Button variant="secondary" type="button" onClick={() => refresh().then(() => setMessage(""))
-        .catch(() => setMessage("출석 목록을 새로고침하지 못했습니다."))}>목록 다시 불러오기</Button>}</Feedback>}
+    {message && <Feedback tone="error">{message}</Feedback>}
     <div className={styles.grid}>{session && <section className={styles.panel} aria-label="출석 창">
       <div className={styles.panelHeader}><h2>출석 창</h2></div>
       <p>현재 창: {session.open ? `${seoulDateTime(session.expiresAt!)}까지 유효`
@@ -110,11 +119,12 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
       {issued && session.open && <div>
         <p>입력 코드: <strong className={styles.code}>{issued.code}</strong></p>
         {qrImage && <Image className={styles.qr} src={qrImage} width={280} height={280} unoptimized alt="현장 출석 QR 코드" />}
-        <p>QR과 코드는 이 화면에서만 표시됩니다. 새로고침하면 다시 발급해 주세요.</p>
+        <p>페이지를 새로고침하면 QR과 코드가 사라집니다. 명단은 15초마다 갱신되며, 바로 확인하려면 &apos;목록 다시 불러오기&apos;를 눌러 주세요.</p>
       </div>}
     </section>}
     <section className={styles.panel} aria-label="단원 출석 기록">
-      <h2>단원별 상태</h2>
+      <div className={styles.panelHeader}><h2>단원별 상태</h2>
+        <Button variant="secondary" type="button" onClick={reloadList}>목록 다시 불러오기</Button></div>
       {members === null && !message && <SkeletonRows count={3} label="출석 기록을 불러오는 중입니다." />}
       {members?.length === 0 && <p>출석 대상 단원이 없습니다.</p>}
       {members?.map((member) => <div className={styles.row} key={member.memberId}>

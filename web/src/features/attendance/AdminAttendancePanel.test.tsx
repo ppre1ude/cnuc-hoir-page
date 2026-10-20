@@ -102,3 +102,52 @@ test("재발급이 실패하면 서버의 출석 창 상태를 다시 받아 보
   expect(screen.queryByText("ABCD2345")).toBeNull();
   expect(vi.mocked(attendance.getCheckInSession).mock.calls.length).toBeGreaterThan(sessionCalls);
 });
+
+const sora = { memberId: 11, name: "김소라", email: "sora@example.com" };
+
+test("출석 창이 열린 동안 15초마다 명단을 다시 받고 QR과 코드는 그대로 둡니다", async () => {
+  await renderWithOpenWindow();
+  vi.mocked(attendance.getAdminAttendance).mockResolvedValue([{ ...sora, status: "CHECKED_IN" }]);
+  const rosterCalls = () => vi.mocked(attendance.getAdminAttendance).mock.calls.length;
+  const before = rosterCalls();
+
+  await act(() => vi.advanceTimersByTimeAsync(15000));
+  expect(rosterCalls()).toBe(before + 1);
+  expect(await screen.findByText(/출석 완료/)).toBeInTheDocument();
+  await act(() => vi.advanceTimersByTimeAsync(15000));
+  expect(rosterCalls()).toBe(before + 2);
+  expect(screen.getByText("ABCD2345")).toBeInTheDocument();
+  expect(attendance.openCheckIn).toHaveBeenCalledTimes(1);
+  expect(attendance.rotateCheckIn).not.toHaveBeenCalled();
+});
+
+test("출석 창을 닫거나 화면을 떠나면 명단 자동 갱신을 멈춥니다", async () => {
+  const { server, view } = await renderWithOpenWindow();
+  vi.mocked(attendance.closeCheckIn).mockImplementation(async () => {
+    server.session = { sessionId: null, expiresAt: null, open: false };
+  });
+  fireEvent.click(screen.getByRole("button", { name: "출석 창 닫기" }));
+  await screen.findByRole("button", { name: "출석 창 열기" });
+  const afterClose = vi.mocked(attendance.getAdminAttendance).mock.calls.length;
+  await act(() => vi.advanceTimersByTimeAsync(60000));
+  expect(vi.mocked(attendance.getAdminAttendance).mock.calls.length).toBe(afterClose);
+
+  fireEvent.click(screen.getByRole("button", { name: "출석 창 열기" }));
+  await screen.findByText("ABCD2345");
+  view.unmount();
+  const afterUnmount = vi.mocked(attendance.getAdminAttendance).mock.calls.length;
+  await act(() => vi.advanceTimersByTimeAsync(60000));
+  expect(vi.mocked(attendance.getAdminAttendance).mock.calls.length).toBe(afterUnmount);
+});
+
+test("목록 다시 불러오기는 오류가 없어도 보이고 QR과 코드를 둔 채 명단을 다시 받습니다", async () => {
+  await renderWithOpenWindow();
+  vi.mocked(attendance.getAdminAttendance).mockResolvedValue([{ ...sora, status: "CHECKED_IN" }]);
+  expect(screen.queryByRole("alert")).toBeNull();
+
+  fireEvent.click(screen.getByRole("button", { name: "목록 다시 불러오기" }));
+
+  expect(await screen.findByText(/출석 완료/)).toBeInTheDocument();
+  expect(screen.getByText("ABCD2345")).toBeInTheDocument();
+  expect(screen.getByText(/새로고침하면 QR과 코드가 사라집니다/)).toBeInTheDocument();
+});
