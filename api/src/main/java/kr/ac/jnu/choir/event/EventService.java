@@ -55,13 +55,18 @@ public class EventService {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "DUPLICATE_EVENT_TIME", "선택한 시작 시각이 중복됩니다.");
             }
         }
-        // ponytail: 동시에 들어온 두 일괄 등록은 둘 다 통과할 수 있음, 막아야 하면 start_at 고유 제약을 추가
+        // 파트연습처럼 제목이 다른 일정은 같은 시각에 열릴 수 있어, 같은 제목과 같은 시작 시각만 중복으로 봅니다.
+        // ponytail: 동시에 들어온 두 일괄 등록은 둘 다 통과할 수 있음, 막아야 하면 (title, start_at) 고유 제약을 추가
+        var requested = new HashSet<String>();
+        input.forEach(item -> requested.add(item.title().strip() + "\n" + item.startAt()));
         Instant from = input.stream().map(EventController.EventInput::startAt).min(Comparator.naturalOrder()).orElseThrow();
         Instant to = input.stream().map(EventController.EventInput::endAt).max(Comparator.naturalOrder()).orElseThrow();
-        events.findOverlapping(from, to).stream().map(Event::getStartAt).filter(starts::contains).findFirst()
+        events.findOverlapping(from, to).stream()
+                .filter(saved -> requested.contains(saved.getTitle() + "\n" + saved.getStartAt()))
+                .map(Event::getStartAt).findFirst()
                 .ifPresent(clash -> {
                     throw new ApiException(HttpStatus.CONFLICT, "DUPLICATE_EVENT_TIME", SEOUL_TIME.format(clash)
-                            + "에 시작하는 일정이 이미 있습니다. 그 날짜를 빼고 다시 등록해 주세요.");
+                            + "에 시작하는 같은 제목의 일정이 이미 있습니다. 그 날짜를 빼고 다시 등록해 주세요.");
                 });
         return events.saveAll(input.stream().map(item -> new Event(item.title(), item.description(),
                 item.startAt(), item.endAt(), item.obEligible(), item.publicVisible(), clock)).toList());

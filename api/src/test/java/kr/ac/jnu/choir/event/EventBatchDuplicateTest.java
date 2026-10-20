@@ -57,13 +57,17 @@ class EventBatchDuplicateTest {
     }
 
     private MockHttpServletResponse batch(MockHttpSession session, String... starts) throws Exception {
+        return titledBatch(session, "정기 연습", starts);
+    }
+
+    private MockHttpServletResponse titledBatch(MockHttpSession session, String title, String... starts) throws Exception {
         String csrf = mvc.perform(get("/api/v1/auth/csrf").session(session)).andReturn().getResponse()
                 .getContentAsString().split("\"token\":\"", 2)[1].split("\"", 2)[0];
         StringBuilder events = new StringBuilder();
         for (String start : starts) {
             if (!events.isEmpty()) events.append(',');
             String end = start.replace("T10:", "T12:");
-            events.append("{\"title\":\"정기 연습\",\"description\":\"\",\"startAt\":\"").append(start)
+            events.append("{\"title\":\"").append(title).append("\",\"description\":\"\",\"startAt\":\"").append(start)
                     .append("\",\"endAt\":\"").append(end).append("\",\"obEligible\":false,\"publicVisible\":false}");
         }
         return mvc.perform(post("/api/v1/admin/events/batch").session(session).header("X-CSRF-TOKEN", csrf)
@@ -81,5 +85,13 @@ class EventBatchDuplicateTest {
 
         assertThat(batch(session, "2099-10-18T10:00:00Z", "2099-10-25T10:00:00Z").getStatus()).isEqualTo(201);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM event", Long.class)).isEqualTo(4);
+    }
+
+    @Test void partRehearsalsWithDifferentTitlesMayStartAtTheSameTime() throws Exception {
+        MockHttpSession session = admin();
+        assertThat(titledBatch(session, "소프라노 파트연습", "2099-11-03T10:00:00Z").getStatus()).isEqualTo(201);
+        assertThat(titledBatch(session, "알토 파트연습", "2099-11-03T10:00:00Z").getStatus()).isEqualTo(201);
+        assertThat(titledBatch(session, "알토 파트연습", "2099-11-03T10:00:00Z").getStatus()).isEqualTo(409);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM event", Long.class)).isEqualTo(2);
     }
 }
