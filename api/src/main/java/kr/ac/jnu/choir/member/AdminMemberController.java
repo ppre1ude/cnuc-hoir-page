@@ -89,7 +89,7 @@ public class AdminMemberController {
         Page<Member> result = approvals.applications(status, page, size);
         List<ApplicationItem> items = result.getContent().stream()
                 .map(member -> new ApplicationItem(member.getId(), member.getName(), member.getEmail(),
-                        member.getStatus(), member.getCreatedAt())).toList();
+                        member.getStatus(), member.getCreatedAt(), member.getPart(), member.getCohort())).toList();
         return new ApplicationPage(items, page, size, result.getTotalElements());
     }
 
@@ -128,6 +128,7 @@ public class AdminMemberController {
             MemberType memberType, boolean admin, boolean googleLinked, Instant createdAt,
             Part part, Integer cohort, List<AdminMemberRoleController.RoleItem> roles) {}
     public record MemberPage(List<MemberItem> items, int page, int size, long total) {}
-    public record ApplicationItem(Long id, String name, String email, AccountStatus status, Instant createdAt) {}
+    public record ApplicationItem(Long id, String name, String email, AccountStatus status, Instant createdAt,
+            Part part, Integer cohort) {}
     public record ApplicationPage(List<ApplicationItem> items, int page, int size, long total) {}
 }

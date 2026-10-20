@@ -77,6 +77,24 @@ class ApplicationReportTest {
         assertThat(approved.getCohort()).isEqualTo(6);
     }
 
+    @Test void applicationsListShowsReportedPartAndCohort() throws Exception {
+        Member reported = applicant();
+        Member silent = applicant();
+        assertThat(report(sessionFor(reported), "{\"name\":\"김민지\",\"cohort\":12,\"part\":\"TENOR\"}")
+                .getStatus()).isEqualTo(200);
+
+        JsonNode items = mapper.readTree(mvc.perform(get("/api/v1/admin/applications?size=100").session(sessionFor(admin())))
+                .andReturn().getResponse().getContentAsString()).path("items");
+        JsonNode reportedItem = item(items, reported.getId());
+        assertThat(reportedItem.path("name").asText()).isEqualTo("김민지");
+        assertThat(reportedItem.path("part").asText()).isEqualTo("TENOR");
+        assertThat(reportedItem.path("cohort").asInt()).isEqualTo(12);
+        JsonNode silentItem = item(items, silent.getId());
+        assertThat(silentItem.has("part")).isTrue();
+        assertThat(silentItem.path("part").isNull()).isTrue();
+        assertThat(silentItem.path("cohort").isNull()).isTrue();
+    }
+
     @Test void approvedAccountCannotReportApplication() throws Exception {
         Member approved = admin();
         MockHttpServletResponse response = report(sessionFor(approved),
@@ -114,6 +132,11 @@ class ApplicationReportTest {
         return mvc.perform(put("/api/v1/auth/application").session(session)
                 .header("X-CSRF-TOKEN", csrf(session)).contentType("application/json").content(body))
                 .andReturn().getResponse();
+    }
+
+    private static JsonNode item(JsonNode items, Long id) {
+        for (JsonNode item : items) if (item.path("id").asLong() == id) return item;
+        throw new AssertionError("신청 목록에 " + id + "번 계정이 없습니다.");
     }
 
     private JsonNode json(MockHttpServletResponse response) throws Exception {
