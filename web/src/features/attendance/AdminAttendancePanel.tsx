@@ -28,10 +28,14 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
   const latestLoad = useRef(0);
   const refresh = useCallback(async () => {
     const load = ++latestLoad.current;
-    const [current, rows] = await Promise.all([getCheckInSession(eventId), getAdminAttendance(eventId)]);
-    if (load !== latestLoad.current) return;
-    setSession(current);
-    setMembers(rows);
+    try {
+      const [current, rows] = await Promise.all([getCheckInSession(eventId), getAdminAttendance(eventId)]);
+      if (load !== latestLoad.current) return;
+      setSession(current);
+      setMembers(rows);
+    } catch (error) {
+      if (load === latestLoad.current) throw error;
+    }
   }, [eventId]);
 
   useEffect(() => {
@@ -44,7 +48,7 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
         if (load !== latestLoad.current) return;
         setSession(sessionResult); setMembers(rows);
       }).catch((error) => {
-        if (alive) setMessage(error instanceof Error ? error.message : "출석 정보를 불러오지 못했습니다.");
+        if (alive && load === latestLoad.current) setMessage(error instanceof Error ? error.message : "출석 정보를 불러오지 못했습니다.");
       });
     return () => { alive = false; };
   }, [eventId]);

@@ -178,3 +178,19 @@ test("늦게 도착한 이전 명단 응답이 더 최근 명단을 덮지 않�
   expect(screen.getByText(/출석 완료/)).toBeInTheDocument();
   expect(screen.queryByText(/출석 창 대기/)).toBeNull();
 });
+
+test("늦게 실패한 이전 명단 요청은 더 최근 성공을 오류로 덮지 않습니다", async () => {
+  await renderWithOpenWindow();
+  let rejectStale!: (error: Error) => void;
+  vi.mocked(attendance.getAdminAttendance)
+    .mockReturnValueOnce(new Promise((_, reject) => { rejectStale = reject; }))
+    .mockResolvedValueOnce([{ ...sora, status: "CHECKED_IN" }]);
+
+  fireEvent.click(screen.getByRole("button", { name: "목록 다시 불러오기" }));
+  fireEvent.click(screen.getByRole("button", { name: "목록 다시 불러오기" }));
+  expect(await screen.findByText(/출석 완료/)).toBeInTheDocument();
+  await act(async () => { rejectStale(new Error("늦은 실패")); });
+
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.getByText("ABCD2345")).toBeInTheDocument();
+});
