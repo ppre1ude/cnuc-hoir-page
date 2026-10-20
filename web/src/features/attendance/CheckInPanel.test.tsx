@@ -11,18 +11,27 @@ vi.mock("./attendance", async (importOriginal) => {
 });
 
 beforeEach(() => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-09-27T08:00:00Z"));
   vi.mocked(attendance.getEventAttendance).mockReset();
   vi.mocked(attendance.submitCheckIn).mockReset();
-  vi.mocked(attendance.getEventAttendance).mockResolvedValue({ eventId: 3, eventTitle: "연습", status: "NOT_OPEN", checkInOpen: false });
+  vi.mocked(attendance.getEventAttendance).mockResolvedValue({ eventId: 3, eventTitle: "연습", startAt: "2026-09-27T09:00:00Z", status: "NOT_OPEN", checkInOpen: false });
   window.history.replaceState(null, "", "/events/3/check-in");
 });
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.useRealTimers(); });
+
+test("출석 창이 열려 있고 아직 출석하지 않았으면 출석 전으로 보입니다", async () => {
+  vi.mocked(attendance.getEventAttendance).mockResolvedValue({ eventId: 3, eventTitle: "연습", startAt: "2026-09-27T07:50:00Z",
+    status: "NOT_OPEN", checkInOpen: true });
+  render(<CheckInPanel eventId={3} />);
+  expect(await screen.findByText("출석 전")).toBeInTheDocument();
+});
 
 test("QR 토큰을 주소에서 즉시 지우고 본문으로 제출합니다", async () => {
   window.history.replaceState(null, "", "/events/3/check-in#token=secret-token");
   vi.mocked(attendance.submitCheckIn).mockResolvedValue();
   vi.mocked(attendance.getEventAttendance)
-    .mockResolvedValueOnce({ eventId: 3, eventTitle: "연습", status: "CHECKED_IN", checkInOpen: false });
+    .mockResolvedValueOnce({ eventId: 3, eventTitle: "연습", startAt: "2026-09-27T09:00:00Z", status: "CHECKED_IN", checkInOpen: false });
   render(<CheckInPanel eventId={3} />);
   expect(window.location.hash).toBe("");
   await waitFor(() => expect(attendance.submitCheckIn).toHaveBeenCalledWith(3, "secret-token"));
@@ -33,7 +42,7 @@ test("QR 토큰을 주소에서 즉시 지우고 본문으로 제출합니다", 
 test("개발 모드의 이중 효과 실행에서도 QR 출석을 한 번 제출합니다", async () => {
   window.history.replaceState(null, "", "/events/3/check-in#token=secret-token");
   vi.mocked(attendance.submitCheckIn).mockResolvedValue();
-  vi.mocked(attendance.getEventAttendance).mockResolvedValue({ eventId: 3, eventTitle: "연습", status: "CHECKED_IN", checkInOpen: false });
+  vi.mocked(attendance.getEventAttendance).mockResolvedValue({ eventId: 3, eventTitle: "연습", startAt: "2026-09-27T09:00:00Z", status: "CHECKED_IN", checkInOpen: false });
   render(<StrictMode><CheckInPanel eventId={3} /></StrictMode>);
   await waitFor(() => expect(attendance.submitCheckIn).toHaveBeenCalledTimes(1));
   expect(window.location.hash).toBe("");
@@ -42,8 +51,8 @@ test("개발 모드의 이중 효과 실행에서도 QR 출석을 한 번 제출
 test("이미 열린 행사 화면에서 QR 해시로 이동하면 주소를 지우고 출석합니다", async () => {
   vi.mocked(attendance.submitCheckIn).mockResolvedValue();
   vi.mocked(attendance.getEventAttendance)
-    .mockResolvedValueOnce({ eventId: 3, eventTitle: "연습", status: "NOT_OPEN", checkInOpen: false })
-    .mockResolvedValueOnce({ eventId: 3, eventTitle: "연습", status: "CHECKED_IN", checkInOpen: false });
+    .mockResolvedValueOnce({ eventId: 3, eventTitle: "연습", startAt: "2026-09-27T09:00:00Z", status: "NOT_OPEN", checkInOpen: false })
+    .mockResolvedValueOnce({ eventId: 3, eventTitle: "연습", startAt: "2026-09-27T09:00:00Z", status: "CHECKED_IN", checkInOpen: false });
   render(<CheckInPanel eventId={3} />);
   await screen.findByText("출석 창 대기");
   window.location.hash = "#token=later-token";
@@ -57,9 +66,9 @@ test("이미 열린 행사 화면에서 QR 해시로 이동하면 주소를 지�
 test("입력 코드 제출 성공 뒤 상태 조회가 실패하면 조회만 재시도합니다", async () => {
   vi.mocked(attendance.submitCheckIn).mockResolvedValue();
   vi.mocked(attendance.getEventAttendance)
-    .mockResolvedValueOnce({ eventId: 3, eventTitle: "연습", status: "NOT_OPEN", checkInOpen: false })
+    .mockResolvedValueOnce({ eventId: 3, eventTitle: "연습", startAt: "2026-09-27T09:00:00Z", status: "NOT_OPEN", checkInOpen: false })
     .mockRejectedValueOnce(new Error("조회 실패"))
-    .mockResolvedValueOnce({ eventId: 3, eventTitle: "연습", status: "CHECKED_IN", checkInOpen: false });
+    .mockResolvedValueOnce({ eventId: 3, eventTitle: "연습", startAt: "2026-09-27T09:00:00Z", status: "CHECKED_IN", checkInOpen: false });
   render(<CheckInPanel eventId={3} />);
   await screen.findByText("출석 창 대기");
   fireEvent.change(screen.getByLabelText("운영진이 알려준 출석 코드"), { target: { value: "ABCD2345" } });
@@ -76,7 +85,7 @@ test("QR 제출 성공 뒤 상태 조회만 실패해도 출석 완료를 유지
   vi.mocked(attendance.submitCheckIn).mockResolvedValue();
   vi.mocked(attendance.getEventAttendance)
     .mockRejectedValueOnce(new Error("조회 실패"))
-    .mockResolvedValueOnce({ eventId: 3, eventTitle: "연습", status: "CHECKED_IN", checkInOpen: false });
+    .mockResolvedValueOnce({ eventId: 3, eventTitle: "연습", startAt: "2026-09-27T09:00:00Z", status: "CHECKED_IN", checkInOpen: false });
   render(<CheckInPanel eventId={3} />);
   await screen.findByText("출석은 완료됐지만 상태를 확인하지 못했습니다.");
   fireEvent.click(screen.getByRole("button", { name: "상태 다시 확인" }));
@@ -89,7 +98,7 @@ test("코드 제출 전 시작된 상태 조회 오류가 출석 성공 안내�
   const initial = new Promise<attendance.AttendanceState>((_, reject) => { rejectInitial = reject; });
   vi.mocked(attendance.getEventAttendance)
     .mockReturnValueOnce(initial)
-    .mockResolvedValueOnce({ eventId: 3, eventTitle: "연습", status: "CHECKED_IN", checkInOpen: false });
+    .mockResolvedValueOnce({ eventId: 3, eventTitle: "연습", startAt: "2026-09-27T09:00:00Z", status: "CHECKED_IN", checkInOpen: false });
   vi.mocked(attendance.submitCheckIn).mockResolvedValue();
   render(<CheckInPanel eventId={3} />);
   fireEvent.change(screen.getByLabelText("운영진이 알려준 출석 코드"), { target: { value: "ABCD2345" } });

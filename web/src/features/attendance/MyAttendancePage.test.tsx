@@ -31,6 +31,13 @@ test("기록 없이 지난 행사는 출석 창을 기다린다고 하지 않는
   expect(screen.queryByText("출석 창 대기")).not.toBeInTheDocument();
 });
 
+test("출석 창이 열린 행사는 출석 기록 없음 대신 출석 전으로 보인다", async () => {
+  getMyAttendance.mockResolvedValue([{ eventId: 4, eventTitle: "정기 연습", startAt: "2026-09-13T09:00:00Z", status: "NOT_OPEN", checkInOpen: true }]);
+  render(<MyAttendancePage />);
+  expect(await screen.findByRole("link", { name: /정기 연습.*출석 전/ })).toBeInTheDocument();
+  expect(screen.queryByText("출석 기록 없음")).not.toBeInTheDocument();
+});
+
 test("같은 제목의 연습을 서울 기준 날짜와 요일로 구분한다", async () => {
   getMyAttendance.mockResolvedValue([
     { eventId: 6, eventTitle: "정기 연습", startAt: "2026-09-19T16:00:00Z", status: "CHECKED_IN", checkInOpen: false },

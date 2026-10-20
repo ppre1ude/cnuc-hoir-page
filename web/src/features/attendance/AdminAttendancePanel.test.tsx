@@ -128,6 +128,14 @@ test("출석 명단은 이메일 없이 이름 옆에 파트와 기수를 보입
   expect(screen.getByLabelText("단원 출석 기록")).not.toHaveTextContent("@");
 });
 
+test("출석 창이 열린 동안 아직 출석하지 않은 단원은 출석 전으로 보입니다", async () => {
+  await renderWithOpenWindow();
+  vi.mocked(attendance.getAdminAttendance).mockResolvedValue([{ ...sora, status: "NOT_OPEN" }]);
+  fireEvent.click(screen.getByRole("button", { name: "목록 다시 불러오기" }));
+  expect(await screen.findByText(/출석 전/)).toBeInTheDocument();
+  expect(screen.queryByText(/출석 창 대기/)).toBeNull();
+});
+
 test("출석 창이 열린 동안 15초마다 명단을 다시 받고 QR과 코드는 그대로 둡니다", async () => {
   await renderWithOpenWindow();
   vi.mocked(attendance.getAdminAttendance).mockResolvedValue([{ ...sora, status: "CHECKED_IN" }]);

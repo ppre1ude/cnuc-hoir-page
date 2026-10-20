@@ -5,7 +5,7 @@ import { Button, Input, Feedback, PageHeader, StatusBadge } from "../../componen
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ApiRequestError } from "../../lib/api";
-import { attendanceLabel, getEventAttendance, submitCheckIn, type AttendanceState } from "./attendance";
+import { getEventAttendance, memberAttendanceLabel, submitCheckIn, type AttendanceState } from "./attendance";
 import styles from "./CheckInPanel.module.css";
 
 export function CheckInPanel({ eventId }: { eventId: number }) {
@@ -126,7 +126,7 @@ export function CheckInPanel({ eventId }: { eventId: number }) {
 
   return <section aria-label="현장 출석" className={styles.panel}>
     <PageHeader title="현장 출석" />
-    {status && <p className={styles.state}>현재 상태 <strong><StatusBadge tone={status.status === "CHECKED_IN" ? "positive" : status.status === "MISSED" ? "negative" : "neutral"}>{attendanceLabel[status.status]}</StatusBadge></strong></p>}
+    {status && <p className={styles.state}>현재 상태 <strong><StatusBadge tone={status.status === "CHECKED_IN" ? "positive" : status.status === "MISSED" ? "negative" : "neutral"}>{memberAttendanceLabel(status)}</StatusBadge></strong></p>}
     <form className={styles.form} onSubmit={submit}>
       <label htmlFor="check-in-code">운영진이 알려준 출석 코드</label>
       <Input id="check-in-code" value={code} maxLength={8} autoComplete="off"

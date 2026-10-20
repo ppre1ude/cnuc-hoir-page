@@ -141,7 +141,7 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
       {members === null && !message && <SkeletonRows count={3} label="출석 기록을 불러오는 중입니다." />}
       {members?.length === 0 && <p>출석 대상 단원이 없습니다.</p>}
       {members?.map((member) => <div className={styles.row} key={member.memberId}>
-        <strong>{rosterName(member)}</strong> · {attendanceLabel[member.status]}
+        <strong>{rosterName(member)}</strong> · {member.status === "NOT_OPEN" && windowOpen ? "출석 전" : attendanceLabel[member.status]}
         <div className={styles.fieldGroup}><label htmlFor={`reason-${member.memberId}`}>정정 이유</label> <Input id={`reason-${member.memberId}`}
           value={reasons[member.memberId] ?? ""} maxLength={500}
           onChange={(event) => setReasons((value) => ({ ...value, [member.memberId]: event.target.value }))} /></div>
