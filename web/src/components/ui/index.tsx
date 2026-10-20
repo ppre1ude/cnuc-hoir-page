@@ -74,7 +74,8 @@ export function SkeletonRows({ count = 4, label, className }: { count?: number; 
 }
 
 export function Linkify({ text }: { text: string }) {
-  return <>{text.split(/(https?:\/\/\S+)/).map((part, index) => {
+  // 주소 문자는 URL에 쓰는 영문 문자로만 잡습니다. "https://forms.gle/abc로 신청"처럼 붙여 쓴 조사가 링크에 들어가지 않게 하기 위해서입니다.
+  return <>{text.split(/(https?:\/\/[A-Za-z0-9\-._~:/?#[\]@!$&'()*+,;=%]+)/).map((part, index) => {
     if (index % 2 === 0) return part;
     // 문장 끝의 마침표, 쉼표, 닫는 괄호가 주소에 붙어 잘못된 링크가 되지 않게 뗍니다.
     const url = part.replace(/[.,)]+$/, "");

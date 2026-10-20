@@ -16,6 +16,14 @@ test("본문의 http·https 주소를 새 탭 링크로 바꾸고 끝의 문장 
   expect(container.textContent).toBe(text);
 });
 
+test("주소 바로 뒤에 붙여 쓴 한국어는 링크에 넣지 않습니다", () => {
+  const text = "https://forms.gle/abc로 신청하고 https://drive.google.com/x?id=1에서 악보를 받으세요.";
+  const { container } = render(<p><Linkify text={text} /></p>);
+  expect(screen.getAllByRole("link").map((link) => link.getAttribute("href")))
+    .toEqual(["https://forms.gle/abc", "https://drive.google.com/x?id=1"]);
+  expect(container.textContent).toBe(text);
+});
+
 test("다른 형식의 주소와 HTML은 링크나 태그로 만들지 않고 글자 그대로 둡니다", () => {
   const text = "javascript:alert(1) <b>굵게</b> www.example.com";
   const { container } = render(<p><Linkify text={text} /></p>);
