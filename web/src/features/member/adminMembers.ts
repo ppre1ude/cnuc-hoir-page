@@ -7,6 +7,8 @@ export type ApplicationItem = {
   email: string;
   status: "APPROVAL_PENDING";
   createdAt: string;
+  part: Part | null;
+  cohort: number | null;
 };
 
 export type ApplicationPage = { items: ApplicationItem[]; page: number; size: number; total: number };

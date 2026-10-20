@@ -52,6 +52,16 @@ export function getSession(): Promise<MemberSession> {
   return apiRequest<MemberSession>("/auth/me");
 }
 
+export type Application = { name: string; cohort: number; part: Part };
+
+export function saveApplication(application: Application): Promise<MemberSession> {
+  return apiRequest<MemberSession>("/auth/application", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(application),
+  });
+}
+
 export function completeAccountSetup(token: string, credential: string): Promise<MemberSession> {
   return apiRequest<MemberSession>("/auth/account-setup/confirm", {
     method: "POST",

@@ -39,6 +39,19 @@ public class MemberApprovalService {
     }
 
     @Transactional
+    public Member reportApplication(Long memberId, String name, Part part, int cohort) {
+        // 승인과 동시에 저장되면 승인 상태를 덮어쓸 수 있어 승인과 같은 행 잠금을 잡습니다.
+        Member member = locked(memberId);
+        try {
+            member.reportApplication(name, part, cohort, clock);
+        } catch (IllegalStateException closed) {
+            throw new ApiException(HttpStatus.CONFLICT, "APPLICATION_CLOSED",
+                    "승인 대기 중일 때만 가입 정보를 고칠 수 있습니다. 다시 로그인해 계정 상태를 확인해 주세요.");
+        }
+        return member;
+    }
+
+    @Transactional
     public void approve(Member actor, Long targetId, MemberType type) {
         LockedMembers locked = lockMembers(actor.getId(), targetId, Permission.APPROVE_APPLICATIONS);
         Member target = locked.target();

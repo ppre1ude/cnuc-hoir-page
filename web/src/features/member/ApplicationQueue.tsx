@@ -5,6 +5,7 @@ import { Button, Select, Textarea, Feedback, PageHeader, SkeletonRows } from "..
 import { useEffect, useState } from "react";
 import { ApiRequestError } from "../../lib/api";
 import { approveApplication, getApplications, rejectApplication, type ApplicationPage } from "./adminMembers";
+import { rosterName } from "./roles";
 import styles from "./AdminPages.module.css";
 
 export function ApplicationQueue() {
@@ -49,7 +50,7 @@ export function ApplicationQueue() {
   return (
     <section className={styles.page}>
       <PageHeader title="가입 승인" />
-      <p>구글 로그인 신청자의 이메일을 단원 명단과 대조해 주세요.</p>
+      <p>가입 신청자가 적은 이름, 기수, 파트와 구글 이메일이 실제 단원과 맞는지 확인한 뒤 승인해 주세요.</p>
       {error && <Feedback tone="error">{error}</Feedback>}
       {!data && error && <Button variant="secondary" type="button" onClick={() => { setError(""); setRetry((value) => value + 1); }}>다시 시도</Button>}
       {data?.items.length === 0 && <p>승인 대기 신청이 없습니다.</p>}
@@ -75,7 +76,7 @@ function ApplicationRow({ item, busy, onApprove, onReject }: {
   const [type, setType] = useState<"ACTIVE" | "OB">("ACTIVE");
   const [reason, setReason] = useState("");
   return <article className={styles.row}>
-    <h2>{item.name}</h2>
+    <h2>{item.part == null && item.cohort == null ? `${item.name} · 정보 미입력` : rosterName(item)}</h2>
     <p>{item.email}</p>
     <p>신청일: {new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", dateStyle: "medium" }).format(new Date(item.createdAt))}</p>
     <div className={styles.fieldGroup}><label htmlFor={`type-${item.id}`}>{item.name} 단원 구분</label>

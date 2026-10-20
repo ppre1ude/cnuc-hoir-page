@@ -13,7 +13,7 @@ export const departments = Object.keys(departmentLabel) as Department[];
 
 // 운영진 명단은 이메일을 보이지 않으므로 "김민지 · 소프라노 5기"처럼 파트와 기수로 동명이인을 가립니다.
 export function rosterName({ name, part, cohort }: { name: string; part: Part | null; cohort: number | null }): string {
-  const detail = [part && partLabel[part], cohort !== null && `${cohort}기`].filter(Boolean).join(" ");
+  const detail = [part && partLabel[part], cohort != null && `${cohort}기`].filter(Boolean).join(" ");
   return detail ? `${name} · ${detail}` : name;
 }
 
