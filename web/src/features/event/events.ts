@@ -1,4 +1,5 @@
 import { apiRequest } from "../../lib/api";
+import type { Part } from "../auth/session";
 
 export type ChoirEvent = {
   id: number;
@@ -20,7 +21,7 @@ export type AdminEventRsvps = {
   attending: number;
   absent: number;
   unanswered: number;
-  members: { memberId: number; name: string; email: string; choice: EventRsvpChoice | null }[];
+  members: { memberId: number; name: string; part: Part | null; cohort: number | null; choice: EventRsvpChoice | null }[];
 };
 
 export function monthBounds(month: string) {

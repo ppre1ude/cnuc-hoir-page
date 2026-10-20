@@ -114,7 +114,27 @@ test("출석 창을 열기 전에 파트연습에는 열지 말라는 경고와 
   expect(screen.getByText(/출석하지 않은 대상 단원 모두가 미출석으로 남습니다/)).toBeInTheDocument();
 });
 
-const sora = { memberId: 11, name: "김소라", email: "sora@example.com" };
+const sora = { memberId: 11, name: "김소라", part: "SOPRANO" as const, cohort: 5 };
+
+test("출석 명단은 이메일 없이 이름 옆에 파트와 기수를 보입니다", async () => {
+  vi.mocked(events.getEvent).mockResolvedValue(rehearsal);
+  vi.mocked(attendance.getCheckInSession).mockResolvedValue({ sessionId: null, expiresAt: null, open: false });
+  vi.mocked(attendance.getAdminAttendance).mockResolvedValue([{ ...sora, status: "CHECKED_IN" },
+    { memberId: 12, name: "이하늘", part: null, cohort: null, status: "MISSED" }]);
+  renderWithSession(<AdminAttendancePanel eventId={3} />, sessionFixture({ admin: true }));
+
+  expect(await screen.findByText("김소라 · 소프라노 5기")).toBeInTheDocument();
+  expect(screen.getByText("이하늘")).toBeInTheDocument();
+  expect(screen.getByLabelText("단원 출석 기록")).not.toHaveTextContent("@");
+});
+
+test("출석 창이 열린 동안 아직 출석하지 않은 단원은 출석 전으로 보입니다", async () => {
+  await renderWithOpenWindow();
+  vi.mocked(attendance.getAdminAttendance).mockResolvedValue([{ ...sora, status: "NOT_OPEN" }]);
+  fireEvent.click(screen.getByRole("button", { name: "목록 다시 불러오기" }));
+  expect(await screen.findByText(/출석 전/)).toBeInTheDocument();
+  expect(screen.queryByText(/출석 창 대기/)).toBeNull();
+});
 
 test("출석 창이 열린 동안 15초마다 명단을 다시 받고 QR과 코드는 그대로 둡니다", async () => {
   await renderWithOpenWindow();
@@ -193,4 +213,40 @@ test("늦게 실패한 이전 명단 요청은 더 최근 성공을 오류로 �
 
   expect(screen.queryByRole("alert")).toBeNull();
   expect(screen.getByText("ABCD2345")).toBeInTheDocument();
+});
+
+test("명단 요청이 멈춰 있어도 유효 시간이 지나면 바로 QR과 코드를 거둡니다", async () => {
+  await renderWithOpenWindow();
+  vi.mocked(attendance.getAdminAttendance).mockReturnValue(new Promise(() => undefined));
+
+  await act(() => vi.advanceTimersByTimeAsync(10 * 60 * 1000));
+
+  expect(screen.getByRole("button", { name: "출석 창 열기" })).toBeInTheDocument();
+  expect(screen.queryByText("ABCD2345")).toBeNull();
+});
+
+test("명단 자동 갱신은 이전 요청이 끝난 뒤에야 다음 요청을 보냅니다", async () => {
+  await renderWithOpenWindow();
+  vi.mocked(attendance.getAdminAttendance).mockReturnValue(new Promise(() => undefined));
+  const before = vi.mocked(attendance.getAdminAttendance).mock.calls.length;
+
+  await act(() => vi.advanceTimersByTimeAsync(15000));
+  expect(vi.mocked(attendance.getAdminAttendance).mock.calls.length).toBe(before + 1);
+  await act(() => vi.advanceTimersByTimeAsync(45000));
+  expect(vi.mocked(attendance.getAdminAttendance).mock.calls.length).toBe(before + 1);
+});
+
+test("늦게 실패한 이전 다시 불러오기는 더 최근 실패의 안내를 지우지 않습니다", async () => {
+  await renderWithOpenWindow();
+  let rejectStale!: (error: Error) => void;
+  vi.mocked(attendance.getAdminAttendance)
+    .mockReturnValueOnce(new Promise((_, reject) => { rejectStale = reject; }))
+    .mockRejectedValueOnce(new Error("최근 실패"));
+
+  fireEvent.click(screen.getByRole("button", { name: "목록 다시 불러오기" }));
+  fireEvent.click(screen.getByRole("button", { name: "목록 다시 불러오기" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("출석 목록을 새로고침하지 못했습니다.");
+  await act(async () => { rejectStale(new Error("늦은 실패")); });
+
+  expect(screen.getByRole("alert")).toHaveTextContent("출석 목록을 새로고침하지 못했습니다.");
 });

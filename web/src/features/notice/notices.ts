@@ -1,4 +1,5 @@
 import { apiRequest } from "../../lib/api";
+import type { Part } from "../auth/session";
 
 export type Notice = {
   id: number;
@@ -29,7 +30,8 @@ export type PollSummary = Pick<PollView, "firstOption" | "secondOption" | "close
 export type PollRespondent = {
   memberId: number;
   name: string;
-  email: string;
+  part: Part | null;
+  cohort: number | null;
   choice: number;
   updatedAt: string;
 };

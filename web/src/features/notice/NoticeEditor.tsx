@@ -6,15 +6,33 @@ import { useEffect, useState } from "react";
 import { ApiRequestError } from "../../lib/api";
 import { createNotice, getAdminNoticePoll, getAdminNotices, updateNotice,
   type AdminPollView, type Notice, type NoticePage, type PollInput } from "./notices";
+import { rosterName } from "../member/roles";
 import styles from "../member/AdminPages.module.css";
+
+type Draft = {
+  title: string; body: string; published: boolean; includePoll: boolean; pollPreset: "attendance" | "agree" | "custom";
+  pollQuestion: string; firstOption: string; secondOption: string; pollClosesAt: string;
+};
+const emptyDraft: Draft = { title: "", body: "", published: false, includePoll: false, pollPreset: "attendance",
+  pollQuestion: "", firstOption: "참석", secondOption: "불참", pollClosesAt: "" };
+
+// 세션이 30분 유휴로 끝나면 로그인 화면으로 넘어가므로, 같은 탭에서 돌아왔을 때 쓰던 새 공지를 되살립니다.
+const draftKey = "notice-draft";
+function readDraft(): Draft {
+  try { return { ...emptyDraft, ...JSON.parse(sessionStorage.getItem(draftKey) ?? "{}") }; } catch { return emptyDraft; }
+}
+function writeDraft(draft: Draft) {
+  try {
+    if (JSON.stringify(draft) === JSON.stringify(emptyDraft)) sessionStorage.removeItem(draftKey);
+    else sessionStorage.setItem(draftKey, JSON.stringify(draft));
+  } catch { /* 저장소가 막힌 브라우저에서는 임시 저장 없이 씁니다. */ }
+}
 
 export function NoticeEditor() {
   const [data, setData] = useState<NoticePage | null>(null);
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<Notice | null>(null);
-  const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
-  const [published, setPublished] = useState(false);
+  const [form, setForm] = useState<Draft>(readDraft);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [listError, setListError] = useState("");
@@ -23,12 +41,10 @@ export function NoticeEditor() {
   const [pollStatus, setPollStatus] = useState<"none" | "loading" | "exists" | "error">("none");
   const [adminPoll, setAdminPoll] = useState<AdminPollView | null>(null);
   const [pollRetry, setPollRetry] = useState(0);
-  const [includePoll, setIncludePoll] = useState(false);
-  const [pollPreset, setPollPreset] = useState<"attendance" | "agree" | "custom">("attendance");
-  const [pollQuestion, setPollQuestion] = useState("");
-  const [firstOption, setFirstOption] = useState("참석");
-  const [secondOption, setSecondOption] = useState("불참");
-  const [pollClosesAt, setPollClosesAt] = useState("");
+  const update = (patch: Partial<Draft>) => setForm((value) => ({ ...value, ...patch }));
+  const { title, body, published, includePoll, pollPreset, pollQuestion, firstOption, secondOption, pollClosesAt } = form;
+
+  useEffect(() => { if (!selected) writeDraft(form); }, [selected, form]);
 
   useEffect(() => {
     let alive = true;
@@ -59,30 +75,14 @@ export function NoticeEditor() {
     setSelected(notice);
     setPollStatus("loading");
     setAdminPoll(null);
-    setIncludePoll(false);
-    setPollPreset("attendance");
-    setPollQuestion("");
-    setFirstOption("참석");
-    setSecondOption("불참");
-    setPollClosesAt("");
-    setTitle(notice.title);
-    setBody(notice.body);
-    setPublished(notice.published);
+    setForm({ ...emptyDraft, title: notice.title, body: notice.body, published: notice.published });
   }
 
-  function clear() {
+  function startNew(next: Draft) {
     setSelected(null);
     setPollStatus("none");
     setAdminPoll(null);
-    setIncludePoll(false);
-    setPollPreset("attendance");
-    setPollQuestion("");
-    setFirstOption("참석");
-    setSecondOption("불참");
-    setPollClosesAt("");
-    setTitle("");
-    setBody("");
-    setPublished(false);
+    setForm(next);
   }
 
   async function save(event: React.FormEvent) {
@@ -106,7 +106,8 @@ export function NoticeEditor() {
       const input = { title: title.trim(), body, published, ...(poll ? { poll } : {}) };
       if (selected) await updateNotice(selected.id, input);
       else await createNotice(input);
-      clear();
+      // 기존 공지를 고쳤다면 임시 저장한 새 공지는 아직 저장되지 않았으므로 되살립니다.
+      startNew(selected ? readDraft() : emptyDraft);
       setSaved(true);
     } catch (caught) {
       setError(caught instanceof ApiRequestError && ["INVALID_POLL", "POLL_EXISTS"].includes(caught.code)
@@ -144,10 +145,10 @@ export function NoticeEditor() {
       <form className={`${styles.panel} ${styles.form}`} onSubmit={save}>
         <h2>{selected ? "공지 수정" : "공지 작성"}</h2>
         <label htmlFor="notice-title">제목</label>
-        <Input id="notice-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={200} required />
+        <Input id="notice-title" value={title} onChange={(event) => update({ title: event.target.value })} maxLength={200} required />
         <label htmlFor="notice-body">본문</label>
-        <Textarea id="notice-body" value={body} onChange={(event) => setBody(event.target.value)} maxLength={10000} required />
-        <label className={styles.check} htmlFor="notice-published"><Input id="notice-published" type="checkbox" checked={published} onChange={(event) => setPublished(event.target.checked)} /> 게시</label>
+        <Textarea id="notice-body" value={body} onChange={(event) => update({ body: event.target.value })} maxLength={10000} required />
+        <label className={styles.check} htmlFor="notice-published"><Input id="notice-published" type="checkbox" checked={published} onChange={(event) => update({ published: event.target.checked })} /> 게시</label>
         {pollStatus === "loading" && <SkeletonRows count={2} label="투표 정보를 불러오는 중입니다." />}
         {pollStatus === "error" && <Feedback tone="error">투표 정보를 불러오지 못했습니다.
           <Button variant="secondary" type="button" onClick={() => { setPollStatus("loading"); setPollRetry((value) => value + 1); }}>다시 시도</Button></Feedback>}
@@ -158,36 +159,36 @@ export function NoticeEditor() {
           <h4>응답자</h4>
           {adminPoll.respondents.length === 0 && <p>아직 응답이 없습니다.</p>}
           <ul>{adminPoll.respondents.map((respondent) => <li key={respondent.memberId}>
-            <span>{respondent.name} ({respondent.email})</span>
+            <span>{rosterName(respondent)}</span>
             <strong>{respondent.choice === 1 ? adminPoll.poll.firstOption : adminPoll.poll.secondOption}</strong>
           </li>)}</ul>
         </section>}
         {pollStatus === "none" && <>
           <label className={styles.check} htmlFor="notice-poll"><Input id="notice-poll" type="checkbox" checked={includePoll}
-            onChange={(event) => setIncludePoll(event.target.checked)} /> 투표 추가</label>
+            onChange={(event) => update({ includePoll: event.target.checked })} /> 투표 추가</label>
           {includePoll && <div className={styles.pollFields}>
             <label htmlFor="poll-question">질문</label>
-            <Input id="poll-question" value={pollQuestion} onChange={(event) => setPollQuestion(event.target.value)} maxLength={200} required />
+            <Input id="poll-question" value={pollQuestion} onChange={(event) => update({ pollQuestion: event.target.value })} maxLength={200} required />
             <label htmlFor="poll-preset">선택지 형식</label>
             <Select id="poll-preset" value={pollPreset}
-              onChange={(event) => { const next = event.target.value as "attendance" | "agree" | "custom";
-                setPollPreset(next);
-                if (next === "agree") { setFirstOption("찬성"); setSecondOption("반대"); }
-                if (next === "attendance") { setFirstOption("참석"); setSecondOption("불참"); } }}>
+              onChange={(event) => { const next = event.target.value as Draft["pollPreset"];
+                update({ pollPreset: next, ...(next === "agree" ? { firstOption: "찬성", secondOption: "반대" }
+                  : next === "attendance" ? { firstOption: "참석", secondOption: "불참" } : {}) }); }}>
               <option value="attendance">참석 / 불참</option><option value="agree">찬성 / 반대</option><option value="custom">직접 입력</option>
             </Select>
             <label htmlFor="poll-first">첫 번째 선택지</label>
-            <Input id="poll-first" value={firstOption} onChange={(event) => { setFirstOption(event.target.value); setPollPreset("custom"); }} maxLength={80} required />
+            <Input id="poll-first" value={firstOption} onChange={(event) => update({ firstOption: event.target.value, pollPreset: "custom" })} maxLength={80} required />
             <label htmlFor="poll-second">두 번째 선택지</label>
-            <Input id="poll-second" value={secondOption} onChange={(event) => { setSecondOption(event.target.value); setPollPreset("custom"); }} maxLength={80} required />
+            <Input id="poll-second" value={secondOption} onChange={(event) => update({ secondOption: event.target.value, pollPreset: "custom" })} maxLength={80} required />
             <label htmlFor="poll-closes">마감 시각 (한국 시간)</label>
-            <Input id="poll-closes" type="datetime-local" value={pollClosesAt} onChange={(event) => setPollClosesAt(event.target.value)} required />
+            <Input id="poll-closes" type="datetime-local" value={pollClosesAt} onChange={(event) => update({ pollClosesAt: event.target.value })} required />
             <p>등록한 투표의 질문과 선택지는 변경할 수 없습니다.</p>
+            <p>응답자 이름과 선택은 운영진에게 표시됩니다. 익명 투표는 지원하지 않습니다.</p>
             <p>참석 응답은 행사 출석 기록과 별도로 관리됩니다.</p>
           </div>}
         </>}
         <div className={styles.actions}><Button variant="primary" type="submit" disabled={busy || !title.trim() || !body.trim()}>저장</Button>
-        {selected && <Button variant="secondary" type="button" onClick={clear}>새 공지</Button>}</div>
+        {selected && <Button variant="secondary" type="button" onClick={() => startNew(readDraft())}>새 공지</Button>}</div>
       </form></div>
   </section>;
 }

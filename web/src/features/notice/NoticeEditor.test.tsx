@@ -16,8 +16,9 @@ vi.mock("./notices", () => ({
 }));
 
 describe("공지 편집기", () => {
-  afterEach(cleanup);
+  afterEach(() => { cleanup(); vi.restoreAllMocks(); });
   beforeEach(() => {
+    sessionStorage.clear();
     getAdminNotices.mockReset();
     createNotice.mockReset();
     updateNotice.mockReset();
@@ -82,6 +83,97 @@ describe("공지 편집기", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
+  it("투표 응답자는 이메일 없이 이름, 파트, 기수로 보인다", async () => {
+    getAdminNotices.mockResolvedValue({ items: [{ id: 1, title: "곡 변경", body: "본문", published: true }], page: 0, size: 20, total: 1 });
+    getAdminNoticePoll.mockResolvedValue({
+      poll: { question: "곡을 바꿀까요?", firstOption: "찬성", secondOption: "반대", closesAt: "2027-10-01T05:00:00Z",
+        closed: false, firstCount: 0, secondCount: 1, myChoice: null },
+      respondents: [{ memberId: 3, name: "김민지", part: "ALTO", cohort: 12, choice: 2, updatedAt: "2027-09-01T00:00:00Z" }],
+    });
+    renderWithSession(<NoticeEditor />, sessionFixture({ admin: true }));
+    fireEvent.click(await screen.findByRole("button", { name: /곡 변경\s*게시/ }));
+    expect(await screen.findByText("김민지 · 알토 12기")).toBeInTheDocument();
+    expect(screen.getByLabelText("투표 결과")).not.toHaveTextContent("@");
+  });
+
+  async function renderEmpty() {
+    const view = renderWithSession(<NoticeEditor />, sessionFixture({ admin: true }));
+    await screen.findByText("작성된 공지가 없습니다.");
+    return view;
+  }
+
+  it("로그인이 끊겨 화면이 다시 열려도 쓰던 새 공지와 투표 설정을 되살린다", async () => {
+    getAdminNotices.mockResolvedValue({ items: [], page: 0, size: 20, total: 0 });
+    const first = await renderEmpty();
+    fireEvent.change(screen.getByLabelText("제목"), { target: { value: "정기연주회 안내" } });
+    fireEvent.change(screen.getByLabelText("본문"), { target: { value: "긴 본문" } });
+    fireEvent.click(screen.getByLabelText("게시"));
+    fireEvent.click(screen.getByLabelText("투표 추가"));
+    fireEvent.change(screen.getByLabelText("질문"), { target: { value: "곡을 바꿀까요?" } });
+    fireEvent.change(screen.getByLabelText("선택지 형식"), { target: { value: "agree" } });
+    fireEvent.change(screen.getByLabelText("마감 시각 (한국 시간)"), { target: { value: "2027-10-01T14:00" } });
+    first.unmount();
+
+    await renderEmpty();
+    expect(screen.getByLabelText("제목")).toHaveValue("정기연주회 안내");
+    expect(screen.getByLabelText("본문")).toHaveValue("긴 본문");
+    expect(screen.getByLabelText("게시")).toBeChecked();
+    expect(screen.getByLabelText("투표 추가")).toBeChecked();
+    expect(screen.getByLabelText("질문")).toHaveValue("곡을 바꿀까요?");
+    expect(screen.getByLabelText("선택지 형식")).toHaveValue("agree");
+    expect(screen.getByLabelText("첫 번째 선택지")).toHaveValue("찬성");
+    expect(screen.getByLabelText("두 번째 선택지")).toHaveValue("반대");
+    expect(screen.getByLabelText("마감 시각 (한국 시간)")).toHaveValue("2027-10-01T14:00");
+  });
+
+  it("되살린 새 공지를 저장하면 다시 열었을 때 빈 양식이다", async () => {
+    getAdminNotices.mockResolvedValue({ items: [], page: 0, size: 20, total: 0 });
+    const first = await renderEmpty();
+    fireEvent.change(screen.getByLabelText("제목"), { target: { value: "새 공지" } });
+    fireEvent.change(screen.getByLabelText("본문"), { target: { value: "본문" } });
+    first.unmount();
+    const second = await renderEmpty();
+    expect(screen.getByLabelText("제목")).toHaveValue("새 공지");
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    expect(await screen.findByText("공지를 저장했습니다.")).toBeInTheDocument();
+    second.unmount();
+
+    await renderEmpty();
+    expect(screen.getByLabelText("제목")).toHaveValue("");
+    expect(screen.getByLabelText("본문")).toHaveValue("");
+  });
+
+  it("기존 공지 수정은 임시 저장하지 않고, 새 공지로 돌아오면 쓰던 새 공지를 되살린다", async () => {
+    getAdminNotices.mockResolvedValue({ items: [{ id: 1, title: "기존 공지", body: "이전 본문", published: false }], page: 0, size: 20, total: 1 });
+    const first = renderWithSession(<NoticeEditor />, sessionFixture({ admin: true }));
+    fireEvent.change(screen.getByLabelText("제목"), { target: { value: "쓰던 새 공지" } });
+    fireEvent.click(await screen.findByRole("button", { name: /기존 공지\s*초안/ }));
+    fireEvent.change(screen.getByLabelText("본문"), { target: { value: "수정 중인 본문" } });
+    fireEvent.click(screen.getByRole("button", { name: "새 공지" }));
+    expect(screen.getByLabelText("제목")).toHaveValue("쓰던 새 공지");
+    expect(screen.getByLabelText("본문")).toHaveValue("");
+    first.unmount();
+
+    renderWithSession(<NoticeEditor />, sessionFixture({ admin: true }));
+    await screen.findByRole("button", { name: /기존 공지\s*초안/ });
+    expect(screen.getByLabelText("제목")).toHaveValue("쓰던 새 공지");
+    expect(screen.getByLabelText("본문")).toHaveValue("");
+  });
+
+  it("브라우저 저장소가 막혀 있어도 공지를 쓰고 저장한다", async () => {
+    const blocked = () => { throw new DOMException("blocked", "SecurityError"); };
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(blocked);
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(blocked);
+    vi.spyOn(Storage.prototype, "removeItem").mockImplementation(blocked);
+    getAdminNotices.mockResolvedValue({ items: [], page: 0, size: 20, total: 0 });
+    await renderEmpty();
+    fireEvent.change(screen.getByLabelText("제목"), { target: { value: "새 공지" } });
+    fireEvent.change(screen.getByLabelText("본문"), { target: { value: "본문" } });
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    expect(await screen.findByText("공지를 저장했습니다.")).toBeInTheDocument();
+    expect(createNotice).toHaveBeenCalledWith({ title: "새 공지", body: "본문", published: false });
+  });
+
   it("공지와 참석 여부 투표를 한 번에 등록한다", async () => {
     getAdminNotices.mockResolvedValue({ items: [], page: 0, size: 20, total: 0 });
     renderWithSession(<NoticeEditor />, sessionFixture({ admin: true }));
@@ -91,6 +183,7 @@ describe("공지 편집기", () => {
     fireEvent.click(screen.getByLabelText("투표 추가"));
     fireEvent.change(screen.getByLabelText("질문"), { target: { value: "연습에 참석하시나요?" } });
     fireEvent.change(screen.getByLabelText("마감 시각 (한국 시간)"), { target: { value: "2027-10-01T14:00" } });
+    expect(screen.getByText("응답자 이름과 선택은 운영진에게 표시됩니다. 익명 투표는 지원하지 않습니다.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
     await waitFor(() => expect(createNotice).toHaveBeenCalledWith({
       title: "연습 참여 조사", body: "참석 여부를 선택해 주세요.", published: false,

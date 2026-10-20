@@ -72,6 +72,15 @@ describe("일정 중심 회원 화면", () => {
       .toHaveAttribute("href", "/events/7");
   });
 
+  it("내 출석 요약에서 출석 창이 열린 행사는 출석 전으로 보인다", async () => {
+    getMyAttendance.mockResolvedValue([
+      { eventId: 7, eventTitle: "정기 연습", startAt: "2026-09-27T02:50:00Z", status: "NOT_OPEN", checkInOpen: true },
+    ]);
+    renderWithSession(<EventCalendar />, ob);
+    const summary = screen.getByRole("region", { name: "내 출석 요약" });
+    expect(await within(summary).findByRole("link", { name: /정기 연습.*출석 전/ })).toBeInTheDocument();
+  });
+
   it("월말에는 다음 달 초 연습까지 받아 이달의 행사에서 바로 응답하게 한다", async () => {
     vi.setSystemTime(new Date("2026-10-29T03:00:00Z"));
     getEvents.mockResolvedValue([

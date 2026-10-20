@@ -37,6 +37,12 @@ describe("공지 투표", () => {
     expect(screen.getByText(/1명 참여/)).toBeInTheDocument();
   });
 
+  it("투표 전에 선택이 이름과 함께 운영진에게 보인다고 알린다", async () => {
+    getNoticePoll.mockResolvedValue(openPoll);
+    render(<NoticePoll noticeId={7} />);
+    expect(await screen.findByText("선택은 이름과 함께 운영진에게 표시됩니다.")).toBeInTheDocument();
+  });
+
   it("마감된 투표는 집계와 내 선택을 유지하되 변경 버튼을 숨긴다", async () => {
     getNoticePoll.mockResolvedValue({ ...openPoll, closed: true, firstCount: 1, myChoice: 1 });
     render(<NoticePoll noticeId={7} />);
