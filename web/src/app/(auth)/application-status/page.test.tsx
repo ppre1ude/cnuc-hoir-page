@@ -31,3 +31,13 @@ test.each(["APPROVAL_PENDING", "REJECTED", "INVITED"])("%s 상태에서 로그�
   render(<ApplicationStatusPage />);
   expect(await screen.findByText(/other@gmail\.com 계정으로 로그인했습니다/)).toHaveTextContent("로그아웃한 뒤 그 계정으로 다시 로그인해 주세요");
 });
+
+test("승인 대기 중 다시 로그인해 확인을 누르면 로그아웃하고 로그인 화면으로 갑니다", async () => {
+  mocks.getSession.mockResolvedValue({ id: 1, name: "신청자", status: "APPROVAL_PENDING" });
+  mocks.logout.mockResolvedValue(undefined);
+  render(<ApplicationStatusPage />);
+  expect(await screen.findByText("운영진이 승인한 뒤 다시 로그인하면 결과를 확인할 수 있습니다.")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "다시 로그인해 확인" }));
+  expect(mocks.logout).toHaveBeenCalledTimes(1);
+  await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/login"));
+});
