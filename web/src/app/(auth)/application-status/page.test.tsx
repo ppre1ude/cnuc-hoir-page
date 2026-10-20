@@ -41,3 +41,9 @@ test("승인 대기 중 다시 로그인해 확인을 누르면 로그아웃하�
   expect(mocks.logout).toHaveBeenCalledTimes(1);
   await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/login"));
 });
+
+test("승인 대기 화면은 Gmail이 아닌 구글 계정이 운영진 승인을 기다린다고 알려 줍니다", async () => {
+  mocks.getSession.mockResolvedValue({ id: 1, name: "신청자", email: "member@naver.com", status: "APPROVAL_PENDING" });
+  render(<ApplicationStatusPage />);
+  expect(await screen.findByText(/Gmail이 아닌 주소로 만든 구글 계정은 자동 승인 명단에 있어도 운영진이 직접 승인해야 합니다/)).toBeInTheDocument();
+});
