@@ -12,6 +12,7 @@ export type MemberRoleItem = { id: number; role: Role; department: Department | 
 export type MemberSession = {
   id: number;
   name: string;
+  email?: string;
   status: "INVITED" | "EMAIL_PENDING" | "APPROVAL_PENDING" | "APPROVED" | "REJECTED" | "REVOKED";
   memberType: "ACTIVE" | "OB" | null;
   admin: boolean;

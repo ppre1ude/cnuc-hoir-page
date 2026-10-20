@@ -97,7 +97,7 @@ public class AuthController {
                 role.getUnit() == null ? null : role.getUnit().name(),
                 role.getPart() == null ? null : role.getPart().name())).toList();
         List<String> granted = permissions.of(member).stream().map(Enum::name).sorted().toList();
-        return new MeResponse(member.getId(), member.getName(), member.getStatus().name(),
+        return new MeResponse(member.getId(), member.getName(), member.getEmail(), member.getStatus().name(),
                 member.getMemberType() == null ? null : member.getMemberType().name(), member.isAdmin(),
                 member.getPart() == null ? null : member.getPart().name(), member.getCohort(), roles, granted);
     }
@@ -107,6 +107,6 @@ public class AuthController {
     public record GoogleRequest(@NotBlank String credential) {}
     public record CompleteSetupRequest(@NotBlank String token, @NotBlank String credential) {}
     public record RoleItem(Long id, String role, String department, String unit, String part) {}
-    public record MeResponse(Long id, String name, String status, String memberType, boolean admin,
+    public record MeResponse(Long id, String name, String email, String status, String memberType, boolean admin,
             String part, Integer cohort, List<RoleItem> roles, List<String> permissions) {}
 }

@@ -121,6 +121,7 @@ export function GoogleButton({ onCredential, onError, reopenUrl }: {
         onError("구글 로그인 화면을 불러오지 못했습니다.");
       }} />
     <div ref={target} aria-label="구글 로그인" />
+    <p>구글 창이 열리지 않거나, 닫히거나, 오류가 보이면 버튼을 다시 눌러 주세요. 계속 안 되면 운영진에게 알려 주세요.</p>
     {phase === "preparing" && slow && <WaitingScore />}
     {/* 알림 영역은 대기 내내 한 개만 두고 글자만 바꿔야 화면 읽기 프로그램이 3초 뒤 안내를 놓치지 않습니다. */}
     {phase === "preparing" && <p role="status">{slow ? SLOW_MESSAGE : "구글 로그인 준비 중..."}</p>}
