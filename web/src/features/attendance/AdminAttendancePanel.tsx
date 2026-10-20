@@ -2,7 +2,7 @@
 
 import { Button, Input, Feedback, PageHeader, SkeletonRows } from "../../components/ui";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import QRCode from "qrcode";
@@ -24,11 +24,11 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     const [current, rows] = await Promise.all([getCheckInSession(eventId), getAdminAttendance(eventId)]);
     setSession(current);
     setMembers(rows);
-  }
+  }, [eventId]);
 
   useEffect(() => {
     let alive = true;
@@ -52,6 +52,16 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
     return () => { alive = false; };
   }, [issued]);
 
+  useEffect(() => {
+    if (!session?.open || !session.expiresAt) return;
+    // 서버 시계가 조금 늦어 아직 열림으로 답하면 1초 뒤 다시 묻습니다.
+    const delay = Math.max(1000, new Date(session.expiresAt).getTime() - Date.now());
+    const timer = window.setTimeout(() => {
+      refresh().catch(() => setSession((value) => value && { ...value, open: false }));
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [session, refresh]);
+
   async function action(operation: () => Promise<IssuedSession | null | void>) {
     if (busy) return;
     setBusy(true); setMessage("");
@@ -65,6 +75,7 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
       }
     } catch (error) {
       setMessage(error instanceof ApiRequestError ? error.message : "요청을 처리하지 못했습니다.");
+      await refresh().catch(() => undefined);
       setBusy(false);
       return;
     }
@@ -91,7 +102,8 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
         .catch(() => setMessage("출석 목록을 새로고침하지 못했습니다."))}>목록 다시 불러오기</Button>}</Feedback>}
     <div className={styles.grid}>{session && <section className={styles.panel} aria-label="출석 창">
       <div className={styles.panelHeader}><h2>출석 창</h2></div>
-      <p>현재 창: {session.open ? `${seoulDateTime(session.expiresAt!)}까지 유효` : "열려 있지 않음"}</p>
+      <p>현재 창: {session.open ? `${seoulDateTime(session.expiresAt!)}까지 유효`
+        : session.sessionId ? "유효 시간이 지났습니다. 늦게 온 단원이 있으면 출석 창을 다시 열어 주세요." : "열려 있지 않음"}</p>
       <div className={styles.actions}>{!session.open && <Button variant="primary" type="button" disabled={busy} onClick={() => action(() => openCheckIn(eventId))}>출석 창 열기</Button>}
       {session.open && <><Button variant="secondary" type="button" disabled={busy} onClick={() => action(() => rotateCheckIn(eventId, session.sessionId!))}>QR과 코드 재발급</Button>
         <Button variant="danger" type="button" disabled={busy} onClick={() => action(async () => { await closeCheckIn(eventId); return null; })}>출석 창 닫기</Button></>}</div>
