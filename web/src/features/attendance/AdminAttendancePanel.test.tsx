@@ -103,6 +103,17 @@ test("재발급이 실패하면 서버의 출석 창 상태를 다시 받아 보
   expect(vi.mocked(attendance.getCheckInSession).mock.calls.length).toBeGreaterThan(sessionCalls);
 });
 
+test("출석 창을 열기 전에 파트연습에는 열지 말라는 경고와 미출석 규칙을 보입니다", async () => {
+  vi.mocked(events.getEvent).mockResolvedValue(rehearsal);
+  vi.mocked(attendance.getCheckInSession).mockResolvedValue({ sessionId: null, expiresAt: null, open: false });
+  vi.mocked(attendance.getAdminAttendance).mockResolvedValue([]);
+  renderWithSession(<AdminAttendancePanel eventId={3} />, sessionFixture({ admin: true }));
+
+  await screen.findByRole("button", { name: "출석 창 열기" });
+  expect(screen.getByText("파트연습에는 출석 창을 열지 마세요.")).toBeInTheDocument();
+  expect(screen.getByText(/출석하지 않은 대상 단원 모두가 미출석으로 남습니다/)).toBeInTheDocument();
+});
+
 const sora = { memberId: 11, name: "김소라", email: "sora@example.com" };
 
 test("출석 창이 열린 동안 15초마다 명단을 다시 받고 QR과 코드는 그대로 둡니다", async () => {

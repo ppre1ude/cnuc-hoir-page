@@ -108,6 +108,7 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
     <Link className={styles.back} href="/admin/events">← 행사 관리로 돌아가기</Link>
     <PageHeader title={`${event?.title ?? "행사"} 출석 관리`} />
     <p>출석 창은 열 때부터 10분 동안 유효합니다. 회전하면 이전 QR과 코드는 즉시 사용할 수 없습니다.</p>
+    <p><strong>파트연습에는 출석 창을 열지 마세요.</strong> 지금은 파트를 구분하지 않아, 출석 창을 닫거나 유효 시간이 지나면 출석하지 않은 대상 단원 모두가 미출석으로 남습니다.</p>
     {message && <Feedback tone="error">{message}</Feedback>}
     <div className={styles.grid}>{session && <section className={styles.panel} aria-label="출석 창">
       <div className={styles.panelHeader}><h2>출석 창</h2></div>
