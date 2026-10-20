@@ -107,6 +107,12 @@ public class AdminMemberController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/applications/{id}/cancel-rejection")
+    public ResponseEntity<Void> cancelRejection(HttpServletRequest request, @PathVariable Long id) {
+        approvals.cancelRejection(sessions.require(request, Permission.APPROVE_APPLICATIONS), id);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/members/{id}/revoke")
     public ResponseEntity<Void> revoke(HttpServletRequest request, @PathVariable Long id,
             @Valid @RequestBody ReasonRequest body) {

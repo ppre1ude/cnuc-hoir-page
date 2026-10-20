@@ -6,7 +6,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { ApiRequestError } from "../../lib/api";
 import { can, type MemberSession } from "../auth/session";
 import { useSession, useSessionState } from "../auth/SessionProvider";
-import { getMembers, inviteMember, reissueAccountSetup, revokeMember,
+import { cancelRejection, getMembers, inviteMember, reissueAccountSetup, revokeMember,
   type IssuedInvitation, type MemberItem, type MemberPage } from "./adminMembers";
 import styles from "./AdminPages.module.css";
 import { MemberRegistration } from "./MemberRegistration";
@@ -85,6 +85,21 @@ export function MemberAccountManager() {
     }
   }
 
+  async function reopen(id: number) {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    setIssued(null);
+    try {
+      await cancelRejection(id);
+      setRefresh((value) => value + 1);
+    } catch {
+      setError("반려를 취소하지 못했습니다. 계정 상태를 확인해 주세요.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const link = issued && typeof window !== "undefined"
     ? `${window.location.origin}/activate#token=${issued.token}` : "";
 
@@ -125,7 +140,8 @@ export function MemberAccountManager() {
           setRefresh((value) => value + 1);
           // 자기 직책·파트가 바뀌면 권한과 메뉴가 달라지므로 세션도 다시 받습니다.
           if (item.id === session.id) refreshSession();
-        }} onRenew={() => renew(item.id)} onRevoke={(reason) => revoke(item.id, reason)} />)}</div>
+        }} onRenew={() => renew(item.id)} onRevoke={(reason) => revoke(item.id, reason)}
+          onReopen={() => reopen(item.id)} />)}</div>
       {data && data.total > data.size && <nav className={styles.pagination} aria-label="계정 목록 페이지">
         <Button variant="secondary" type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>이전</Button>
         <span>{page + 1} / {Math.ceil(data.total / data.size)}</span>
@@ -135,9 +151,9 @@ export function MemberAccountManager() {
   </section>;
 }
 
-function MemberRow({ item, busy, session, onChanged, onRenew, onRevoke }: {
+function MemberRow({ item, busy, session, onChanged, onRenew, onRevoke, onReopen }: {
   item: MemberItem; busy: boolean; session: MemberSession; onChanged: () => void;
-  onRenew: () => void; onRevoke: (reason: string) => void;
+  onRenew: () => void; onRevoke: (reason: string) => void; onReopen: () => void;
 }) {
   const [reason, setReason] = useState("");
   const status = item.status === "INVITED" ? "초대 대기" : item.status === "APPROVED" ? "사용 중"
@@ -154,6 +170,9 @@ function MemberRow({ item, busy, session, onChanged, onRenew, onRevoke }: {
       <Button variant="secondary" type="button" disabled={busy} onClick={onRenew}>
         {item.status === "INVITED" ? "초대 링크 다시 발급" : item.status === "REVOKED" ? "다시 초대" : "계정 연결 링크 발급"}
       </Button>
+    </div>}
+    {can(session, "APPROVE_APPLICATIONS") && item.status === "REJECTED" && <div className={styles.actions}>
+      <Button variant="secondary" type="button" disabled={busy} onClick={onReopen}>반려 취소</Button>
     </div>}
     {can(session, "REVOKE_ACCESS") && (!leadership || can(session, "MANAGE_SITE_ADMINS")) && (item.status === "APPROVED" || item.status === "INVITED")
       && item.id !== session.id && <div className={styles.fieldGroup}>

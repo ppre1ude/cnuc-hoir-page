@@ -63,6 +63,18 @@ public class MemberApprovalService {
     }
 
     @Transactional
+    public void cancelRejection(Member actor, Long targetId) {
+        LockedMembers locked = lockMembers(actor.getId(), targetId, Permission.APPROVE_APPLICATIONS);
+        Member target = locked.target();
+        if (target.getStatus() != AccountStatus.REJECTED) {
+            throw conflict();
+        }
+        AccountStatus before = target.getStatus();
+        target.reopenApplication(clock);
+        logs.save(new AdminActionLog(locked.actor(), target, "REJECT_CANCEL", before, target.getStatus(), null, clock.instant()));
+    }
+
+    @Transactional
     public void revoke(Member actor, Long targetId, String reason) {
         LockedMembers locked = lockMembers(actor.getId(), targetId, Permission.REVOKE_ACCESS);
         Member target = locked.target();

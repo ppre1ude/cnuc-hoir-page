@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, expect, onTestFinished, test, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ApplicationQueue } from "./ApplicationQueue";
@@ -55,7 +55,20 @@ test("신청 목록 조회 실패 후 다시 시도하면 목록을 표시합니
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 });
 
+test("반려는 확인 대화상자에서 취소하면 요청하지 않습니다", async () => {
+  const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+  onTestFinished(() => confirm.mockRestore());
+  render(<ApplicationQueue />);
+  await screen.findByText("member@example.org");
+  await userEvent.type(screen.getByLabelText("신청자 반려 이유"), "명단 확인 불가");
+  await userEvent.click(screen.getByRole("button", { name: "신청자 반려" }));
+  expect(confirm).toHaveBeenCalledWith(expect.stringContaining("신청자의 가입 신청을 반려할까요?"));
+  expect(rejectApplication).not.toHaveBeenCalled();
+});
+
 test("반려 이유를 입력하고 충돌을 안내합니다", async () => {
+  const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+  onTestFinished(() => confirm.mockRestore());
   vi.mocked(rejectApplication).mockRejectedValue(new ApiRequestError(409, "INVALID_MEMBER_STATE", "이미 처리됨"));
   render(<ApplicationQueue />);
   await screen.findByText("member@example.org");

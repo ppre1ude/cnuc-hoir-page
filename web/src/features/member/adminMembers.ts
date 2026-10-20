@@ -27,6 +27,10 @@ export function rejectApplication(id: number, reason: string): Promise<void> {
   });
 }
 
+export function cancelRejection(id: number): Promise<void> {
+  return apiRequest<void>(`/admin/applications/${id}/cancel-rejection`, { method: "POST" });
+}
+
 export function revokeMember(id: number, reason: string): Promise<void> {
   return apiRequest<void>(`/admin/members/${id}/revoke`, {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason }),

@@ -226,6 +226,12 @@ public class Member {
         updatedAt = clock.instant();
     }
 
+    public void reopenApplication(Clock clock) {
+        status = AccountStatus.APPROVAL_PENDING;
+        authVersion++;
+        updatedAt = clock.instant();
+    }
+
     public void revoke(Clock clock) {
         status = AccountStatus.REVOKED;
         admin = false;

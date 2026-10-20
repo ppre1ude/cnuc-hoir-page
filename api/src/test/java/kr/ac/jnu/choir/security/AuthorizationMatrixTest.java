@@ -147,6 +147,8 @@ class AuthorizationMatrixTest {
         jdbc.update("UPDATE member SET status = 'APPROVED', member_type = 'ACTIVE', email_verified_at = CURRENT_TIMESTAMP(6) WHERE id = ?", target.getId());
         long eventId = events.create("정정 대상 행사", "내용", Instant.parse("2026-09-20T09:00:00Z"),
                 Instant.parse("2026-09-20T11:00:00Z"), false, false).getId();
+        Member rejected = members.save(new Member(UUID.randomUUID() + "@example.org", "반려된 신청자", "{noop}password", Clock.systemUTC()));
+        jdbc.update("UPDATE member SET status = 'REJECTED', email_verified_at = CURRENT_TIMESTAMP(6) WHERE id = ?", rejected.getId());
         String event = "{\"title\":\"새 행사\",\"description\":\"내용\",\"startAt\":\"2026-09-21T09:00:00Z\","
                 + "\"endAt\":\"2026-09-21T11:00:00Z\",\"obEligible\":false,\"publicVisible\":false}";
         for (MockHttpSession role : List.of(ordinary, admin)) {
@@ -157,6 +159,9 @@ class AuthorizationMatrixTest {
             assertThat(mvc.perform(post("/api/v1/admin/applications/" + applicant.getId() + "/approve")
                     .session(role).header("X-CSRF-TOKEN", token).contentType("application/json")
                     .content("{\"memberType\":\"ACTIVE\"}")).andReturn().getResponse().getStatus())
+                    .isEqualTo(expectedApproval);
+            assertThat(mvc.perform(post("/api/v1/admin/applications/" + rejected.getId() + "/cancel-rejection")
+                    .session(role).header("X-CSRF-TOKEN", token)).andReturn().getResponse().getStatus())
                     .isEqualTo(expectedApproval);
             assertThat(mvc.perform(post("/api/v1/admin/events").session(role).header("X-CSRF-TOKEN", token)
                     .contentType("application/json").content(event)).andReturn().getResponse().getStatus())
@@ -178,6 +183,13 @@ class AuthorizationMatrixTest {
         assertThat(mvc.perform(post("/api/v1/admin/applications/" + applicant.getId() + "/approve")
                 .session(vice).header("X-CSRF-TOKEN", token).contentType("application/json")
                 .content("{\"memberType\":\"ACTIVE\"}")).andReturn().getResponse().getStatus()).isEqualTo(204);
+        Member rejected = members.save(new Member(UUID.randomUUID() + "@example.org", "반려된 신청자", "{noop}password", Clock.systemUTC()));
+        jdbc.update("UPDATE member SET status = 'REJECTED', email_verified_at = CURRENT_TIMESTAMP(6) WHERE id = ?", rejected.getId());
+        MockHttpSession lead = staff("SECTION_LEAD");
+        assertThat(mvc.perform(post("/api/v1/admin/applications/" + rejected.getId() + "/cancel-rejection")
+                .session(lead).header("X-CSRF-TOKEN", csrf(lead))).andReturn().getResponse().getStatus()).isEqualTo(403);
+        assertThat(mvc.perform(post("/api/v1/admin/applications/" + rejected.getId() + "/cancel-rejection")
+                .session(vice).header("X-CSRF-TOKEN", token)).andReturn().getResponse().getStatus()).isEqualTo(204);
         assertThat(mvc.perform(post("/api/v1/admin/members/" + target.getId() + "/revoke")
                 .session(vice).header("X-CSRF-TOKEN", token).contentType("application/json")
                 .content("{\"reason\":\"권한 확인\"}")).andReturn().getResponse().getStatus()).isEqualTo(403);
