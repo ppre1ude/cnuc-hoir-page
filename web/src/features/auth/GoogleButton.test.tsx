@@ -133,3 +133,10 @@ test("일반 브라우저에서는 안내 없이 구글 버튼만 보입니다",
   expect(screen.queryByRole("link")).not.toBeInTheDocument();
   expect(openExternally).not.toHaveBeenCalled();
 });
+
+test("구글 창이 안 될 때 다시 누르고 계속 안 되면 운영진에게 알리라고 안내합니다", () => {
+  fakeGoogle();
+  vi.mocked(getGoogleNonce).mockReturnValue(new Promise(() => undefined));
+  render(<GoogleButton onCredential={vi.fn()} onError={vi.fn()} />);
+  expect(screen.getByText("구글 창이 열리지 않거나, 닫히거나, 오류가 보이면 버튼을 다시 눌러 주세요. 계속 안 되면 운영진에게 알려 주세요.")).toBeInTheDocument();
+});
