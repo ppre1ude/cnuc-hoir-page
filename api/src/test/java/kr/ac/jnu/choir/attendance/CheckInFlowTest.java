@@ -382,4 +382,25 @@ class CheckInFlowTest {
         close(id, session(admin));
         assertThat(own(id, newcomer)).contains("\"status\":\"MISSED\"");
     }
+
+    private String myList(Member member) throws Exception {
+        return mvc.perform(get("/api/v1/attendance/me").session(session(member))).andReturn().getResponse().getContentAsString();
+    }
+
+    @Test void obAttendanceListShowsOnlyEligibleEventsAndKeepsEarnedRecords() throws Exception {
+        Member admin = member("ACTIVE", true);
+        Member active = member("ACTIVE", false);
+        Member ob = member("OB", false);
+        long practice = event(false);
+        long concert = event(true);
+        long formerConcert = event(true);
+        String code = field(open(formerConcert, session(admin)), "code");
+        assertThat(check(formerConcert, session(ob), code)).isEqualTo(204);
+        jdbc.update("UPDATE event SET ob_eligible = FALSE WHERE id = ?", formerConcert);
+
+        assertThat(myList(ob)).contains("\"eventId\":" + concert + ",", "\"eventId\":" + formerConcert + ",")
+                .doesNotContain("\"eventId\":" + practice + ",", "NOT_ELIGIBLE");
+        assertThat(myList(active)).contains("\"eventId\":" + practice + ",", "\"eventId\":" + concert + ",",
+                "\"eventId\":" + formerConcert + ",");
+    }
 }

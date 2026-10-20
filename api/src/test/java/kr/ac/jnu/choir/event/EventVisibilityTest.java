@@ -116,6 +116,19 @@ class EventVisibilityTest {
         assertThat(response.indexOf("겹침")).isLessThan(response.indexOf("다음"));
     }
 
+    @Test void obMembersListOnlyObEligibleEventsWhileActiveMembersListAll() throws Exception {
+        Member admin = member(true, "ACTIVE");
+        Member active = member(false, "ACTIVE");
+        Member ob = member(false, "OB");
+        create(admin, input("정기 연습", "2026-09-10T00:00:00Z", "2026-09-10T02:00:00Z", false, false));
+        create(admin, input("정기 공연", "2026-09-20T00:00:00Z", "2026-09-20T02:00:00Z", true, false));
+        String range = "/api/v1/events?from=2026-09-01T00:00:00Z&to=2026-10-01T00:00:00Z";
+        String obList = mvc.perform(get(range).session(session(ob))).andReturn().getResponse().getContentAsString();
+        assertThat(obList).contains("정기 공연").doesNotContain("정기 연습");
+        String activeList = mvc.perform(get(range).session(session(active))).andReturn().getResponse().getContentAsString();
+        assertThat(activeList).contains("정기 연습", "정기 공연");
+    }
+
     @Test void rejectsInvalidIntervalAndUpdatesEligibility() throws Exception {
         Member admin = member(true, "ACTIVE");
         MockHttpSession editor = session(admin);

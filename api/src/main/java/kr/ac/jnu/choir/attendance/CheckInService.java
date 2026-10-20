@@ -115,8 +115,10 @@ public class CheckInService {
     @Transactional(readOnly = true)
     public List<AttendanceState> myList(Member member) {
         MemberRow target = memberRow(member.getId());
+        // ob_eligible로 거르지 않고 계산된 상태로 거릅니다. 활동 단원 시절에 남은 출석·미출석 기록을 OB가 된 뒤에도 보여야 합니다.
         return jdbc.query("SELECT id,title,ob_eligible FROM event ORDER BY start_at DESC,id DESC", (rs, row) ->
-                state(new EventRow(rs.getLong(1), rs.getString(2), rs.getBoolean(3)), target));
+                state(new EventRow(rs.getLong(1), rs.getString(2), rs.getBoolean(3)), target))
+                .stream().filter(state -> !"NOT_ELIGIBLE".equals(state.status())).toList();
     }
 
     @Transactional(readOnly = true)
