@@ -2,6 +2,9 @@ package kr.ac.jnu.choir.event;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
 import java.util.HashSet;
 import kr.ac.jnu.choir.common.ApiException;
@@ -11,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class EventService {
+    private static final DateTimeFormatter SEOUL_TIME = DateTimeFormatter.ofPattern("yyyy년 M월 d일 HH:mm")
+            .withZone(ZoneId.of("Asia/Seoul"));
     private final EventRepository events;
     private final Clock clock;
 
@@ -50,6 +55,14 @@ public class EventService {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "DUPLICATE_EVENT_TIME", "선택한 시작 시각이 중복됩니다.");
             }
         }
+        // ponytail: 동시에 들어온 두 일괄 등록은 둘 다 통과할 수 있음, 막아야 하면 start_at 고유 제약을 추가
+        Instant from = input.stream().map(EventController.EventInput::startAt).min(Comparator.naturalOrder()).orElseThrow();
+        Instant to = input.stream().map(EventController.EventInput::endAt).max(Comparator.naturalOrder()).orElseThrow();
+        events.findOverlapping(from, to).stream().map(Event::getStartAt).filter(starts::contains).findFirst()
+                .ifPresent(clash -> {
+                    throw new ApiException(HttpStatus.CONFLICT, "DUPLICATE_EVENT_TIME", SEOUL_TIME.format(clash)
+                            + "에 시작하는 일정이 이미 있습니다. 그 날짜를 빼고 다시 등록해 주세요.");
+                });
         return events.saveAll(input.stream().map(item -> new Event(item.title(), item.description(),
                 item.startAt(), item.endAt(), item.obEligible(), item.publicVisible(), clock)).toList());
     }

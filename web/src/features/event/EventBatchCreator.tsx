@@ -3,6 +3,7 @@
 import { Button, Input, Textarea, Feedback } from "../../components/ui";
 
 import { useState, type FormEvent } from "react";
+import { ApiRequestError } from "../../lib/api";
 import { createEventsBatch, seoulDateKey, type EventInput } from "./events";
 import styles from "./EventEditor.module.css";
 
@@ -55,8 +56,8 @@ export function EventBatchCreator({ onCreated }: Props) {
       setSaved(`${items.length}개 일정을 등록했습니다.`);
       setDates([]);
       onCreated(month);
-    } catch {
-      setError("일정을 등록하지 못했습니다. 입력 내용과 중복 일정을 확인해 주세요.");
+    } catch (caught) {
+      setError(caught instanceof ApiRequestError ? caught.message : "일정을 등록하지 못했습니다. 잠시 뒤 다시 시도해 주세요.");
     } finally {
       setBusy(false);
     }
