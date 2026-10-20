@@ -413,7 +413,7 @@ class CheckInFlowTest {
                 + "('다음 주 연습','설명','2026-10-04 09:00:00','2026-10-04 12:00:00',FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))");
 
         String list = myList(active);
-        assertThat(list).contains("지난주 연습").doesNotContain("저녁 연습", "다음 주 연습");
+        assertThat(list).contains("지난주 연습", "\"startAt\":\"2026-09-20T09:00:00Z\"").doesNotContain("저녁 연습", "다음 주 연습");
         assertThat(list.indexOf("\"eventId\":" + recent + ",")).isNotNegative().isLessThan(list.indexOf("지난주 연습"));
     }
 }

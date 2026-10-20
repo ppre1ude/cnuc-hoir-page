@@ -62,6 +62,16 @@ describe("일정 중심 회원 화면", () => {
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
   });
 
+  it("내 출석 요약에 행사 날짜와 요일을 함께 보여 준다", async () => {
+    getMyAttendance.mockResolvedValue([
+      { eventId: 7, eventTitle: "정기 연습", startAt: "2026-09-20T09:00:00Z", status: "NOT_OPEN", checkInOpen: false },
+    ]);
+    renderWithSession(<EventCalendar />, ob);
+    const summary = screen.getByRole("region", { name: "내 출석 요약" });
+    expect(await within(summary).findByRole("link", { name: /09\.20 \(일\) 정기 연습.*출석 기록 없음/ }))
+      .toHaveAttribute("href", "/events/7");
+  });
+
   it("일정과 출석을 조회하는 동안 빈 기록으로 잘못 안내하지 않는다", () => {
     getEvents.mockReturnValue(new Promise(() => {}));
     getMyAttendance.mockReturnValue(new Promise(() => {}));

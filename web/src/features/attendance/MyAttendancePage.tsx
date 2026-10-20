@@ -4,11 +4,11 @@ import { Button, Feedback, PageHeader, SkeletonRows, StatusBadge } from "../../c
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getMyAttendance, myAttendanceLabel, type AttendanceState } from "./attendance";
+import { attendanceDate, getMyAttendance, myAttendanceLabel, type AttendanceRecord } from "./attendance";
 import styles from "./MyAttendancePage.module.css";
 
 export function MyAttendancePage() {
-  const [items, setItems] = useState<AttendanceState[]>([]);
+  const [items, setItems] = useState<AttendanceRecord[]>([]);
   const [error, setError] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [retry, setRetry] = useState(0);
@@ -24,7 +24,7 @@ export function MyAttendancePage() {
     {!loaded && !error && <SkeletonRows count={4} label="출석 기록을 불러오는 중입니다." className={styles.list} />}
     {loaded && items.length === 0 && !error && <p className={styles.empty}>출석 기록이 없습니다.</p>}
     {!error && loaded && items.length > 0 && <ul className={styles.list} aria-label="행사별 출석 기록">{items.map((item) => <li key={item.eventId}>
-      <Link href={`/events/${item.eventId}`}><span className={styles.eventTitle}>{item.eventTitle}</span><StatusBadge tone={item.status === "CHECKED_IN" ? "positive" : item.status === "MISSED" ? "negative" : "neutral"}>{myAttendanceLabel[item.status]}</StatusBadge><span aria-hidden="true" className={styles.arrow}>→</span></Link>
+      <Link href={`/events/${item.eventId}`}><time dateTime={item.startAt} className={styles.date}>{attendanceDate(item.startAt)}</time><span className={styles.eventTitle}>{item.eventTitle}</span><StatusBadge tone={item.status === "CHECKED_IN" ? "positive" : item.status === "MISSED" ? "negative" : "neutral"}>{myAttendanceLabel[item.status]}</StatusBadge><span aria-hidden="true" className={styles.arrow}>→</span></Link>
     </li>)}</ul>}
   </main>;
 }

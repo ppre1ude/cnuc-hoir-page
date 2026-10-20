@@ -5,6 +5,7 @@
 .list a:hover { background: var(--color-subtle); }
 .eventTitle { flex: 1; min-width: 0; font-weight: var(--weight-label); overflow-wrap: anywhere; }
 .list a > span:not(.eventTitle) { flex: none; }
+.date { flex: none; color: var(--color-primary); font-size: var(--text-label); font-weight: var(--weight-label); }
 .arrow { color: var(--color-primary); }
 .empty { margin: 0; padding: var(--space-6) var(--space-2); border-top: 2px solid var(--color-ink); border-bottom: 1px solid var(--color-line); color: var(--color-muted); }
 .skeletonHeader { composes: pageHeader from "../../components/ui/ui.module.css"; }
