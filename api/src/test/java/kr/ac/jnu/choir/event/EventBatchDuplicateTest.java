@@ -61,13 +61,19 @@ class EventBatchDuplicateTest {
     }
 
     private MockHttpServletResponse titledBatch(MockHttpSession session, String title, String... starts) throws Exception {
+        String[][] items = new String[starts.length][];
+        for (int index = 0; index < starts.length; index++) items[index] = new String[] {title, starts[index]};
+        return send(session, items);
+    }
+
+    private MockHttpServletResponse send(MockHttpSession session, String[]... items) throws Exception {
         String csrf = mvc.perform(get("/api/v1/auth/csrf").session(session)).andReturn().getResponse()
                 .getContentAsString().split("\"token\":\"", 2)[1].split("\"", 2)[0];
         StringBuilder events = new StringBuilder();
-        for (String start : starts) {
+        for (String[] item : items) {
             if (!events.isEmpty()) events.append(',');
-            String end = start.replace("T10:", "T12:");
-            events.append("{\"title\":\"").append(title).append("\",\"description\":\"\",\"startAt\":\"").append(start)
+            String end = item[1].replace("T10:", "T12:");
+            events.append("{\"title\":\"").append(item[0]).append("\",\"description\":\"\",\"startAt\":\"").append(item[1])
                     .append("\",\"endAt\":\"").append(end).append("\",\"obEligible\":false,\"publicVisible\":false}");
         }
         return mvc.perform(post("/api/v1/admin/events/batch").session(session).header("X-CSRF-TOKEN", csrf)
@@ -92,6 +98,15 @@ class EventBatchDuplicateTest {
         assertThat(titledBatch(session, "소프라노 파트연습", "2099-11-03T10:00:00Z").getStatus()).isEqualTo(201);
         assertThat(titledBatch(session, "알토 파트연습", "2099-11-03T10:00:00Z").getStatus()).isEqualTo(201);
         assertThat(titledBatch(session, "알토 파트연습", "2099-11-03T10:00:00Z").getStatus()).isEqualTo(409);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM event", Long.class)).isEqualTo(2);
+    }
+
+    @Test void oneBatchMayHoldDifferentTitlesAtTheSameTimeButNotTheSameTitleTwice() throws Exception {
+        MockHttpSession session = admin();
+        assertThat(send(session, new String[] {"테너 파트연습", "2099-12-01T10:00:00Z"},
+                new String[] {"베이스 파트연습", "2099-12-01T10:00:00Z"}).getStatus()).isEqualTo(201);
+        assertThat(send(session, new String[] {"정기 연습", "2099-12-08T10:00:00Z"},
+                new String[] {"정기 연습", "2099-12-08T10:00:00Z"}).getStatus()).isEqualTo(400);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM event", Long.class)).isEqualTo(2);
     }
 }
