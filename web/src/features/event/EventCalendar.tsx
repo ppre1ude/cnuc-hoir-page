@@ -29,6 +29,14 @@ function mondayOffset(month: string) {
   return (new Date(Date.UTC(year, number - 1, 1)).getUTCDay() + 6) % 7;
 }
 
+// 월말에도 다음 주 연습에 바로 응답할 수 있게 이번 달은 오늘부터 14일 뒤까지 함께 받습니다.
+function eventRange(month: string) {
+  const bounds = monthBounds(month);
+  if (month !== seoulDateKey(new Date()).slice(0, 7)) return bounds;
+  const soon = new Date(Date.now() + 14 * 86_400_000).toISOString();
+  return soon > bounds.to ? { from: bounds.from, to: soon } : bounds;
+}
+
 export function EventCalendar() {
   const session = useSession();
   const [month, setMonth] = useState(() => seoulDateKey(new Date()).slice(0, 7));
@@ -54,7 +62,7 @@ export function EventCalendar() {
 
   useEffect(() => {
     let alive = true;
-    const { from, to } = monthBounds(month);
+    const { from, to } = eventRange(month);
     getEvents(from, to).then((monthEvents) => {
       if (!alive) return;
       setEvents(monthEvents);
@@ -66,7 +74,7 @@ export function EventCalendar() {
 
   useEffect(() => {
     let alive = true;
-    const { from, to } = monthBounds(month);
+    const { from, to } = eventRange(month);
     getMyEventRsvps(from, to).then((items) => {
       if (!alive) return;
       setRsvpByEvent(Object.fromEntries(items.filter((item) => item.choice !== null)

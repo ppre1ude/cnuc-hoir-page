@@ -72,6 +72,23 @@ describe("일정 중심 회원 화면", () => {
       .toHaveAttribute("href", "/events/7");
   });
 
+  it("월말에는 다음 달 초 연습까지 받아 이달의 행사에서 바로 응답하게 한다", async () => {
+    vi.setSystemTime(new Date("2026-10-29T03:00:00Z"));
+    getEvents.mockResolvedValue([
+      { id: 11, title: "지난 연습", description: "", startAt: "2026-10-27T10:00:00Z", endAt: "2026-10-27T12:00:00Z", obEligible: false, publicVisible: false },
+      { id: 12, title: "전체 연습", description: "", startAt: "2026-11-02T10:00:00Z", endAt: "2026-11-02T12:00:00Z", obEligible: false, publicVisible: false },
+    ]);
+    renderWithSession(<EventCalendar />, sessionFixture({ memberType: "ACTIVE" }));
+    const list = screen.getByRole("region", { name: "선택한 행사" });
+    expect(await within(list).findByRole("group", { name: "전체 연습 참석 응답" })).toBeInTheDocument();
+    expect(within(list).getByRole("heading", { name: "전체 연습" })).toBeInTheDocument();
+    expect(getEvents).toHaveBeenCalledWith("2026-09-30T15:00:00.000Z", "2026-11-12T03:00:00.000Z");
+    expect(getMyEventRsvps).toHaveBeenCalledWith("2026-09-30T15:00:00.000Z", "2026-11-12T03:00:00.000Z");
+    fireEvent.click(screen.getByRole("button", { name: "다음 달" }));
+    await waitFor(() => expect(getEvents).toHaveBeenLastCalledWith("2026-10-31T15:00:00.000Z", "2026-11-30T15:00:00.000Z"));
+    expect(getMyEventRsvps).toHaveBeenLastCalledWith("2026-10-31T15:00:00.000Z", "2026-11-30T15:00:00.000Z");
+  });
+
   it("일정과 출석을 조회하는 동안 빈 기록으로 잘못 안내하지 않는다", () => {
     getEvents.mockReturnValue(new Promise(() => {}));
     getMyAttendance.mockReturnValue(new Promise(() => {}));
