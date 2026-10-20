@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactNode } from "react";
+import { Fragment, type ComponentProps, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import styles from "./ui.module.css";
@@ -71,4 +71,13 @@ export function SkeletonRows({ count = 4, label, className }: { count?: number; 
       <span className={styles.skeleton} style={{ width: "18%" }} />
     </div>)}
   </div>;
+}
+
+export function Linkify({ text }: { text: string }) {
+  return <>{text.split(/(https?:\/\/\S+)/).map((part, index) => {
+    if (index % 2 === 0) return part;
+    // 문장 끝의 마침표, 쉼표, 닫는 괄호가 주소에 붙어 잘못된 링크가 되지 않게 뗍니다.
+    const url = part.replace(/[.,)]+$/, "");
+    return <Fragment key={index}><a href={url} target="_blank" rel="noopener noreferrer" className={styles.textLink}>{url}</a>{part.slice(url.length)}</Fragment>;
+  })}</>;
 }

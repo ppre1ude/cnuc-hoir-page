@@ -33,6 +33,17 @@ describe("공지 목록", () => {
     expect(screen.queryByText("조사 본문")).not.toBeInTheDocument();
   });
 
+  it("공지 본문의 주소를 새 탭 링크로 연다", async () => {
+    const notice = { id: 4, title: "참가 신청", body: "신청: https://forms.gle/abc.", author: "운영진" };
+    getNotices.mockResolvedValue({ items: [notice], page: 0, size: 20, total: 1 });
+    getNotice.mockResolvedValue(notice);
+    renderWithSession(<NoticeList />);
+    fireEvent.click(await screen.findByRole("button", { name: "참가 신청" }));
+    const link = await screen.findByRole("link", { name: "https://forms.gle/abc" });
+    expect(link).toHaveAttribute("href", "https://forms.gle/abc");
+    expect(link).toHaveAttribute("target", "_blank");
+  });
+
   it("빠르게 다른 공지를 선택해도 늦게 도착한 본문이 현재 선택을 덮지 않는다", async () => {
     let resolveFirst!: (value: unknown) => void;
     const first = { id: 1, title: "첫 공지", body: "오래된 본문", author: "운영진" };
