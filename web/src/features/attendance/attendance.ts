@@ -9,6 +9,8 @@ export type AdminAttendance = { memberId: number; name: string; email: string; s
 export const attendanceLabel: Record<AttendanceStatus, string> = {
   CHECKED_IN: "출석 완료", MISSED: "미출석", NOT_OPEN: "출석 창 대기", NOT_ELIGIBLE: "출석 대상 아님",
 };
+// 내 출석 목록은 이미 시작한 행사만 받으므로 기록이 없을 때 출석 창을 기다린다고 하지 않습니다.
+export const myAttendanceLabel: Record<AttendanceStatus, string> = { ...attendanceLabel, NOT_OPEN: "출석 기록 없음" };
 
 export function getMyAttendance(): Promise<AttendanceState[]> { return apiRequest("/attendance/me"); }
 export function getEventAttendance(eventId: number): Promise<AttendanceState> {

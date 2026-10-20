@@ -23,3 +23,10 @@ test("조회 실패 후 재시도하면 행사 링크와 실제 출석 상태를
   expect(await screen.findByRole("link", { name: /정기 연습.*미출석/ })).toHaveAttribute("href", "/events/3");
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 });
+
+test("기록 없이 지난 행사는 출석 창을 기다린다고 하지 않는다", async () => {
+  getMyAttendance.mockResolvedValue([{ eventId: 4, eventTitle: "지난 공연", status: "NOT_OPEN", checkInOpen: false }]);
+  render(<MyAttendancePage />);
+  expect(await screen.findByRole("link", { name: /지난 공연.*출석 기록 없음/ })).toBeInTheDocument();
+  expect(screen.queryByText("출석 창 대기")).not.toBeInTheDocument();
+});

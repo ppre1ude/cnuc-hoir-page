@@ -8,6 +8,8 @@ import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
@@ -116,8 +118,10 @@ public class CheckInService {
     public List<AttendanceState> myList(Member member) {
         MemberRow target = memberRow(member.getId());
         // ob_eligible로 거르지 않고 계산된 상태로 거릅니다. 활동 단원 시절에 남은 출석·미출석 기록을 OB가 된 뒤에도 보여야 합니다.
-        return jdbc.query("SELECT id,title,ob_eligible FROM event ORDER BY start_at DESC,id DESC", (rs, row) ->
-                state(new EventRow(rs.getLong(1), rs.getString(2), rs.getBoolean(3)), target))
+        return jdbc.query("SELECT id,title,ob_eligible FROM event WHERE start_at <= ? ORDER BY start_at DESC,id DESC", (rs, row) ->
+                state(new EventRow(rs.getLong(1), rs.getString(2), rs.getBoolean(3)), target),
+                // event 시각은 UTC 기준 TIMESTAMP라 JVM 시간대를 타는 Timestamp 대신 UTC LocalDateTime으로 비교합니다.
+                LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC))
                 .stream().filter(state -> !"NOT_ELIGIBLE".equals(state.status())).toList();
     }
 

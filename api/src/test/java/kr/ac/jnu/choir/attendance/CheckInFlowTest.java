@@ -403,4 +403,17 @@ class CheckInFlowTest {
         assertThat(myList(active)).contains("\"eventId\":" + practice + ",", "\"eventId\":" + concert + ",",
                 "\"eventId\":" + formerConcert + ",");
     }
+
+    @Test void attendanceListShowsStartedEventsNewestFirst() throws Exception {
+        Member active = member("ACTIVE", false);
+        long recent = event(false);
+        jdbc.update("INSERT INTO event (title,description,start_at,end_at,ob_eligible,public_visible,created_at,updated_at) "
+                + "VALUES ('지난주 연습','설명','2026-09-20 09:00:00','2026-09-20 12:00:00',FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6)), "
+                + "('저녁 연습','설명','2026-09-27 13:00:00','2026-09-27 15:00:00',FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6)), "
+                + "('다음 주 연습','설명','2026-10-04 09:00:00','2026-10-04 12:00:00',FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))");
+
+        String list = myList(active);
+        assertThat(list).contains("지난주 연습").doesNotContain("저녁 연습", "다음 주 연습");
+        assertThat(list.indexOf("\"eventId\":" + recent + ",")).isNotNegative().isLessThan(list.indexOf("지난주 연습"));
+    }
 }
