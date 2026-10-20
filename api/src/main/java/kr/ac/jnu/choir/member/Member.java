@@ -154,9 +154,10 @@ public class Member {
         updatedAt = clock.instant();
     }
 
-    public void updateProfile(Part part, Integer cohort, Clock clock) {
+    public void updateProfile(Part part, Integer cohort, MemberType memberType, Clock clock) {
         this.part = part;
         this.cohort = cohort;
+        this.memberType = memberType;
         updatedAt = clock.instant();
     }
 

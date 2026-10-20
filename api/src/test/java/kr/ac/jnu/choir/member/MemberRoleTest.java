@@ -194,6 +194,48 @@ class MemberRoleTest {
         assertThat(put(caller(admin), "/api/v1/admin/members/" + target.getId() + "/profile", "{\"cohort\":0}")).isEqualTo(400);
     }
 
+    @Test void switchingToObRemovesRolesKeepsSiteAdminAndRecordsChange() throws Exception {
+        Member admin = member("관리자", true);
+        Member target = member("졸업 단원", true);
+        grant(target, "TREASURER", null, null, null, admin);
+        grant(target, "SECTION_LEAD", null, null, "BASS", admin);
+
+        assertThat(put(caller(admin), "/api/v1/admin/members/" + target.getId() + "/profile",
+                "{\"part\":\"BASS\",\"cohort\":3,\"memberType\":\"OB\"}")).isEqualTo(204);
+        assertThat(me(target)).contains("\"memberType\":\"OB\"").contains("\"roles\":[]").contains("\"admin\":true");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM member_role WHERE member_id = ?", Long.class, target.getId())).isZero();
+        assertThat(jdbc.queryForObject("SELECT reason FROM admin_action_log WHERE target_member_id = ? AND action = 'PROFILE_UPDATE'",
+                String.class, target.getId())).contains("구분 ACTIVE→OB").contains("TREASURER").contains("SECTION_LEAD");
+
+        assertThat(put(caller(admin), "/api/v1/admin/members/" + target.getId() + "/profile",
+                "{\"part\":\"BASS\",\"cohort\":3,\"memberType\":\"ACTIVE\"}")).isEqualTo(204);
+        assertThat(me(target)).contains("\"memberType\":\"ACTIVE\"");
+    }
+
+    @Test void presidentCannotStripLeadershipBySwitchingToOb() throws Exception {
+        Member admin = member("관리자", true);
+        Member president = member("단장", false);
+        grant(president, "PRESIDENT", null, null, null, admin);
+        Member vice = member("부단장", false);
+        grant(vice, "VICE_PRESIDENT", null, null, null, admin);
+
+        assertThat(put(caller(president), "/api/v1/admin/members/" + vice.getId() + "/profile",
+                "{\"memberType\":\"OB\"}")).isEqualTo(403);
+        assertThat(me(vice)).contains("\"memberType\":\"ACTIVE\"").contains("\"role\":\"VICE_PRESIDENT\"");
+    }
+
+    @Test void memberTypeChangesOnlyForApprovedAccounts() throws Exception {
+        Member admin = member("관리자", true);
+        Member pending = member("신청자", false);
+        jdbc.update("UPDATE member SET status = 'APPROVAL_PENDING', member_type = NULL WHERE id = ?", pending.getId());
+
+        assertThat(put(caller(admin), "/api/v1/admin/members/" + pending.getId() + "/profile",
+                "{\"memberType\":\"OB\"}")).isEqualTo(409);
+        assertThat(put(caller(admin), "/api/v1/admin/members/" + pending.getId() + "/profile",
+                "{\"cohort\":4}")).isEqualTo(204);
+        assertThat(jdbc.queryForObject("SELECT member_type IS NULL FROM member WHERE id = ?", Boolean.class, pending.getId())).isTrue();
+    }
+
     @Test void memberListIncludesRoles() throws Exception {
         Member admin = member("관리자", true);
         Member lead = member("수석", false);

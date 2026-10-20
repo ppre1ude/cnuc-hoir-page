@@ -42,7 +42,7 @@ public class AdminMemberRoleController {
 
     @PutMapping("/profile")
     public ResponseEntity<Void> profile(HttpServletRequest request, @PathVariable long id, @RequestBody ProfileInput body) {
-        service.updateProfile(sessions.require(request, Permission.MANAGE_ROLES).getId(), id, body.part(), body.cohort());
+        service.updateProfile(sessions.require(request, Permission.MANAGE_ROLES).getId(), id, body.part(), body.cohort(), body.memberType());
         return ResponseEntity.noContent().build();
     }
 
@@ -57,7 +57,7 @@ public class AdminMemberRoleController {
     }
 
     public record RoleInput(@NotNull Role role, Department department, Unit unit, Part part) {}
-    public record ProfileInput(Part part, Integer cohort) {}
+    public record ProfileInput(Part part, Integer cohort, MemberType memberType /* 없으면 그대로 */) {}
     public record SiteAdminInput(@NotNull Boolean admin) {}
     public record RoleItem(Long id, Role role, Department department, Unit unit, Part part) {}
 }

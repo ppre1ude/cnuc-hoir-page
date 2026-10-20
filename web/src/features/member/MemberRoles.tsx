@@ -15,10 +15,12 @@ export function MemberRoles({ item, session, onChanged }: { item: MemberItem; se
   const [part, setPart] = useState<Part>("SOPRANO");
   const [profilePart, setProfilePart] = useState<Part | "">(item.part ?? "");
   const [cohort, setCohort] = useState(item.cohort === null ? "" : String(item.cohort));
+  const [memberType, setMemberType] = useState<"ACTIVE" | "OB">(item.memberType ?? "ACTIVE");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const leadership = can(session, "MANAGE_SITE_ADMINS");
-  const eligible = item.status === "APPROVED" && item.memberType === "ACTIVE";
+  const approved = item.status === "APPROVED";
+  const eligible = approved && item.memberType === "ACTIVE";
   // 단장·부단장은 사이트 관리자만 지정합니다.
   const choices = roles.filter((value) => leadership || (value !== "PRESIDENT" && value !== "VICE_PRESIDENT"));
 
@@ -41,8 +43,10 @@ export function MemberRoles({ item, session, onChanged }: { item: MemberItem; se
 
   function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void run(() => updateMemberProfile(item.id, { part: profilePart || null, cohort: cohort.trim() ? Number(cohort) : null }),
-      "파트와 기수를 저장하지 못했습니다.");
+    if (memberType === "OB" && item.memberType !== "OB" && item.roles.length > 0
+      && !window.confirm(`OB로 바꾸면 ${item.name}의 직책(${item.roles.map(describeRole).join(", ")})이 모두 해제됩니다. 계속할까요?`)) return;
+    void run(() => updateMemberProfile(item.id, { part: profilePart || null, cohort: cohort.trim() ? Number(cohort) : null,
+      ...(approved ? { memberType } : {}) }), "단원 정보를 저장하지 못했습니다.");
   }
 
   if (!can(session, "MANAGE_ROLES")) {
@@ -55,13 +59,19 @@ export function MemberRoles({ item, session, onChanged }: { item: MemberItem; se
 
   return <div className={styles.roles}>
     <form className={styles.inlineForm} onSubmit={saveProfile}>
+      {approved && <>
+        <label htmlFor={`member-type-${item.id}`}>단원 구분</label>
+        <Select id={`member-type-${item.id}`} value={memberType} onChange={(event) => setMemberType(event.target.value as "ACTIVE" | "OB")}>
+          <option value="ACTIVE">활동 단원</option><option value="OB">OB</option>
+        </Select>
+      </>}
       <label htmlFor={`part-${item.id}`}>파트</label>
       <Select id={`part-${item.id}`} value={profilePart} onChange={(event) => setProfilePart(event.target.value as Part | "")}>
         <option value="">미지정</option>{parts.map((value) => <option key={value} value={value}>{partLabel[value]}</option>)}
       </Select>
       <label htmlFor={`cohort-${item.id}`}>기수</label>
       <Input id={`cohort-${item.id}`} type="number" min={1} value={cohort} onChange={(event) => setCohort(event.target.value)} />
-      <Button variant="secondary" size="small" type="submit" disabled={busy}>파트·기수 저장</Button>
+      <Button variant="secondary" size="small" type="submit" disabled={busy}>저장</Button>
     </form>
     <p className={styles.roleList}>
       {item.roles.length === 0 && <span>직책 없음</span>}

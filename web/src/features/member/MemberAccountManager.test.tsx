@@ -48,7 +48,7 @@ test("권한이 없는 기능은 가리고 조회 권한만 있으면 목록만 
   await screen.findByRole("heading", { name: "단원" });
   expect(screen.queryByRole("button", { name: "접근 해제" })).not.toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: "단원 추가" })).not.toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "파트·기수 저장" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "저장" })).not.toBeInTheDocument();
 });
 
 test("자기 행의 직책을 바꾸면 세션을 다시 받습니다", async () => {

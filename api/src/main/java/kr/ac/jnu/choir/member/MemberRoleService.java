@@ -1,6 +1,8 @@
 package kr.ac.jnu.choir.member;
 
 import java.time.Clock;
+import java.util.List;
+import java.util.stream.Collectors;
 import kr.ac.jnu.choir.auth.Permission;
 import kr.ac.jnu.choir.auth.PermissionService;
 import kr.ac.jnu.choir.common.AdminActionLog;
@@ -60,16 +62,32 @@ public class MemberRoleService {
     }
 
     @Transactional
-    public void updateProfile(long actorId, long targetId, Part part, Integer cohort) {
+    public void updateProfile(long actorId, long targetId, Part part, Integer cohort, MemberType memberType) {
         Locked locked = lock(actorId, targetId, Permission.MANAGE_ROLES);
         Member actor = locked.actor();
         if (cohort != null && cohort < 1) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_COHORT", "기수는 1 이상이어야 합니다.");
         }
         Member target = locked.target();
-        target.updateProfile(part, cohort, clock);
+        MemberType before = target.getMemberType();
+        MemberType type = memberType == null ? before : memberType;
+        if (type != before && target.getStatus() != AccountStatus.APPROVED) {
+            throw new ApiException(HttpStatus.CONFLICT, "MEMBER_TYPE_LOCKED", "승인된 단원만 단원 구분을 바꿀 수 있습니다.");
+        }
+        String removed = "";
+        if (type == MemberType.OB) {
+            List<MemberRole> held = roles.findByMemberIdOrderByAssignedAtAsc(targetId);
+            // OB는 직책을 가질 수 없어 모두 지웁니다. 직책 관리 권한만으로 단장·부단장 직책이 지워지지 않게 직책마다 권한을 봅니다.
+            if (held.stream().anyMatch(role -> !permissions.of(actor).contains(required(role.getRole())))) throw denied();
+            roles.deleteAll(held);
+            if (!held.isEmpty()) removed = ", 직책 해제 " + held.stream()
+                    .map(role -> describe(role.getRole(), role.getDepartment(), role.getUnit(), role.getPart()))
+                    .collect(Collectors.joining("/"));
+        }
+        target.updateProfile(part, cohort, type, clock);
         logs.save(new AdminActionLog(actor, target, "PROFILE_UPDATE", target.getStatus(), target.getStatus(),
-                (part == null ? "파트 없음" : part.name()) + ", 기수 " + (cohort == null ? "없음" : cohort), clock.instant()));
+                (part == null ? "파트 없음" : part.name()) + ", 기수 " + (cohort == null ? "없음" : cohort)
+                        + ", 구분 " + (type == before ? String.valueOf(type) : before + "→" + type) + removed, clock.instant()));
     }
 
     @Transactional
