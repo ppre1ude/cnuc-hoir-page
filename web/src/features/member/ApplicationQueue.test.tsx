@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, onTestFinished, test, vi } from "vitest"
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ApplicationQueue } from "./ApplicationQueue";
-import { approveApplication, getApplications, rejectApplication } from "./adminMembers";
+import { approveApplication, getApplications, rejectApplication, type ApplicationItem } from "./adminMembers";
 import { ApiRequestError } from "../../lib/api";
 
 vi.mock("./adminMembers", () => ({ getApplications: vi.fn(), approveApplication: vi.fn(), rejectApplication: vi.fn() }));
@@ -88,4 +88,12 @@ test("신청자가 적은 파트와 기수를 이름 옆에 보이고 적지 않
   expect(screen.getByRole("heading", { name: "Kim · 정보 미입력" })).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "Kim 승인" }));
   expect(approveApplication).toHaveBeenCalledWith(4, "ACTIVE");
+});
+
+test("API가 아직 파트와 기수를 보내지 않아도 정보 미입력으로 표시합니다", async () => {
+  // 웹이 API보다 먼저 배포되면 예전 응답에는 part와 cohort 키가 없습니다.
+  const legacy = { id: 5, name: "Lee", email: "lee@example.org", status: "APPROVAL_PENDING", createdAt: "2026-09-27T00:00:00Z" } as unknown as ApplicationItem;
+  vi.mocked(getApplications).mockResolvedValue({ items: [legacy], page: 0, size: 20, total: 1 });
+  render(<ApplicationQueue />);
+  expect(await screen.findByRole("heading", { name: "Lee · 정보 미입력" })).toBeInTheDocument();
 });

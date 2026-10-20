@@ -76,7 +76,7 @@ function ApplicationRow({ item, busy, onApprove, onReject }: {
   const [type, setType] = useState<"ACTIVE" | "OB">("ACTIVE");
   const [reason, setReason] = useState("");
   return <article className={styles.row}>
-    <h2>{item.part === null && item.cohort === null ? `${item.name} · 정보 미입력` : rosterName(item)}</h2>
+    <h2>{item.part == null && item.cohort == null ? `${item.name} · 정보 미입력` : rosterName(item)}</h2>
     <p>{item.email}</p>
     <p>신청일: {new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", dateStyle: "medium" }).format(new Date(item.createdAt))}</p>
     <div className={styles.fieldGroup}><label htmlFor={`type-${item.id}`}>{item.name} 단원 구분</label>
