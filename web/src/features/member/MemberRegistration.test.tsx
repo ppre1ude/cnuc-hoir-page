@@ -59,3 +59,17 @@ test("운영진 권한을 선택하면 운영진으로, 아니면 일반 단원�
   expect(addOperatorPreapproval).toHaveBeenCalledWith({ email: "operator@gmail.com", memberType: "ACTIVE" });
   expect(addAllowlist).toHaveBeenCalledTimes(1);
 });
+
+test("Gmail이 아닌 주소를 입력하면 바로 승인되지 않는다고 경고합니다", async () => {
+  render(<MemberRegistration session={{ id: 1, name: "관리자", status: "APPROVED", memberType: "ACTIVE", admin: true }} />);
+  await screen.findByText("등록된 단원 이메일이 없습니다.");
+  expect(screen.getByText(/@gmail\.com 주소는 그 구글 계정으로 로그인하면 바로 승인됩니다\. 다른 주소로 만든 구글 계정은/)).toBeInTheDocument();
+
+  const input = screen.getByLabelText("구글 계정 이메일");
+  await userEvent.type(input, "hong@gmial.com");
+  expect(input).toHaveAccessibleDescription(/@gmail\.com 주소가 아니면 로그인해도 바로 승인되지 않습니다/);
+
+  await userEvent.clear(input);
+  await userEvent.type(input, "Hong@Gmail.com");
+  expect(screen.queryByText(/@gmail\.com 주소가 아니면/)).not.toBeInTheDocument();
+});
