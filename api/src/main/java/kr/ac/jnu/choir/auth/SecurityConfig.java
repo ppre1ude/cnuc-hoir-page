@@ -22,7 +22,7 @@ public class SecurityConfig {
                 .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                 .requestMatchers("/api/v1/auth/csrf", "/api/v1/auth/google/nonce", "/api/v1/auth/google",
                         "/api/v1/auth/account-setup/confirm").permitAll()
-                .requestMatchers("/api/v1/auth/me", "/api/v1/auth/logout").authenticated()
+                .requestMatchers("/api/v1/auth/me", "/api/v1/auth/logout", "/api/v1/auth/application").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/v1/public/events").permitAll()
                 .requestMatchers("/api/v1/admin/**").hasRole("MEMBER")
                 .requestMatchers("/api/v1/**").hasRole("MEMBER")

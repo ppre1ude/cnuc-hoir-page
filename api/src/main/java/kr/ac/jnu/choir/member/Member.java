@@ -161,6 +161,16 @@ public class Member {
         updatedAt = clock.instant();
     }
 
+    public void reportApplication(String name, Part part, int cohort, Clock clock) {
+        if (status != AccountStatus.APPROVAL_PENDING) {
+            throw new IllegalStateException("승인 대기 중인 계정만 가입 정보를 고칠 수 있습니다.");
+        }
+        this.name = name.strip();
+        this.part = part;
+        this.cohort = cohort;
+        updatedAt = clock.instant();
+    }
+
     public void setSiteAdmin(boolean siteAdmin, Clock clock) {
         admin = siteAdmin;
         updatedAt = clock.instant();

@@ -1,15 +1,22 @@
 package kr.ac.jnu.choir.auth;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import java.util.List;
 import kr.ac.jnu.choir.member.Member;
+import kr.ac.jnu.choir.member.MemberApprovalService;
+import kr.ac.jnu.choir.member.Part;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -24,10 +31,12 @@ public class AuthController {
     private final GoogleLoginNonceService nonces;
     private final ClientIpResolver clientIps;
     private final PermissionService permissions;
+    private final MemberApprovalService approvals;
 
     public AuthController(SessionMemberService sessions, LoginAttemptLimiter limiter,
             GoogleIdentityVerifier google, GoogleMemberService googleMembers,
-            GoogleLoginNonceService nonces, ClientIpResolver clientIps, PermissionService permissions) {
+            GoogleLoginNonceService nonces, ClientIpResolver clientIps, PermissionService permissions,
+            MemberApprovalService approvals) {
         this.sessions = sessions;
         this.limiter = limiter;
         this.google = google;
@@ -35,6 +44,7 @@ public class AuthController {
         this.nonces = nonces;
         this.clientIps = clientIps;
         this.permissions = permissions;
+        this.approvals = approvals;
     }
 
     @GetMapping("/csrf")
@@ -72,6 +82,12 @@ public class AuthController {
         return response(member);
     }
 
+    @PutMapping("/application")
+    public MeResponse reportApplication(@Valid @RequestBody ApplicationRequest body, HttpServletRequest request) {
+        Member member = sessions.current(request);
+        return response(approvals.reportApplication(member.getId(), body.name(), body.part(), body.cohort()));
+    }
+
     @PostMapping("/account-setup/confirm")
     public MeResponse completeSetup(@Valid @RequestBody CompleteSetupRequest body, HttpServletRequest request) {
         String ip = clientIps.resolve(request);
@@ -106,6 +122,12 @@ public class AuthController {
     public record NonceResponse(String nonce) {}
     public record GoogleRequest(@NotBlank String credential) {}
     public record CompleteSetupRequest(@NotBlank String token, @NotBlank String credential) {}
+    public record ApplicationRequest(@NotBlank @Size(max = 40) String name,
+            @NotNull @Min(1) @Max(99) Integer cohort, @NotNull Part part) {
+        public ApplicationRequest {
+            if (name != null) name = name.strip();
+        }
+    }
     public record RoleItem(Long id, String role, String department, String unit, String part) {}
     public record MeResponse(Long id, String name, String email, String status, String memberType, boolean admin,
             String part, Integer cohort, List<RoleItem> roles, List<String> permissions) {}
