@@ -27,6 +27,10 @@ export function rejectApplication(id: number, reason: string): Promise<void> {
   });
 }
 
+export function cancelRejection(id: number): Promise<void> {
+  return apiRequest<void>(`/admin/applications/${id}/cancel-rejection`, { method: "POST" });
+}
+
 export function revokeMember(id: number, reason: string): Promise<void> {
   return apiRequest<void>(`/admin/members/${id}/revoke`, {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason }),
@@ -119,7 +123,8 @@ export function removeOperatorPreapproval(id: number): Promise<void> {
   return apiRequest<void>(`/admin/operator-preapprovals/${id}`, { method: "DELETE" });
 }
 
-export function updateMemberProfile(id: number, input: { part: Part | null; cohort: number | null }): Promise<void> {
+export function updateMemberProfile(id: number,
+  input: { part: Part | null; cohort: number | null; memberType?: "ACTIVE" | "OB" }): Promise<void> {
   return apiRequest<void>(`/admin/members/${id}/profile`, {
     method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
   });

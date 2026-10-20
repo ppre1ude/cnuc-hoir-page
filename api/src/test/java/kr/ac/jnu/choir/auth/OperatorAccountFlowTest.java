@@ -162,6 +162,7 @@ class OperatorAccountFlowTest {
                 .contains("\"status\":\"APPROVED\"");
         assertThat(attempts("GOOGLE_IP")).isEqualTo(attemptsBeforeLogin);
         assertThat(members.findByEmailIgnoreCase(gmail).orElseThrow().getMemberType().name()).isEqualTo("ACTIVE");
+        assertThat(members.findByEmailIgnoreCase(gmail).orElseThrow().getName()).isEqualTo("자동 승인");
         MockHttpSession externalSession = new MockHttpSession();
         assertThat(login(externalSession, "external-credential", externalSubject, external, "승인 대기", false))
                 .contains("\"status\":\"APPROVAL_PENDING\"");
@@ -182,10 +183,40 @@ class OperatorAccountFlowTest {
         assertThat(login(approvedSession, "external-credential", externalSubject, external, "승인 대기", false))
                 .contains("\"status\":\"APPROVED\"");
 
+        String pending = mvc.perform(get("/api/v1/admin/allowlist").session(adminSession))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(pending).doesNotContain(gmail);
         assertThat(mvc.perform(delete("/api/v1/admin/allowlist/" + gmailEntry)
                 .session(adminSession).header("X-CSRF-TOKEN", adminCsrf))
-                .andReturn().getResponse().getStatus()).isEqualTo(204);
+                .andReturn().getResponse().getStatus()).isEqualTo(404);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM admin_action_log a JOIN member m ON m.id = a.target_member_id "
+                + "WHERE m.email = ? AND a.action = 'ALLOWLIST_APPROVE'", Integer.class, gmail)).isEqualTo(1);
         assertThat(members.findByEmailIgnoreCase(gmail).orElseThrow().getStatus()).isEqualTo(AccountStatus.APPROVED);
+    }
+
+    @Test void cancelledRejectionLetsAllowlistApproveOnNextLogin() throws Exception {
+        Member admin = admin();
+        MockHttpSession adminSession = sessionFor(admin);
+        String adminCsrf = csrf(adminSession);
+        String gmail = "rejected" + UUID.randomUUID().toString().replace("-", "") + "@gmail.com";
+        String subject = "sub-" + UUID.randomUUID();
+        assertThat(login(new MockHttpSession(), "rejected-credential", subject, gmail, "모르는 이름", true))
+                .contains("\"status\":\"APPROVAL_PENDING\"");
+        long id = members.findByEmailIgnoreCase(gmail).orElseThrow().getId();
+        assertThat(mvc.perform(post("/api/v1/admin/applications/" + id + "/reject").session(adminSession)
+                .header("X-CSRF-TOKEN", adminCsrf).contentType("application/json")
+                .content("{\"reason\":\"명단에 없음\"}")).andReturn().getResponse().getStatus()).isEqualTo(204);
+        addAllowlist(adminSession, adminCsrf, gmail, "실제 단원");
+        assertThat(login(new MockHttpSession(), "rejected-credential", subject, gmail, "모르는 이름", true))
+                .contains("\"status\":\"REJECTED\"");
+
+        assertThat(mvc.perform(post("/api/v1/admin/applications/" + id + "/cancel-rejection").session(adminSession)
+                .header("X-CSRF-TOKEN", adminCsrf)).andReturn().getResponse().getStatus()).isEqualTo(204);
+        assertThat(login(new MockHttpSession(), "rejected-credential", subject, gmail, "모르는 이름", true))
+                .contains("\"status\":\"APPROVED\"");
+        Member approved = members.findById(id).orElseThrow();
+        assertThat(approved.getName()).isEqualTo("실제 단원");
+        assertThat(approved.getStatus()).isEqualTo(AccountStatus.APPROVED);
     }
 
     @Test void preapprovedOperatorGetsAdminOnFirstVerifiedGoogleLogin() throws Exception {
@@ -215,9 +246,11 @@ class OperatorAccountFlowTest {
                 SELECT COUNT(*) FROM admin_action_log
                 WHERE target_member_id = ? AND action = 'OPERATOR_PREAPPROVAL'
                 """, Integer.class, chair.getId())).isEqualTo(1);
+        assertThat(mvc.perform(get("/api/v1/admin/operator-preapprovals").session(adminSession))
+                .andReturn().getResponse().getContentAsString()).doesNotContain(email);
         assertThat(mvc.perform(delete("/api/v1/admin/operator-preapprovals/" + entryId)
                 .session(adminSession).header("X-CSRF-TOKEN", csrf))
-                .andReturn().getResponse().getStatus()).isEqualTo(204);
+                .andReturn().getResponse().getStatus()).isEqualTo(404);
         assertThat(members.findById(chair.getId()).orElseThrow().isAdmin()).isTrue();
         assertThat(mvc.perform(post("/api/v1/admin/members/" + chair.getId() + "/revoke")
                 .session(adminSession).header("X-CSRF-TOKEN", csrf).contentType("application/json")
@@ -275,10 +308,26 @@ class OperatorAccountFlowTest {
                 .contains("\"admin\":false");
     }
 
+    @Test void allowlistNameReplacesGoogleProfileNameOnApproval() throws Exception {
+        Member admin = admin();
+        MockHttpSession adminSession = sessionFor(admin);
+        String adminCsrf = csrf(adminSession);
+        String gmail = "named" + UUID.randomUUID().toString().replace("-", "") + "@gmail.com";
+        addAllowlist(adminSession, adminCsrf, gmail, "홍길동");
+        assertThat(login(new MockHttpSession(), "named-credential", "sub-" + UUID.randomUUID(), gmail, "Jae", true))
+                .contains("\"status\":\"APPROVED\"").contains("\"name\":\"홍길동\"");
+        assertThat(members.findByEmailIgnoreCase(gmail).orElseThrow().getName()).isEqualTo("홍길동");
+    }
+
     private long addAllowlist(MockHttpSession session, String csrf, String email) throws Exception {
+        return addAllowlist(session, csrf, email, null);
+    }
+
+    private long addAllowlist(MockHttpSession session, String csrf, String email, String name) throws Exception {
         String body = mvc.perform(post("/api/v1/admin/allowlist").session(session)
                 .header("X-CSRF-TOKEN", csrf).contentType("application/json")
-                .content("{\"email\":\"" + email + "\",\"memberType\":\"ACTIVE\"}"))
+                .content("{\"email\":\"" + email + "\",\"memberType\":\"ACTIVE\""
+                        + (name == null ? "" : ",\"name\":\"" + name + "\"") + "}"))
                 .andReturn().getResponse().getContentAsString();
         return mapper.readTree(body).get("id").asLong();
     }

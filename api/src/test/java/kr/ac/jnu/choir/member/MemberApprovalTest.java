@@ -146,6 +146,39 @@ class MemberApprovalTest {
         assertThat(mvc.perform(get("/api/v1/auth/me").session(oldSession)).andReturn().getResponse().getStatus()).isEqualTo(401);
     }
 
+    @Test void cancellingRejectionReturnsAccountToApplicationQueue() throws Exception {
+        Member admin = member("APPROVED", true);
+        Member pending = member("APPROVAL_PENDING", false);
+        var csrf = mvc.perform(get("/api/v1/auth/csrf").session(session(admin))).andReturn();
+        MockHttpSession adminSession = (MockHttpSession) csrf.getRequest().getSession(false);
+        String token = csrf.getResponse().getContentAsString().split("\"token\":\"", 2)[1].split("\"", 2)[0];
+        String cancel = "/api/v1/admin/applications/" + pending.getId() + "/cancel-rejection";
+        assertThat(mvc.perform(post(cancel).session(adminSession).header("X-CSRF-TOKEN", token))
+                .andReturn().getResponse().getStatus()).isEqualTo(409);
+        assertThat(mvc.perform(post("/api/v1/admin/applications/" + pending.getId() + "/reject")
+                .session(adminSession).header("X-CSRF-TOKEN", token).contentType("application/json")
+                .content("{\"reason\":\"모르는 이메일\"}")).andReturn().getResponse().getStatus()).isEqualTo(204);
+        assertThat(mvc.perform(get("/api/v1/admin/applications?size=100").session(adminSession))
+                .andReturn().getResponse().getContentAsString()).doesNotContain(pending.getEmail());
+
+        assertThat(mvc.perform(post(cancel).session(adminSession).header("X-CSRF-TOKEN", token))
+                .andReturn().getResponse().getStatus()).isEqualTo(204);
+        assertThat(members.findById(pending.getId()).orElseThrow().getStatus()).isEqualTo(AccountStatus.APPROVAL_PENDING);
+        assertThat(mvc.perform(get("/api/v1/admin/applications?size=100").session(adminSession))
+                .andReturn().getResponse().getContentAsString()).contains(pending.getEmail());
+        assertThat(jdbc.queryForObject("""
+                SELECT actor_member_id || ' ' || previous_status || ' ' || new_status FROM admin_action_log
+                WHERE target_member_id = ? AND action = 'REJECT_CANCEL'
+                """, String.class, pending.getId())).isEqualTo(admin.getId() + " REJECTED APPROVAL_PENDING");
+        assertThat(mvc.perform(post(cancel).session(adminSession).header("X-CSRF-TOKEN", token))
+                .andReturn().getResponse().getStatus()).isEqualTo(409);
+
+        assertThat(mvc.perform(post("/api/v1/admin/applications/" + pending.getId() + "/approve")
+                .session(adminSession).header("X-CSRF-TOKEN", token).contentType("application/json")
+                .content("{\"memberType\":\"ACTIVE\"}")).andReturn().getResponse().getStatus()).isEqualTo(204);
+        assertThat(members.findById(pending.getId()).orElseThrow().getStatus()).isEqualTo(AccountStatus.APPROVED);
+    }
+
     @Test void mutualAdminRevocationCannotRemoveAllAdmins() throws Exception {
         Member first = member("APPROVED", true);
         Member second = member("APPROVED", true);

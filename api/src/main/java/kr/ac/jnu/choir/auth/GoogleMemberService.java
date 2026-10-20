@@ -112,9 +112,12 @@ public class GoogleMemberService {
     private void approveFromAllowlist(Member member) {
         allowlist.findByEmailIgnoreCase(member.getEmail()).ifPresent(entry -> {
             AccountStatus before = member.getStatus();
+            // 구글 프로필 이름보다 운영진이 명단에 적은 이름이 단원 명단에서 알아보기 쉽습니다.
+            if (entry.getDisplayName() != null) member.rename(entry.getDisplayName(), clock);
             member.approve(entry.getMemberType(), clock);
             logs.save(new AdminActionLog(entry.getCreatedBy(), member, "ALLOWLIST_APPROVE", before,
                     member.getStatus(), null, clock.instant()));
+            allowlist.delete(entry);
         });
     }
 

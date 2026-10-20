@@ -1,4 +1,4 @@
-import { afterEach, expect, test, vi } from "vitest";
+import { afterEach, expect, onTestFinished, test, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemberRoles } from "./MemberRoles";
@@ -48,6 +48,45 @@ test("파트와 기수를 저장합니다", async () => {
   await userEvent.selectOptions(screen.getByLabelText("파트"), "TENOR");
   await userEvent.clear(screen.getByLabelText("기수"));
   await userEvent.type(screen.getByLabelText("기수"), "3");
-  await userEvent.click(screen.getByRole("button", { name: "파트·기수 저장" }));
+  await userEvent.click(screen.getByRole("button", { name: "저장" }));
   expect(updateMemberProfile).toHaveBeenCalledWith(7, { part: "TENOR", cohort: 3 });
+});
+
+test("구분이 비어 있는 승인 계정은 미지정으로 보이고, 파트만 저장하면 구분을 바꾸지 않습니다", async () => {
+  vi.mocked(updateMemberProfile).mockResolvedValue(undefined);
+  render(<MemberRoles item={{ ...item, memberType: null, roles: [] }} session={president} onChanged={vi.fn()} />);
+  expect(screen.getByLabelText("단원 구분")).toHaveDisplayValue("미지정");
+  await userEvent.selectOptions(screen.getByLabelText("파트"), "TENOR");
+  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  expect(updateMemberProfile).toHaveBeenLastCalledWith(7, { part: "TENOR", cohort: 2 });
+});
+
+test("직책이 있는 단원을 OB로 바꾸기 전에 직책 해제를 확인합니다", async () => {
+  vi.mocked(updateMemberProfile).mockResolvedValue(undefined);
+  const confirm = vi.spyOn(window, "confirm").mockReturnValueOnce(false).mockReturnValueOnce(true);
+  onTestFinished(() => confirm.mockRestore());
+  render(<MemberRoles item={item} session={president} onChanged={vi.fn()} />);
+  await userEvent.selectOptions(screen.getByLabelText("단원 구분"), "OB");
+  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  expect(confirm).toHaveBeenCalledWith(expect.stringContaining("직책(알토수석)이 모두 해제됩니다"));
+  expect(updateMemberProfile).not.toHaveBeenCalled();
+  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  expect(updateMemberProfile).toHaveBeenCalledWith(7, { part: "ALTO", cohort: 2, memberType: "OB" });
+});
+
+test("직책이 없으면 확인 없이 OB로 바꾸고, 승인 전 계정에는 단원 구분을 보내지 않습니다", async () => {
+  vi.mocked(updateMemberProfile).mockResolvedValue(undefined);
+  const confirm = vi.spyOn(window, "confirm");
+  onTestFinished(() => confirm.mockRestore());
+  const { unmount } = render(<MemberRoles item={{ ...item, roles: [] }} session={president} onChanged={vi.fn()} />);
+  await userEvent.selectOptions(screen.getByLabelText("단원 구분"), "OB");
+  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  expect(confirm).not.toHaveBeenCalled();
+  expect(updateMemberProfile).toHaveBeenLastCalledWith(7, { part: "ALTO", cohort: 2, memberType: "OB" });
+  unmount();
+
+  render(<MemberRoles item={{ ...item, status: "APPROVAL_PENDING", memberType: null, roles: [] }} session={president} onChanged={vi.fn()} />);
+  expect(screen.queryByLabelText("단원 구분")).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  expect(updateMemberProfile).toHaveBeenLastCalledWith(7, { part: "ALTO", cohort: 2 });
 });

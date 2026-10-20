@@ -149,9 +149,15 @@ public class Member {
         return cohort;
     }
 
-    public void updateProfile(Part part, Integer cohort, Clock clock) {
+    public void rename(String name, Clock clock) {
+        this.name = name.strip();
+        updatedAt = clock.instant();
+    }
+
+    public void updateProfile(Part part, Integer cohort, MemberType memberType, Clock clock) {
         this.part = part;
         this.cohort = cohort;
+        this.memberType = memberType;
         updatedAt = clock.instant();
     }
 
@@ -217,6 +223,12 @@ public class Member {
 
     public void reject(Clock clock) {
         status = AccountStatus.REJECTED;
+        authVersion++;
+        updatedAt = clock.instant();
+    }
+
+    public void reopenApplication(Clock clock) {
+        status = AccountStatus.APPROVAL_PENDING;
         authVersion++;
         updatedAt = clock.instant();
     }

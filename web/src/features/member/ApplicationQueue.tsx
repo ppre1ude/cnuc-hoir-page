@@ -86,6 +86,8 @@ function ApplicationRow({ item, busy, onApprove, onReject }: {
     <div className={styles.actions}><Button variant="primary" type="button" disabled={busy} onClick={() => onApprove(type)}>{item.name} 승인</Button></div>
     <div className={styles.fieldGroup}><label htmlFor={`reason-${item.id}`}>{item.name} 반려 이유</label>
       <Textarea id={`reason-${item.id}`} value={reason} onChange={(event) => setReason(event.target.value)} maxLength={500} /></div>
-    <div className={styles.actions}><Button variant="danger" type="button" disabled={busy || !reason.trim()} onClick={() => onReject(reason.trim())}>{item.name} 반려</Button></div>
+    <div className={styles.actions}><Button variant="danger" type="button" disabled={busy || !reason.trim()} onClick={() => {
+      if (window.confirm(`${item.name}의 가입 신청을 반려할까요? 반려한 계정은 단원 계정 화면에서 반려를 취소할 수 있습니다.`)) onReject(reason.trim());
+    }}>{item.name} 반려</Button></div>
   </article>;
 }
