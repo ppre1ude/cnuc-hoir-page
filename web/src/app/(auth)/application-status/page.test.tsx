@@ -25,3 +25,9 @@ test("직접 로그아웃하면 로그인 화면으로 이동합니다", async (
   await userEvent.click(await screen.findByRole("button", { name: "로그아웃" }));
   await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/login"));
 });
+
+test.each(["APPROVAL_PENDING", "REJECTED", "INVITED"])("%s 상태에서 로그인한 구글 계정과 계정을 바꾸는 방법을 보여 줍니다", async (status) => {
+  mocks.getSession.mockResolvedValue({ id: 1, name: "신청자", email: "other@gmail.com", status });
+  render(<ApplicationStatusPage />);
+  expect(await screen.findByText(/other@gmail\.com 계정으로 로그인했습니다/)).toHaveTextContent("로그아웃한 뒤 그 계정으로 다시 로그인해 주세요");
+});

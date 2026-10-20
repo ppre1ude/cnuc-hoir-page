@@ -33,6 +33,7 @@ export default function ApplicationStatusPage() {
   return <>
     <h1>{session ? title : "계정 확인 중"}</h1>
     {session && <p>{session.name}님의 계정 상태입니다.</p>}
+    {session?.email && <p>{session.email} 계정으로 로그인했습니다. 운영진에게 알려 준 구글 계정이 아니면 로그아웃한 뒤 그 계정으로 다시 로그인해 주세요.</p>}
     {session && <div className={styles.actions}>
       {session.status === "APPROVAL_PENDING" && <Button variant="secondary" type="button" onClick={() => window.location.reload()}>상태 다시 확인</Button>}
       <Button variant="secondary" type="button" onClick={signOut}>로그아웃</Button>
