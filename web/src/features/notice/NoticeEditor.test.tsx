@@ -104,6 +104,7 @@ describe("공지 편집기", () => {
     fireEvent.click(screen.getByLabelText("투표 추가"));
     fireEvent.change(screen.getByLabelText("질문"), { target: { value: "연습에 참석하시나요?" } });
     fireEvent.change(screen.getByLabelText("마감 시각 (한국 시간)"), { target: { value: "2027-10-01T14:00" } });
+    expect(screen.getByText("응답자 이름과 선택은 운영진에게 표시됩니다. 익명 투표는 지원하지 않습니다.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
     await waitFor(() => expect(createNotice).toHaveBeenCalledWith({
       title: "연습 참여 조사", body: "참석 여부를 선택해 주세요.", published: false,

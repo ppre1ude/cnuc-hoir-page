@@ -70,6 +70,7 @@ export function NoticePoll({ noticeId, onChanged }: {
   return <form className={styles.poll} onSubmit={submit} aria-labelledby={`poll-question-${noticeId}`} aria-busy={busy}>
     <div className={styles.heading}><h3 id={`poll-question-${noticeId}`}>{poll.question}</h3><StatusBadge tone={poll.closed ? "neutral" : "positive"}>{poll.closed ? "마감" : "진행 중"}</StatusBadge></div>
     <p className={styles.deadline}>마감 <time dateTime={poll.closesAt}>{deadline(poll.closesAt)}</time> · {total}명 참여</p>
+    <p className={styles.deadline}>선택은 이름과 함께 운영진에게 표시됩니다.</p>
     <fieldset disabled={poll.closed || busy}>
       <legend className={styles.srOnly}>투표 선택지</legend>
       {[{ value: 1, label: poll.firstOption, count: poll.firstCount },

@@ -184,6 +184,7 @@ export function NoticeEditor() {
             <label htmlFor="poll-closes">마감 시각 (한국 시간)</label>
             <Input id="poll-closes" type="datetime-local" value={pollClosesAt} onChange={(event) => setPollClosesAt(event.target.value)} required />
             <p>등록한 투표의 질문과 선택지는 변경할 수 없습니다.</p>
+            <p>응답자 이름과 선택은 운영진에게 표시됩니다. 익명 투표는 지원하지 않습니다.</p>
             <p>참석 응답은 행사 출석 기록과 별도로 관리됩니다.</p>
           </div>}
         </>}
