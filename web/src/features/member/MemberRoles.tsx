@@ -15,7 +15,7 @@ export function MemberRoles({ item, session, onChanged }: { item: MemberItem; se
   const [part, setPart] = useState<Part>("SOPRANO");
   const [profilePart, setProfilePart] = useState<Part | "">(item.part ?? "");
   const [cohort, setCohort] = useState(item.cohort === null ? "" : String(item.cohort));
-  const [memberType, setMemberType] = useState<"ACTIVE" | "OB">(item.memberType ?? "ACTIVE");
+  const [memberType, setMemberType] = useState<"ACTIVE" | "OB" | "">(item.memberType ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const leadership = can(session, "MANAGE_SITE_ADMINS");
@@ -45,8 +45,9 @@ export function MemberRoles({ item, session, onChanged }: { item: MemberItem; se
     event.preventDefault();
     if (memberType === "OB" && item.memberType !== "OB" && item.roles.length > 0
       && !window.confirm(`OB로 바꾸면 ${item.name}의 직책(${item.roles.map(describeRole).join(", ")})이 모두 해제됩니다. 계속할까요?`)) return;
+    // 운영진이 구분을 바꿨을 때만 보냅니다. 파트만 저장해도 비어 있던 구분이 활동 단원으로 바뀌면 안 됩니다.
     void run(() => updateMemberProfile(item.id, { part: profilePart || null, cohort: cohort.trim() ? Number(cohort) : null,
-      ...(approved ? { memberType } : {}) }), "단원 정보를 저장하지 못했습니다.");
+      ...(approved && memberType && memberType !== item.memberType ? { memberType } : {}) }), "단원 정보를 저장하지 못했습니다.");
   }
 
   if (!can(session, "MANAGE_ROLES")) {
@@ -61,7 +62,8 @@ export function MemberRoles({ item, session, onChanged }: { item: MemberItem; se
     <form className={styles.inlineForm} onSubmit={saveProfile}>
       {approved && <>
         <label htmlFor={`member-type-${item.id}`}>단원 구분</label>
-        <Select id={`member-type-${item.id}`} value={memberType} onChange={(event) => setMemberType(event.target.value as "ACTIVE" | "OB")}>
+        <Select id={`member-type-${item.id}`} value={memberType} onChange={(event) => setMemberType(event.target.value as "ACTIVE" | "OB" | "")}>
+          {item.memberType === null && <option value="">미지정</option>}
           <option value="ACTIVE">활동 단원</option><option value="OB">OB</option>
         </Select>
       </>}

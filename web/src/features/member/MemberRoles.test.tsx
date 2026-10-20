@@ -49,7 +49,16 @@ test("파트와 기수를 저장합니다", async () => {
   await userEvent.clear(screen.getByLabelText("기수"));
   await userEvent.type(screen.getByLabelText("기수"), "3");
   await userEvent.click(screen.getByRole("button", { name: "저장" }));
-  expect(updateMemberProfile).toHaveBeenCalledWith(7, { part: "TENOR", cohort: 3, memberType: "ACTIVE" });
+  expect(updateMemberProfile).toHaveBeenCalledWith(7, { part: "TENOR", cohort: 3 });
+});
+
+test("구분이 비어 있는 승인 계정은 미지정으로 보이고, 파트만 저장하면 구분을 바꾸지 않습니다", async () => {
+  vi.mocked(updateMemberProfile).mockResolvedValue(undefined);
+  render(<MemberRoles item={{ ...item, memberType: null, roles: [] }} session={president} onChanged={vi.fn()} />);
+  expect(screen.getByLabelText("단원 구분")).toHaveDisplayValue("미지정");
+  await userEvent.selectOptions(screen.getByLabelText("파트"), "TENOR");
+  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  expect(updateMemberProfile).toHaveBeenLastCalledWith(7, { part: "TENOR", cohort: 2 });
 });
 
 test("직책이 있는 단원을 OB로 바꾸기 전에 직책 해제를 확인합니다", async () => {
