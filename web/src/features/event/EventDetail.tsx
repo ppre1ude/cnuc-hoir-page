@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ActionLink, StatusBadge } from "../../components/ui";
+import { ActionLink, Linkify, StatusBadge } from "../../components/ui";
 import { type ChoirEvent, seoulDateTime } from "./events";
 import styles from "./EventCalendar.module.css";
 
@@ -9,7 +9,7 @@ export function EventDetail({ event, memberType, checkInOpen, link = false }: Pr
   return <article className={styles.eventDetail}>
     <h2>{event.title}</h2>
     <p className={styles.eventTime}><time dateTime={event.startAt}>{seoulDateTime(event.startAt)}</time><span aria-hidden="true"> ~ </span><time dateTime={event.endAt}>{seoulDateTime(event.endAt)}</time></p>
-    {event.description && <p className={styles.description}>{event.description}</p>}
+    {event.description && <p className={styles.description}><Linkify text={event.description} /></p>}
     <div className={styles.eventActions}><StatusBadge tone={event.obEligible ? "positive" : "neutral"}>
       {memberType === "OB"
         ? event.obEligible ? "OB 참여 가능" : "OB 참여 불가"

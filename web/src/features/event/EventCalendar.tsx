@@ -9,7 +9,7 @@ import { getNotices, type Notice } from "../notice/notices";
 import { type ChoirEvent, type EventRsvpChoice, getEvents, getMyEventRsvps, monthBounds, seoulDateKey } from "./events";
 import { EventDetail } from "./EventDetail";
 import { EventRsvp } from "./EventRsvp";
-import { attendanceLabel, getEventAttendance, getMyAttendance, type AttendanceState } from "../attendance/attendance";
+import { attendanceDate, getEventAttendance, getMyAttendance, myAttendanceLabel, type AttendanceRecord, type AttendanceState } from "../attendance/attendance";
 import { memberLinks } from "../member/memberLinks";
 import styles from "./EventCalendar.module.css";
 
@@ -29,6 +29,14 @@ function mondayOffset(month: string) {
   return (new Date(Date.UTC(year, number - 1, 1)).getUTCDay() + 6) % 7;
 }
 
+// 월말에도 다음 주 연습에 바로 응답할 수 있게 이번 달은 오늘부터 14일 뒤까지 함께 받습니다.
+function eventRange(month: string) {
+  const bounds = monthBounds(month);
+  if (month !== seoulDateKey(new Date()).slice(0, 7)) return bounds;
+  const soon = new Date(Date.now() + 14 * 86_400_000).toISOString();
+  return soon > bounds.to ? { from: bounds.from, to: soon } : bounds;
+}
+
 export function EventCalendar() {
   const session = useSession();
   const [month, setMonth] = useState(() => seoulDateKey(new Date()).slice(0, 7));
@@ -36,7 +44,7 @@ export function EventCalendar() {
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [events, setEvents] = useState<ChoirEvent[]>([]);
   const [notices, setNotices] = useState<Notice[]>([]);
-  const [attendance, setAttendance] = useState<AttendanceState[]>([]);
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [selectedAttendance, setSelectedAttendance] = useState<AttendanceState | null>(null);
   const [attendanceError, setAttendanceError] = useState("");
   const [attendanceLoaded, setAttendanceLoaded] = useState(false);
@@ -54,7 +62,7 @@ export function EventCalendar() {
 
   useEffect(() => {
     let alive = true;
-    const { from, to } = monthBounds(month);
+    const { from, to } = eventRange(month);
     getEvents(from, to).then((monthEvents) => {
       if (!alive) return;
       setEvents(monthEvents);
@@ -66,7 +74,7 @@ export function EventCalendar() {
 
   useEffect(() => {
     let alive = true;
-    const { from, to } = monthBounds(month);
+    const { from, to } = eventRange(month);
     getMyEventRsvps(from, to).then((items) => {
       if (!alive) return;
       setRsvpByEvent(Object.fromEntries(items.filter((item) => item.choice !== null)
@@ -221,7 +229,7 @@ export function EventCalendar() {
         {!attendanceError && !attendanceLoaded && <SkeletonRows count={3} label="출석 기록을 불러오는 중입니다." />}
         {!attendanceError && attendanceLoaded && attendance.length === 0 && <p className={styles.empty}>출석 기록이 없습니다.</p>}
         {!attendanceError && attendanceLoaded && attendance.slice(0, 3).map((item) => <Link key={item.eventId} href={`/events/${item.eventId}`} className={styles.attendanceRow}>
-          <span>{item.eventTitle}</span><StatusBadge tone={item.status === "CHECKED_IN" ? "positive" : item.status === "MISSED" ? "negative" : "neutral"}>{attendanceLabel[item.status]}</StatusBadge>
+          <span><time dateTime={item.startAt} className={styles.eventDate}>{attendanceDate(item.startAt)}</time> {item.eventTitle}</span><StatusBadge tone={item.status === "CHECKED_IN" ? "positive" : item.status === "MISSED" ? "negative" : "neutral"}>{myAttendanceLabel[item.status]}</StatusBadge>
         </Link>)}
       </section>
     </div>

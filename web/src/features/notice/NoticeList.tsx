@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Feedback, PageHeader, SkeletonRows } from "../../components/ui";
+import { Button, Feedback, Linkify, PageHeader, SkeletonRows } from "../../components/ui";
 
 import { useCallback, useEffect, useState } from "react";
 import { getNotice, getNotices, type Notice, type NoticePage, type PollView } from "./notices";
@@ -65,7 +65,7 @@ export function NoticeList({ initialNoticeId = null }: { initialNoticeId?: numbe
     return <section aria-label="공지 본문" className={styles.detail}>
       {detailError ? <><Feedback tone="error">{detailError}</Feedback><Button variant="secondary" onClick={() => { setDetailError(""); setDetailRetry((value) => value + 1); }}>다시 시도</Button></>
         : !visibleNotice ? <SkeletonRows count={3} label="공지를 불러오는 중입니다." />
-        : <><p className={styles.body}>{visibleNotice.body}</p><NoticePoll key={visibleNotice.id} noticeId={visibleNotice.id} onChanged={updatePoll} /></>}
+        : <><p className={styles.body}><Linkify text={visibleNotice.body} /></p><NoticePoll key={visibleNotice.id} noticeId={visibleNotice.id} onChanged={updatePoll} /></>}
       <Button variant="ghost" className={styles.close} onClick={close}>닫기</Button>
     </section>;
   }

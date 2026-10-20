@@ -10,6 +10,7 @@ import jakarta.validation.constraints.NotEmpty;
 import java.time.Instant;
 import java.util.List;
 import kr.ac.jnu.choir.auth.SessionMemberService;
+import kr.ac.jnu.choir.member.MemberType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,8 +37,8 @@ public class EventController {
 
     @GetMapping("/events")
     public List<EventItem> list(HttpServletRequest request, @RequestParam Instant from, @RequestParam Instant to) {
-        sessions.requireApproved(request);
-        return events.list(from, to).stream().map(this::item).toList();
+        boolean ob = sessions.requireApproved(request).getMemberType() == MemberType.OB;
+        return events.list(from, to).stream().filter(event -> !ob || event.isObEligible()).map(this::item).toList();
     }
 
     @GetMapping("/events/{id}")

@@ -8,6 +8,8 @@ import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
@@ -115,8 +117,12 @@ public class CheckInService {
     @Transactional(readOnly = true)
     public List<AttendanceState> myList(Member member) {
         MemberRow target = memberRow(member.getId());
-        return jdbc.query("SELECT id,title,ob_eligible FROM event ORDER BY start_at DESC,id DESC", (rs, row) ->
-                state(new EventRow(rs.getLong(1), rs.getString(2), rs.getBoolean(3)), target));
+        // ob_eligible로 거르지 않고 계산된 상태로 거릅니다. 활동 단원 시절에 남은 출석·미출석 기록을 OB가 된 뒤에도 보여야 합니다.
+        return jdbc.query("SELECT id,title,ob_eligible,start_at FROM event WHERE start_at <= ? ORDER BY start_at DESC,id DESC", (rs, row) ->
+                state(new EventRow(rs.getLong(1), rs.getString(2), rs.getBoolean(3), eventTime(rs)), target),
+                // event 시각은 UTC 기준 TIMESTAMP라 JVM 시간대를 타는 Timestamp 대신 UTC LocalDateTime으로 비교합니다.
+                LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC))
+                .stream().filter(state -> !"NOT_ELIGIBLE".equals(state.status())).toList();
     }
 
     @Transactional(readOnly = true)
@@ -170,15 +176,15 @@ public class CheckInService {
 
     private AttendanceState state(EventRow event, MemberRow target) {
         String stored = attendance(event.id(), target.id());
-        if (stored != null) return new AttendanceState(event.id(), event.title(), stored, false);
+        if (stored != null) return new AttendanceState(event.id(), event.title(), event.startAt(), stored, false);
         boolean eligibleNow = eligible(event, target);
         List<SessionRow> active = activeSession(event.id());
         boolean open = !active.isEmpty() && clock.instant().isBefore(active.getFirst().expiresAt());
-        if (open && eligibleNow) return new AttendanceState(event.id(), event.title(), "NOT_OPEN", true);
+        if (open && eligibleNow) return new AttendanceState(event.id(), event.title(), event.startAt(), "NOT_OPEN", true);
         if (historicalMissed(event.id(), target.id())) {
-            return new AttendanceState(event.id(), event.title(), "MISSED", false);
+            return new AttendanceState(event.id(), event.title(), event.startAt(), "MISSED", false);
         }
-        return new AttendanceState(event.id(), event.title(), eligibleNow ? "NOT_OPEN" : "NOT_ELIGIBLE", false);
+        return new AttendanceState(event.id(), event.title(), event.startAt(), eligibleNow ? "NOT_OPEN" : "NOT_ELIGIBLE", false);
     }
 
     private boolean historicalMissed(long eventId, long memberId) {
@@ -201,8 +207,8 @@ public class CheckInService {
     private EventRow lockEvent(long eventId) { return eventRow(eventId, true); }
     private EventRow findEvent(long eventId) { return eventRow(eventId, false); }
     private EventRow eventRow(long eventId, boolean lock) {
-        List<EventRow> rows = jdbc.query("SELECT id,title,ob_eligible FROM event WHERE id = ?" + (lock ? " FOR UPDATE" : ""),
-                (rs, row) -> new EventRow(rs.getLong(1), rs.getString(2), rs.getBoolean(3)), eventId);
+        List<EventRow> rows = jdbc.query("SELECT id,title,ob_eligible,start_at FROM event WHERE id = ?" + (lock ? " FOR UPDATE" : ""),
+                (rs, row) -> new EventRow(rs.getLong(1), rs.getString(2), rs.getBoolean(3), eventTime(rs)), eventId);
         if (rows.isEmpty()) throw new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "행사를 찾을 수 없습니다.");
         return rows.getFirst();
     }
@@ -261,17 +267,20 @@ public class CheckInService {
         return MessageDigest.isEqual(HexFormat.of().parseHex(first), HexFormat.of().parseHex(second));
     }
     private static Timestamp time(Instant instant) { return Timestamp.from(instant); }
+    private static Instant eventTime(java.sql.ResultSet rs) throws java.sql.SQLException {
+        return rs.getObject("start_at", LocalDateTime.class).toInstant(ZoneOffset.UTC);
+    }
     private static ApiException conflict(String code, String message) {
         return new ApiException(HttpStatus.CONFLICT, code, message);
     }
     private static ApiException forbidden() {
         return new ApiException(HttpStatus.FORBIDDEN, "NOT_ELIGIBLE", "이 행사의 출석 대상이 아닙니다.");
     }
-    private record EventRow(long id, String title, boolean obEligible) {}
+    private record EventRow(long id, String title, boolean obEligible, Instant startAt) {}
     private record MemberRow(long id, String name, String email, String status, String type) {}
     private record SessionRow(long id, Instant expiresAt, Instant closedAt, String qrHash, String codeHash) {}
     public record IssuedSession(Long sessionId, Instant expiresAt, String qrUrl, String code) {}
     public record SessionStatus(Long sessionId, Instant expiresAt, boolean open) {}
-    public record AttendanceState(Long eventId, String eventTitle, String status, boolean checkInOpen) {}
+    public record AttendanceState(Long eventId, String eventTitle, Instant startAt, String status, boolean checkInOpen) {}
     public record AdminAttendance(Long memberId, String name, String email, String status) {}
 }

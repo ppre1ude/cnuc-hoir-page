@@ -382,4 +382,38 @@ class CheckInFlowTest {
         close(id, session(admin));
         assertThat(own(id, newcomer)).contains("\"status\":\"MISSED\"");
     }
+
+    private String myList(Member member) throws Exception {
+        return mvc.perform(get("/api/v1/attendance/me").session(session(member))).andReturn().getResponse().getContentAsString();
+    }
+
+    @Test void obAttendanceListShowsOnlyEligibleEventsAndKeepsEarnedRecords() throws Exception {
+        Member admin = member("ACTIVE", true);
+        Member active = member("ACTIVE", false);
+        Member ob = member("OB", false);
+        long practice = event(false);
+        long concert = event(true);
+        long formerConcert = event(true);
+        String code = field(open(formerConcert, session(admin)), "code");
+        assertThat(check(formerConcert, session(ob), code)).isEqualTo(204);
+        jdbc.update("UPDATE event SET ob_eligible = FALSE WHERE id = ?", formerConcert);
+
+        assertThat(myList(ob)).contains("\"eventId\":" + concert + ",", "\"eventId\":" + formerConcert + ",")
+                .doesNotContain("\"eventId\":" + practice + ",", "NOT_ELIGIBLE");
+        assertThat(myList(active)).contains("\"eventId\":" + practice + ",", "\"eventId\":" + concert + ",",
+                "\"eventId\":" + formerConcert + ",");
+    }
+
+    @Test void attendanceListShowsStartedEventsNewestFirst() throws Exception {
+        Member active = member("ACTIVE", false);
+        long recent = event(false);
+        jdbc.update("INSERT INTO event (title,description,start_at,end_at,ob_eligible,public_visible,created_at,updated_at) "
+                + "VALUES ('지난주 연습','설명','2026-09-20 09:00:00','2026-09-20 12:00:00',FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6)), "
+                + "('저녁 연습','설명','2026-09-27 13:00:00','2026-09-27 15:00:00',FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6)), "
+                + "('다음 주 연습','설명','2026-10-04 09:00:00','2026-10-04 12:00:00',FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))");
+
+        String list = myList(active);
+        assertThat(list).contains("지난주 연습", "\"startAt\":\"2026-09-20T09:00:00Z\"").doesNotContain("저녁 연습", "다음 주 연습");
+        assertThat(list.indexOf("\"eventId\":" + recent + ",")).isNotNegative().isLessThan(list.indexOf("지난주 연습"));
+    }
 }

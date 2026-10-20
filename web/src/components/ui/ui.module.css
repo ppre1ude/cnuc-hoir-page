@@ -72,3 +72,4 @@
   .logo { width: var(--logo-width, 188px); }
   .surface { padding: var(--space-5); }
 }
+.textLink { color: var(--color-primary); }
