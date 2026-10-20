@@ -73,12 +73,19 @@ export function SkeletonRows({ count = 4, label, className }: { count?: number; 
   </div>;
 }
 
+// 문장 끝의 마침표와 쉼표, 그리고 여는 괄호와 짝이 없는 닫는 괄호만 뗍니다. "Foo_(bar)"처럼 주소 안에서 짝이 맞는 괄호는 남깁니다.
+function trimUrlEnd(part: string) {
+  let url = part.replace(/[.,]+$/, "");
+  const count = (char: string) => url.split(char).length - 1;
+  while (url.endsWith(")") && count(")") > count("(")) url = url.slice(0, -1).replace(/[.,]+$/, "");
+  return url;
+}
+
 export function Linkify({ text }: { text: string }) {
   // 주소 문자는 URL에 쓰는 영문 문자로만 잡습니다. "https://forms.gle/abc로 신청"처럼 붙여 쓴 조사가 링크에 들어가지 않게 하기 위해서입니다.
   return <>{text.split(/(https?:\/\/[A-Za-z0-9\-._~:/?#[\]@!$&'()*+,;=%]+)/).map((part, index) => {
     if (index % 2 === 0) return part;
-    // 문장 끝의 마침표, 쉼표, 닫는 괄호가 주소에 붙어 잘못된 링크가 되지 않게 뗍니다.
-    const url = part.replace(/[.,)]+$/, "");
+    const url = trimUrlEnd(part);
     return <Fragment key={index}><a href={url} target="_blank" rel="noopener noreferrer" className={styles.textLink}>{url}</a>{part.slice(url.length)}</Fragment>;
   })}</>;
 }

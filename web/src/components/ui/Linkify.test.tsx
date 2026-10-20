@@ -24,6 +24,14 @@ test("주소 바로 뒤에 붙여 쓴 한국어는 링크에 넣지 않습니다
   expect(container.textContent).toBe(text);
 });
 
+test("주소 안에서 짝이 맞는 괄호는 링크에 남기고 바깥 괄호만 뗍니다", () => {
+  const text = "참고(https://ko.wikipedia.org/wiki/Foo_(bar)), 위키 https://ko.wikipedia.org/wiki/Baz_(qux).";
+  const { container } = render(<p><Linkify text={text} /></p>);
+  expect(screen.getAllByRole("link").map((link) => link.getAttribute("href")))
+    .toEqual(["https://ko.wikipedia.org/wiki/Foo_(bar)", "https://ko.wikipedia.org/wiki/Baz_(qux)"]);
+  expect(container.textContent).toBe(text);
+});
+
 test("다른 형식의 주소와 HTML은 링크나 태그로 만들지 않고 글자 그대로 둡니다", () => {
   const text = "javascript:alert(1) <b>굵게</b> www.example.com";
   const { container } = render(<p><Linkify text={text} /></p>);
