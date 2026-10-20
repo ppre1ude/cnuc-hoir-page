@@ -32,7 +32,7 @@ public class NoticePollService {
             boolean closed, long firstCount, long secondCount, Integer myChoice) {}
     public record PollSummary(String firstOption, String secondOption, Instant closesAt,
             boolean closed, Integer myChoice) {}
-    public record Respondent(Long memberId, String name, String email, int choice, Instant updatedAt) {}
+    public record Respondent(Long memberId, String name, String part, Integer cohort, int choice, Instant updatedAt) {}
     public record AdminPollView(PollView poll, List<Respondent> respondents) {}
 
     @Transactional
@@ -109,11 +109,11 @@ public class NoticePollService {
     @Transactional(readOnly = true)
     public AdminPollView adminView(long noticeId) {
         PollRow poll = find(noticeId, false);
-        List<Respondent> respondents = jdbc.query("SELECT v.member_id, m.name, m.email, v.choice, v.updated_at "
+        List<Respondent> respondents = jdbc.query("SELECT v.member_id, m.name, m.part, m.cohort, v.choice, v.updated_at "
                 + "FROM notice_poll_vote v JOIN member m ON m.id = v.member_id WHERE v.poll_id = ? "
                 + "ORDER BY v.updated_at DESC, v.member_id",
                 (rs, row) -> new Respondent(rs.getLong("member_id"), rs.getString("name"),
-                        rs.getString("email"), rs.getInt("choice"),
+                        rs.getString("part"), rs.getObject("cohort", Integer.class), rs.getInt("choice"),
                         rs.getObject("updated_at", LocalDateTime.class).toInstant(ZoneOffset.UTC)),
                 poll.id());
         return new AdminPollView(view(poll, null), respondents);

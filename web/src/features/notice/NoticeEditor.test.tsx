@@ -82,6 +82,19 @@ describe("공지 편집기", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
+  it("투표 응답자는 이메일 없이 이름, 파트, 기수로 보인다", async () => {
+    getAdminNotices.mockResolvedValue({ items: [{ id: 1, title: "곡 변경", body: "본문", published: true }], page: 0, size: 20, total: 1 });
+    getAdminNoticePoll.mockResolvedValue({
+      poll: { question: "곡을 바꿀까요?", firstOption: "찬성", secondOption: "반대", closesAt: "2027-10-01T05:00:00Z",
+        closed: false, firstCount: 0, secondCount: 1, myChoice: null },
+      respondents: [{ memberId: 3, name: "김민지", part: "ALTO", cohort: 12, choice: 2, updatedAt: "2027-09-01T00:00:00Z" }],
+    });
+    renderWithSession(<NoticeEditor />, sessionFixture({ admin: true }));
+    fireEvent.click(await screen.findByRole("button", { name: /곡 변경\s*게시/ }));
+    expect(await screen.findByText("김민지 · 알토 12기")).toBeInTheDocument();
+    expect(screen.getByLabelText("투표 결과")).not.toHaveTextContent("@");
+  });
+
   it("공지와 참석 여부 투표를 한 번에 등록한다", async () => {
     getAdminNotices.mockResolvedValue({ items: [], page: 0, size: 20, total: 0 });
     renderWithSession(<NoticeEditor />, sessionFixture({ admin: true }));

@@ -4,6 +4,7 @@ import { Button, Feedback, SkeletonRows } from "../../components/ui";
 
 import { useEffect, useState } from "react";
 import { getAdminEventRsvps, type AdminEventRsvps as Rsvps } from "./events";
+import { rosterName } from "../member/roles";
 import styles from "./EventEditor.module.css";
 
 export function AdminEventRsvps({ eventId }: { eventId: number }) {
@@ -27,7 +28,7 @@ export function AdminEventRsvps({ eventId }: { eventId: number }) {
     {data && <>
       <p className={styles.rsvpCounts}>참석 {data.attending} · 불참 {data.absent} · 미응답 {data.unanswered}</p>
       <ul className={styles.rsvpMembers}>
-        {data.members.map((member) => <li key={member.memberId}><span>{member.name}<br />{member.email}</span>
+        {data.members.map((member) => <li key={member.memberId}><span>{rosterName(member)}</span>
           <strong>{member.choice === "ATTENDING" ? "참석" : member.choice === "ABSENT" ? "불참" : "미응답"}</strong></li>)}
       </ul>
     </>}

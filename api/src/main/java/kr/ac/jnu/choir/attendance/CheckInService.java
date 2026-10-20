@@ -128,7 +128,7 @@ public class CheckInService {
     @Transactional(readOnly = true)
     public List<AdminAttendance> adminList(long eventId) {
         EventRow event = findEvent(eventId);
-        return jdbc.query("SELECT id,name,email,status,member_type FROM member WHERE "
+        return jdbc.query("SELECT id,name,status,member_type,part,cohort FROM member WHERE "
                 + "(status = 'APPROVED' AND (member_type = 'ACTIVE' OR (? AND member_type = 'OB'))) "
                 + "OR EXISTS (SELECT 1 FROM attendance a WHERE a.event_id = ? AND a.member_id = member.id) "
                 + "OR EXISTS (SELECT 1 FROM attendance_eligibility_snapshot snap "
@@ -136,9 +136,9 @@ public class CheckInService {
                 + "WHERE sess.event_id = ? AND snap.member_id = member.id) "
                 + "ORDER BY name,id",
                 (rs, row) -> {
-                    MemberRow target = new MemberRow(rs.getLong(1), rs.getString(2), rs.getString(3),
-                            rs.getString(4), rs.getString(5));
-                    return new AdminAttendance(target.id(), target.name(), target.email(), state(event, target).status());
+                    MemberRow target = new MemberRow(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getString(4));
+                    return new AdminAttendance(target.id(), target.name(), rs.getString(5),
+                            rs.getObject(6, Integer.class), state(event, target).status());
                 }, event.obEligible(), eventId, eventId);
     }
 
@@ -216,9 +216,9 @@ public class CheckInService {
     private MemberRow lockMember(long id) { return readMember(id, true); }
     private MemberRow memberRow(long id) { return readMember(id, false); }
     private MemberRow readMember(long id, boolean lock) {
-        List<MemberRow> rows = jdbc.query("SELECT id,name,email,status,member_type FROM member WHERE id = ?"
+        List<MemberRow> rows = jdbc.query("SELECT id,name,status,member_type FROM member WHERE id = ?"
                 + (lock ? " FOR UPDATE" : ""), (rs, row) -> new MemberRow(rs.getLong(1), rs.getString(2),
-                rs.getString(3), rs.getString(4), rs.getString(5)), id);
+                rs.getString(3), rs.getString(4)), id);
         if (rows.isEmpty()) throw new ApiException(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "단원을 찾을 수 없습니다.");
         return rows.getFirst();
     }
@@ -277,10 +277,10 @@ public class CheckInService {
         return new ApiException(HttpStatus.FORBIDDEN, "NOT_ELIGIBLE", "이 행사의 출석 대상이 아닙니다.");
     }
     private record EventRow(long id, String title, boolean obEligible, Instant startAt) {}
-    private record MemberRow(long id, String name, String email, String status, String type) {}
+    private record MemberRow(long id, String name, String status, String type) {}
     private record SessionRow(long id, Instant expiresAt, Instant closedAt, String qrHash, String codeHash) {}
     public record IssuedSession(Long sessionId, Instant expiresAt, String qrUrl, String code) {}
     public record SessionStatus(Long sessionId, Instant expiresAt, boolean open) {}
     public record AttendanceState(Long eventId, String eventTitle, Instant startAt, String status, boolean checkInOpen) {}
-    public record AdminAttendance(Long memberId, String name, String email, String status) {}
+    public record AdminAttendance(Long memberId, String name, String part, Integer cohort, String status) {}
 }

@@ -192,9 +192,11 @@ class NoticePollTest {
         String memberView = mvc.perform(get("/api/v1/notices/" + id + "/poll").session(voterSession))
                 .andReturn().getResponse().getContentAsString();
         assertThat(memberView).doesNotContain(voter.getEmail(), "respondents");
+        jdbc.update("UPDATE member SET part = 'ALTO', cohort = 12 WHERE id = ?", voter.getId());
         String adminView = mvc.perform(get("/api/v1/admin/notices/" + id + "/poll")
                 .session(session(admin))).andReturn().getResponse().getContentAsString();
-        assertThat(adminView).contains("단원", voter.getEmail(), "\"choice\":2");
+        assertThat(adminView).contains("\"name\":\"단원\",\"part\":\"ALTO\",\"cohort\":12", "\"choice\":2")
+                .doesNotContain(voter.getEmail(), "\"email\"");
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM notice_poll_vote WHERE member_id = ?",
                 Integer.class, voter.getId())).isEqualTo(1);
     }

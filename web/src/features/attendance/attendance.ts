@@ -1,12 +1,13 @@
 import { apiRequest } from "../../lib/api";
 import { seoulDateKey } from "../event/events";
+import type { Part } from "../auth/session";
 
 export type AttendanceStatus = "CHECKED_IN" | "MISSED" | "NOT_OPEN" | "NOT_ELIGIBLE";
 export type AttendanceState = { eventId: number; eventTitle: string; status: AttendanceStatus; checkInOpen: boolean };
 export type AttendanceRecord = AttendanceState & { startAt: string };
 export type IssuedSession = { sessionId: number; expiresAt: string; qrUrl: string; code: string };
 export type SessionStatus = { sessionId: number | null; expiresAt: string | null; open: boolean };
-export type AdminAttendance = { memberId: number; name: string; email: string; status: AttendanceStatus };
+export type AdminAttendance = { memberId: number; name: string; part: Part | null; cohort: number | null; status: AttendanceStatus };
 
 export const attendanceLabel: Record<AttendanceStatus, string> = {
   CHECKED_IN: "출석 완료", MISSED: "미출석", NOT_OPEN: "출석 창 대기", NOT_ELIGIBLE: "출석 대상 아님",

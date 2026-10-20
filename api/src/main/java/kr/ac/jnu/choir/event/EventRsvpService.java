@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class EventRsvpService {
     public enum Choice { ATTENDING, ABSENT }
     public record MyRsvp(long eventId, Choice choice) {}
-    public record Respondent(long memberId, String name, String email, Choice choice) {}
+    public record Respondent(long memberId, String name, String part, Integer cohort, Choice choice) {}
     public record AdminRsvps(long eventId, long attending, long absent, long unanswered,
             List<Respondent> members) {}
 
@@ -72,13 +72,14 @@ public class EventRsvpService {
     @Transactional(readOnly = true)
     public AdminRsvps adminView(long eventId) {
         EventRow event = event(eventId, false);
-        List<Respondent> respondents = jdbc.query("SELECT m.id, m.name, m.email, r.choice FROM member m "
+        List<Respondent> respondents = jdbc.query("SELECT m.id, m.name, m.part, m.cohort, r.choice FROM member m "
                 + "LEFT JOIN event_rsvp r ON r.member_id = m.id AND r.event_id = ? "
                 + "WHERE m.status = 'APPROVED' AND (m.member_type = 'ACTIVE' "
                 + "OR (? AND m.member_type = 'OB')) "
                 + "ORDER BY m.name, m.id",
                 (rs, row) -> new Respondent(rs.getLong("id"), rs.getString("name"),
-                        rs.getString("email"), rs.getString("choice") == null ? null : Choice.valueOf(rs.getString("choice"))),
+                        rs.getString("part"), rs.getObject("cohort", Integer.class),
+                        rs.getString("choice") == null ? null : Choice.valueOf(rs.getString("choice"))),
                 eventId, event.obEligible());
         long attending = respondents.stream().filter(item -> item.choice() == Choice.ATTENDING).count();
         long absent = respondents.stream().filter(item -> item.choice() == Choice.ABSENT).count();

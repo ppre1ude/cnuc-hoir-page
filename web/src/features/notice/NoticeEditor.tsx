@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { ApiRequestError } from "../../lib/api";
 import { createNotice, getAdminNoticePoll, getAdminNotices, updateNotice,
   type AdminPollView, type Notice, type NoticePage, type PollInput } from "./notices";
+import { rosterName } from "../member/roles";
 import styles from "../member/AdminPages.module.css";
 
 export function NoticeEditor() {
@@ -158,7 +159,7 @@ export function NoticeEditor() {
           <h4>응답자</h4>
           {adminPoll.respondents.length === 0 && <p>아직 응답이 없습니다.</p>}
           <ul>{adminPoll.respondents.map((respondent) => <li key={respondent.memberId}>
-            <span>{respondent.name} ({respondent.email})</span>
+            <span>{rosterName(respondent)}</span>
             <strong>{respondent.choice === 1 ? adminPoll.poll.firstOption : adminPoll.poll.secondOption}</strong>
           </li>)}</ul>
         </section>}

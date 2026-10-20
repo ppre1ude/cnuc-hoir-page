@@ -199,9 +199,11 @@ class EventVisibilityTest {
         assertThat(mvc.perform(put("/api/v1/events/" + past + "/rsvp").session(responder)
                 .header("X-CSRF-TOKEN", csrf(responder)).contentType("application/json").content(attend))
                 .andReturn().getResponse().getStatus()).isEqualTo(409);
+        jdbc.update("UPDATE member SET part = 'SOPRANO', cohort = 5 WHERE id = ?", active.getId());
         String roster = mvc.perform(get("/api/v1/admin/events/" + future + "/rsvps").session(session(admin)))
                 .andReturn().getResponse().getContentAsString();
-        assertThat(roster).contains("\"absent\":1", "\"name\":\"단원\"", active.getEmail());
+        assertThat(roster).contains("\"absent\":1", "\"name\":\"단원\",\"part\":\"SOPRANO\",\"cohort\":5")
+                .doesNotContain(active.getEmail(), admin.getEmail(), "\"email\"");
         assertThat(mvc.perform(get("/api/v1/admin/events/" + future + "/rsvps").session(responder))
                 .andReturn().getResponse().getStatus()).isEqualTo(403);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM attendance", Long.class)).isZero();

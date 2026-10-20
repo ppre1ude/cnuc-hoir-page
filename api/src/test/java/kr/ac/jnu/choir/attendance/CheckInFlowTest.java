@@ -232,9 +232,13 @@ class CheckInFlowTest {
         assertThat(check(id, session(recorded), code)).isEqualTo(204);
         jdbc.update("UPDATE member SET status = 'REVOKED', auth_version = auth_version + 1 WHERE id IN (?, ?)",
                 recorded.getId(), unrecorded.getId());
+        jdbc.update("UPDATE member SET part = 'TENOR', cohort = 3 WHERE id = ?", recorded.getId());
         String rows = mvc.perform(get("/api/v1/admin/events/" + id + "/attendance").session(session(admin)))
                 .andReturn().getResponse().getContentAsString();
-        assertThat(rows).contains("\"memberId\":" + recorded.getId(), "\"status\":\"CHECKED_IN\"")
+        assertThat(rows).doesNotContain(recorded.getEmail(), unrecorded.getEmail(), "\"email\"");
+        assertThat(rows).contains("\"memberId\":" + recorded.getId() + ",\"name\":\"단원\",\"part\":\"TENOR\",\"cohort\":3",
+                "\"memberId\":" + unrecorded.getId() + ",\"name\":\"단원\",\"part\":null,\"cohort\":null",
+                "\"status\":\"CHECKED_IN\"")
                 .containsPattern("\\\"memberId\\\":" + unrecorded.getId() + "[^}]*\\\"status\\\":\\\"NOT_ELIGIBLE\\\"");
         MockHttpSession adminSession = session(admin);
         assertThat(mvc.perform(put("/api/v1/admin/events/" + id + "/attendance/" + recorded.getId())
