@@ -73,3 +73,19 @@ test("Gmail이 아닌 주소를 입력하면 바로 승인되지 않는다고 �
   await userEvent.type(input, "Hong@Gmail.com");
   expect(screen.queryByText(/@gmail\.com 주소가 아니면/)).not.toBeInTheDocument();
 });
+
+test("등록한 뒤에도 고른 단원 구분을 유지하고 이메일 칸으로 돌아갑니다", async () => {
+  render(<MemberRegistration session={{ id: 1, name: "관리자", status: "APPROVED", memberType: "ACTIVE", admin: true }} />);
+  await screen.findByText("등록된 단원 이메일이 없습니다.");
+  await userEvent.type(screen.getByLabelText("구글 계정 이메일"), "ob1@gmail.com");
+  await userEvent.type(screen.getByLabelText("이름 (선택)"), "첫 OB");
+  await userEvent.selectOptions(screen.getByLabelText("단원 구분"), "OB");
+  await userEvent.click(screen.getByRole("button", { name: "등록" }));
+
+  await waitFor(() => expect(screen.getByLabelText("구글 계정 이메일")).toHaveFocus());
+  expect(screen.getByLabelText("구글 계정 이메일")).toHaveValue("");
+  expect(screen.getByLabelText("이름 (선택)")).toHaveValue("");
+  await userEvent.type(screen.getByLabelText("구글 계정 이메일"), "ob2@gmail.com");
+  await userEvent.click(screen.getByRole("button", { name: "등록" }));
+  expect(addAllowlist).toHaveBeenLastCalledWith({ email: "ob2@gmail.com", memberType: "OB", name: "" });
+});

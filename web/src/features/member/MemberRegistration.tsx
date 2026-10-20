@@ -33,8 +33,10 @@ export function MemberRegistration({ session, children }: { session: MemberSessi
     try {
       if (admin) await addOperatorPreapproval({ email: address, memberType });
       else await addAllowlist({ email: address, memberType, name: String(values.get("name") ?? "").trim() });
-      form.reset();
+      // 여러 명을 이어서 넣을 때 구분이 활동 단원으로 돌아가 OB를 잘못 등록하지 않도록 구분은 그대로 둡니다.
+      (form.elements.namedItem("name") as HTMLInputElement).value = "";
       setEmail("");
+      (form.elements.namedItem("email") as HTMLInputElement).focus();
       setAdmin(false);
       setRevision((value) => value + 1);
     } catch (caught) {
