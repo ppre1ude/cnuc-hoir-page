@@ -15,6 +15,12 @@ import {
 import { rosterName } from "../member/roles";
 import styles from "../member/AdminPages.module.css";
 
+// 서버 시계가 조금 늦으면 유효 시간이 지난 창을 아직 열림으로 답하므로, 이미 지난 창은 닫힌 것으로 봅니다.
+function closedIfExpired(session: SessionStatus): SessionStatus {
+  return session.open && session.expiresAt && new Date(session.expiresAt).getTime() <= Date.now()
+    ? { ...session, open: false } : session;
+}
+
 export function AdminAttendancePanel({ eventId }: { eventId: number }) {
   const [event, setEvent] = useState<ChoirEvent | null>(null);
   const [session, setSession] = useState<SessionStatus | null>(null);
@@ -26,16 +32,19 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
   const [busy, setBusy] = useState(false);
 
   // 15초 갱신, 버튼, 동작 뒤 갱신이 겹칠 수 있어 가장 나중에 보낸 요청의 응답만 화면에 씁니다.
+  // 화면에 쓰지 않은 응답이면 false를 돌려줘 호출한 쪽이 안내 문구를 건드리지 않게 합니다.
   const latestLoad = useRef(0);
   const refresh = useCallback(async () => {
     const load = ++latestLoad.current;
     try {
       const [current, rows] = await Promise.all([getCheckInSession(eventId), getAdminAttendance(eventId)]);
-      if (load !== latestLoad.current) return;
-      setSession(current);
+      if (load !== latestLoad.current) return false;
+      setSession(closedIfExpired(current));
       setMembers(rows);
+      return true;
     } catch (error) {
       if (load === latestLoad.current) throw error;
+      return false;
     }
   }, [eventId]);
 
@@ -47,7 +56,7 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
         if (!alive) return;
         setEvent(eventResult);
         if (load !== latestLoad.current) return;
-        setSession(sessionResult); setMembers(rows);
+        setSession(closedIfExpired(sessionResult)); setMembers(rows);
       }).catch((error) => {
         if (alive && load === latestLoad.current) setMessage(error instanceof Error ? error.message : "출석 정보를 불러오지 못했습니다.");
       });
@@ -66,23 +75,28 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
 
   useEffect(() => {
     if (!session?.open || !session.expiresAt) return;
-    // 서버 시계가 조금 늦어 아직 열림으로 답하면 1초 뒤 다시 묻습니다.
-    const delay = Math.max(1000, new Date(session.expiresAt).getTime() - Date.now());
+    // 명단 요청이 늦어져도 지난 QR과 코드가 남지 않게 먼저 닫고, 서버 상태는 뒤이어 맞춥니다.
     const timer = window.setTimeout(() => {
-      refresh().catch(() => setSession((value) => value && { ...value, open: false }));
-    }, delay);
+      setSession((value) => value && { ...value, open: false });
+      refresh().catch(() => undefined);
+    }, Math.max(0, new Date(session.expiresAt).getTime() - Date.now()));
     return () => window.clearTimeout(timer);
   }, [session, refresh]);
 
   const windowOpen = session?.open ?? false;
   useEffect(() => {
     if (!windowOpen) return;
-    const timer = window.setInterval(() => { refresh().catch(() => undefined); }, 15000);
-    return () => window.clearInterval(timer);
+    // 느린 연결에서 요청이 쌓여 서로를 무효로 만들지 않게, 이전 요청이 끝난 뒤에 다음 요청을 잡습니다.
+    let stopped = false;
+    let timer = window.setTimeout(function poll() {
+      refresh().catch(() => undefined).finally(() => { if (!stopped) timer = window.setTimeout(poll, 15000); });
+    }, 15000);
+    return () => { stopped = true; window.clearTimeout(timer); };
   }, [windowOpen, refresh]);
 
   function reloadList() {
-    refresh().then(() => setMessage("")).catch(() => setMessage("출석 목록을 새로고침하지 못했습니다."));
+    refresh().then((applied) => { if (applied) setMessage(""); })
+      .catch(() => setMessage("출석 목록을 새로고침하지 못했습니다."));
   }
 
   async function action(operation: () => Promise<IssuedSession | null | void>) {
