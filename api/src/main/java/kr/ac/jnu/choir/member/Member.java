@@ -149,6 +149,11 @@ public class Member {
         return cohort;
     }
 
+    public void rename(String name, Clock clock) {
+        this.name = name.strip();
+        updatedAt = clock.instant();
+    }
+
     public void updateProfile(Part part, Integer cohort, Clock clock) {
         this.part = part;
         this.cohort = cohort;

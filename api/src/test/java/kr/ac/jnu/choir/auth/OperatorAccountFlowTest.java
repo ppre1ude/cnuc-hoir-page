@@ -162,6 +162,7 @@ class OperatorAccountFlowTest {
                 .contains("\"status\":\"APPROVED\"");
         assertThat(attempts("GOOGLE_IP")).isEqualTo(attemptsBeforeLogin);
         assertThat(members.findByEmailIgnoreCase(gmail).orElseThrow().getMemberType().name()).isEqualTo("ACTIVE");
+        assertThat(members.findByEmailIgnoreCase(gmail).orElseThrow().getName()).isEqualTo("자동 승인");
         MockHttpSession externalSession = new MockHttpSession();
         assertThat(login(externalSession, "external-credential", externalSubject, external, "승인 대기", false))
                 .contains("\"status\":\"APPROVAL_PENDING\"");
@@ -275,10 +276,26 @@ class OperatorAccountFlowTest {
                 .contains("\"admin\":false");
     }
 
+    @Test void allowlistNameReplacesGoogleProfileNameOnApproval() throws Exception {
+        Member admin = admin();
+        MockHttpSession adminSession = sessionFor(admin);
+        String adminCsrf = csrf(adminSession);
+        String gmail = "named" + UUID.randomUUID().toString().replace("-", "") + "@gmail.com";
+        addAllowlist(adminSession, adminCsrf, gmail, "홍길동");
+        assertThat(login(new MockHttpSession(), "named-credential", "sub-" + UUID.randomUUID(), gmail, "Jae", true))
+                .contains("\"status\":\"APPROVED\"").contains("\"name\":\"홍길동\"");
+        assertThat(members.findByEmailIgnoreCase(gmail).orElseThrow().getName()).isEqualTo("홍길동");
+    }
+
     private long addAllowlist(MockHttpSession session, String csrf, String email) throws Exception {
+        return addAllowlist(session, csrf, email, null);
+    }
+
+    private long addAllowlist(MockHttpSession session, String csrf, String email, String name) throws Exception {
         String body = mvc.perform(post("/api/v1/admin/allowlist").session(session)
                 .header("X-CSRF-TOKEN", csrf).contentType("application/json")
-                .content("{\"email\":\"" + email + "\",\"memberType\":\"ACTIVE\"}"))
+                .content("{\"email\":\"" + email + "\",\"memberType\":\"ACTIVE\""
+                        + (name == null ? "" : ",\"name\":\"" + name + "\"") + "}"))
                 .andReturn().getResponse().getContentAsString();
         return mapper.readTree(body).get("id").asLong();
     }
