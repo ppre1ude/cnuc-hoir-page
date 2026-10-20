@@ -66,3 +66,10 @@ test("권한 부족 403은 이동하지 않고 등록된 함수에 알립니다"
   await expect(apiRequest("/admin/notices")).rejects.toMatchObject({ code: "PERMISSION_REQUIRED" });
   expect(listener).toHaveBeenCalledTimes(1);
 });
+
+test("코드와 메시지가 없는 서버 오류 본문에도 안내 문구를 붙입니다", async () => {
+  respond(500, { timestamp: "2026-10-20T00:00:00Z", status: 500, error: "Internal Server Error", path: "/api/v1/attendance/me" });
+  await expect(apiRequest("/attendance/me")).rejects.toMatchObject({
+    status: 500, code: "REQUEST_FAILED", message: "서버에 문제가 생겼습니다. 잠시 후 다시 시도해 주세요.",
+  });
+});

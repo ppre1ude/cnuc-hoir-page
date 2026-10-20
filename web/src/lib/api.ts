@@ -58,7 +58,8 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
     if (response.status === 403 && error.code === "PERMISSION_REQUIRED") {
       permissionDeniedListeners.forEach((listener) => listener());
     }
-    throw new ApiRequestError(response.status, error.code, error.message);
+    throw new ApiRequestError(response.status, error.code ?? "REQUEST_FAILED",
+      error.message || "서버에 문제가 생겼습니다. 잠시 후 다시 시도해 주세요.");
   }
 
   if (response.status === 202 || response.status === 204) {
