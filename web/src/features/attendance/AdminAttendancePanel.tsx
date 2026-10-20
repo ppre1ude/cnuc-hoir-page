@@ -2,7 +2,7 @@
 
 import { Button, Input, Feedback, PageHeader, SkeletonRows } from "../../components/ui";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import QRCode from "qrcode";
@@ -24,18 +24,25 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // 15초 갱신, 버튼, 동작 뒤 갱신이 겹칠 수 있어 가장 나중에 보낸 요청의 응답만 화면에 씁니다.
+  const latestLoad = useRef(0);
   const refresh = useCallback(async () => {
+    const load = ++latestLoad.current;
     const [current, rows] = await Promise.all([getCheckInSession(eventId), getAdminAttendance(eventId)]);
+    if (load !== latestLoad.current) return;
     setSession(current);
     setMembers(rows);
   }, [eventId]);
 
   useEffect(() => {
     let alive = true;
+    const load = ++latestLoad.current;
     Promise.all([getEvent(eventId), getCheckInSession(eventId), getAdminAttendance(eventId)])
       .then(([eventResult, sessionResult, rows]) => {
         if (!alive) return;
-        setEvent(eventResult); setSession(sessionResult); setMembers(rows);
+        setEvent(eventResult);
+        if (load !== latestLoad.current) return;
+        setSession(sessionResult); setMembers(rows);
       }).catch((error) => {
         if (alive) setMessage(error instanceof Error ? error.message : "출석 정보를 불러오지 못했습니다.");
       });

@@ -162,3 +162,19 @@ test("목록 다시 불러오기는 오류가 없어도 보이고 QR과 코드�
   expect(screen.getByText("ABCD2345")).toBeInTheDocument();
   expect(screen.getByText(/새로고침하면 QR과 코드가 사라집니다/)).toBeInTheDocument();
 });
+
+test("늦게 도착한 이전 명단 응답이 더 최근 명단을 덮지 않습니다", async () => {
+  await renderWithOpenWindow();
+  let resolveStale!: (rows: attendance.AdminAttendance[]) => void;
+  vi.mocked(attendance.getAdminAttendance)
+    .mockReturnValueOnce(new Promise((resolve) => { resolveStale = resolve; }))
+    .mockResolvedValueOnce([{ ...sora, status: "CHECKED_IN" }]);
+
+  fireEvent.click(screen.getByRole("button", { name: "목록 다시 불러오기" }));
+  fireEvent.click(screen.getByRole("button", { name: "목록 다시 불러오기" }));
+  expect(await screen.findByText(/출석 완료/)).toBeInTheDocument();
+  await act(async () => { resolveStale([{ ...sora, status: "NOT_OPEN" }]); });
+
+  expect(screen.getByText(/출석 완료/)).toBeInTheDocument();
+  expect(screen.queryByText(/출석 창 대기/)).toBeNull();
+});
