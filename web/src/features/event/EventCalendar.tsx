@@ -151,7 +151,7 @@ export function EventCalendar() {
       href={link.href} target="_blank" rel="noopener noreferrer">{link.label} <span aria-hidden="true">↗</span></ActionLink>)} />
     {error && <div role="alert" className={styles.error}>{error} <Button variant="secondary" type="button" onClick={() => setRetry(retry + 1)}>다시 시도</Button></div>}
     <div className={styles.grid}>
-      <section aria-label="행사 달력" className={`${styles.card} ${styles.calendar}`}>
+      <section aria-label="일정 달력"className={`${styles.card} ${styles.calendar}`}>
         <div className={styles.calendarHeader}>
           <h2 id="calendar-month" aria-live="polite" aria-atomic="true">{month.replace("-", "년 ")}월</h2>
           <div className={styles.monthControls}>
@@ -173,7 +173,7 @@ export function EventCalendar() {
             return <td key={key}><Button variant="unstyled" type="button" className={`${styles.day} ${key === selectedDate ? styles.selectedDay : ""}`}
               onClick={() => { setSelectedDate(key); setSelectedEventId(null); }} aria-pressed={key === selectedDate}
               aria-current={key === today ? "date" : undefined}
-              aria-label={`${month.replace("-", "년 ")}월 ${day}일${count ? `, 행사 ${count}개` : ""}`}>
+              aria-label={`${month.replace("-", "년 ")}월 ${day}일${count ? `, 일정 ${count}개` : ""}`}>
               <span className={styles.dayNumber}>{day}</span>
               {count > 0 && <span className={styles.dayEvent}>{eventsOnDay[0].title}</span>}
               {count > 1 && <span className={styles.moreEvents}>+{count - 1}</span>}
@@ -190,12 +190,12 @@ export function EventCalendar() {
         </div>
       </section>
       <div className={styles.rightColumn}>
-      <section aria-label="선택한 행사" className={`${styles.card} ${styles.detail}`}>
-        <div className={styles.sectionHeader}><h2>이달의 행사</h2></div>
+      <section aria-label="선택한 일정" className={`${styles.card} ${styles.detail}`}>
+        <div className={styles.sectionHeader}><h2>이달의 일정</h2></div>
         {rsvpError && <Feedback tone="error">{rsvpError} <Button variant="secondary" type="button" onClick={() => {
           setRsvpError(""); setRsvpRetry((value) => value + 1);
         }}>다시 시도</Button></Feedback>}
-        {eventsLoaded && sortedEvents.length === 0 && <p className={styles.empty}>등록된 행사가 없습니다.</p>}
+        {eventsLoaded && sortedEvents.length === 0 && <p className={styles.empty}>등록된 일정이 없습니다.</p>}
         {sortedEvents.length > 0 && <ul className={styles.eventList}>
           {sortedEvents.map((event) => {
             const date = seoulDateKey(event.startAt);

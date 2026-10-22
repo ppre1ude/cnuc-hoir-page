@@ -5,6 +5,8 @@
   border-bottom: 1px solid var(--color-line);
   background: var(--color-surface);
 }
+/* 고정 헤더가 위로 이동한 키보드 초점을 가리지 않게 헤더 높이만큼 스크롤 여백을 둡니다. */
+:global(html):has(.header) { scroll-padding-top: 80px; }
 
 .inner {
   display: flex;
@@ -43,6 +45,7 @@
 .subnav a { min-height: var(--control-medium); font-size: var(--text-label); }
 
 @media (max-width: 850px) {
+  :global(html):has(.header) { scroll-padding-top: 112px; }
   .inner { flex-wrap: wrap; height: auto; gap: 0 var(--space-4); }
   .brand { height: var(--control-large); }
   .brand img { --logo-width: 160px; }

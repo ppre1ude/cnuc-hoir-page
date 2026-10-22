@@ -11,7 +11,7 @@ vi.mock("./attendance", async (importOriginal) => {
   const original = await importOriginal<typeof attendance>();
   return {
     ...original, getCheckInSession: vi.fn(), getAdminAttendance: vi.fn(), openCheckIn: vi.fn(),
-    rotateCheckIn: vi.fn(), closeCheckIn: vi.fn(),
+    rotateCheckIn: vi.fn(), closeCheckIn: vi.fn(), correctAttendance: vi.fn(),
   };
 });
 vi.mock("../event/events", async (importOriginal) => {
@@ -126,6 +126,28 @@ test("출석 명단은 이메일 없이 이름 옆에 파트와 기수를 보입
   expect(await screen.findByText("김소라 · 소프라노 5기")).toBeInTheDocument();
   expect(screen.getByText("이하늘")).toBeInTheDocument();
   expect(screen.getByLabelText("단원 출석 기록")).not.toHaveTextContent("@");
+});
+
+test("정정 이유를 적기 전에는 정정 버튼이 꺼져 있고, 적으면 그 단원만 정정합니다", async () => {
+  vi.mocked(events.getEvent).mockResolvedValue(rehearsal);
+  vi.mocked(attendance.getCheckInSession).mockResolvedValue({ sessionId: null, expiresAt: null, open: false });
+  vi.mocked(attendance.getAdminAttendance).mockResolvedValue([{ ...sora, status: "MISSED" },
+    { memberId: 12, name: "이하늘", part: null, cohort: null, status: "MISSED" }]);
+  vi.mocked(attendance.correctAttendance).mockResolvedValue();
+  renderWithSession(<AdminAttendancePanel eventId={3} />, sessionFixture({ admin: true }));
+
+  const checkIn = await screen.findByRole("button", { name: "김소라 출석으로 정정" });
+  expect(checkIn).toBeDisabled();
+  expect(screen.getByRole("button", { name: "김소라 미출석으로 정정" })).toBeDisabled();
+  fireEvent.change(screen.getByLabelText("김소라 정정 이유"), { target: { value: "  " } });
+  expect(checkIn).toBeDisabled();
+  fireEvent.change(screen.getByLabelText("김소라 정정 이유"), { target: { value: "지각 확인" } });
+  expect(checkIn).toBeEnabled();
+  expect(screen.getByRole("button", { name: "이하늘 출석으로 정정" })).toBeDisabled();
+
+  fireEvent.click(checkIn);
+  await waitFor(() => expect(attendance.correctAttendance).toHaveBeenCalledWith(3, 11, "CHECKED_IN", "지각 확인"));
+  expect(screen.queryByRole("alert")).toBeNull();
 });
 
 test("출석 창이 열린 동안 아직 출석하지 않은 단원은 출석 전으로 보입니다", async () => {

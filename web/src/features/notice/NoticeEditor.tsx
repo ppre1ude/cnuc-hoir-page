@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Input, Select, Textarea, Feedback, PageHeader, SkeletonRows } from "../../components/ui";
+import { Button, Input, Select, Textarea, Feedback, PageHeader, SkeletonRows, StatusBadge } from "../../components/ui";
 
 import { useEffect, useState } from "react";
 import { ApiRequestError } from "../../lib/api";
@@ -134,7 +134,8 @@ export function NoticeEditor() {
       {visibleData && <>
       {visibleData.items.length === 0 && <p>작성된 공지가 없습니다.</p>}
       {visibleData.items.map((notice) => <Button variant="unstyled" className={styles.rowButton} type="button" key={notice.id} onClick={() => edit(notice)}>
-        <strong>{notice.title}</strong><span>{notice.published ? "게시" : "초안"}</span>
+        <strong>{notice.title}</strong><StatusBadge tone={notice.published ? "positive" : "neutral"}>{notice.published ? "게시" : "초안"}</StatusBadge>
+        <span aria-hidden="true" className={styles.arrow}>→</span>
       </Button>)}
       {visibleData.total > visibleData.size && <nav className={styles.pagination} aria-label="공지 관리 페이지">
         <Button variant="secondary" type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>이전</Button>
@@ -184,7 +185,7 @@ export function NoticeEditor() {
             <Input id="poll-closes" type="datetime-local" value={pollClosesAt} onChange={(event) => update({ pollClosesAt: event.target.value })} required />
             <p>등록한 투표의 질문과 선택지는 변경할 수 없습니다.</p>
             <p>응답자 이름과 선택은 운영진에게 표시됩니다. 익명 투표는 지원하지 않습니다.</p>
-            <p>참석 응답은 행사 출석 기록과 별도로 관리됩니다.</p>
+            <p>투표의 참석·불참은 일정의 참석 응답이나 출석 기록에 반영되지 않습니다.</p>
           </div>}
         </>}
         <div className={styles.actions}><Button variant="primary" type="submit" disabled={busy || !title.trim() || !body.trim()}>저장</Button>

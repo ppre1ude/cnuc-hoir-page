@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ApiRequestError, onPermissionDenied, redirectTo } from "../../lib/api";
 import { loginPath } from "../../lib/returnPath";
-import { getSession, isStaff, type MemberSession } from "./session";
+import { getSession, isStaff, rememberedSession, rememberSession, type MemberSession } from "./session";
 
 export type SessionStatus = "loading" | "ready" | "failed";
 type SessionState = { status: SessionStatus; session: MemberSession | null; refresh: () => void };
@@ -17,10 +17,14 @@ export function SessionProvider({ children, requireStaff = false, initialSession
   requireStaff?: boolean;
   initialSession?: MemberSession;
 }) {
-  const [session, setSession] = useState<MemberSession | null>(initialSession ?? null);
-  const [status, setStatus] = useState<SessionStatus>(initialSession ? "ready" : "loading");
+  const [first] = useState(() => {
+    const remembered = rememberedSession();
+    return initialSession ?? (remembered && (!requireStaff || isStaff(remembered)) ? remembered : null);
+  });
+  const [session, setSession] = useState<MemberSession | null>(first);
+  const [status, setStatus] = useState<SessionStatus>(first ? "ready" : "loading");
   const latest = useRef(0);
-  const hasSession = useRef(Boolean(initialSession));
+  const hasSession = useRef(Boolean(first));
 
   const load = useCallback((retries = 0) => {
     const attempt = (left: number) => {
@@ -30,11 +34,12 @@ export function SessionProvider({ children, requireStaff = false, initialSession
         if (value.status !== "APPROVED") { redirectTo("/application-status"); return; }
         if (requireStaff && !isStaff(value)) { redirectTo("/dashboard"); return; }
         hasSession.current = true;
+        rememberSession(value);
         setSession(value);
         setStatus("ready");
       }).catch((error: unknown) => {
         if (request !== latest.current) return;
-        if (error instanceof ApiRequestError && error.status === 401) { redirectTo(loginPath(window.location)); return; }
+        if (error instanceof ApiRequestError && error.status === 401) { rememberSession(null); redirectTo(loginPath(window.location)); return; }
         // 이미 받은 세션이 있으면 다시 받기 실패는 화면을 바꾸지 않습니다.
         if (hasSession.current) return;
         if (left > 0) { attempt(left - 1); return; }
@@ -50,13 +55,14 @@ export function SessionProvider({ children, requireStaff = false, initialSession
   }, [load]);
 
   useEffect(() => {
-    // 처음 값이 있으면 받지 않습니다. StrictMode가 effect를 다시 실행해도 같습니다.
-    if (!hasSession.current) load(1);
+    // 처음 값을 받았으면 받지 않습니다. StrictMode가 effect를 다시 실행해도 같습니다.
+    // 기억한 세션으로 먼저 그렸으면 직책이 바뀌었을 수 있어 다시 받아 맞춥니다.
+    if (!initialSession) load(hasSession.current ? 0 : 1);
     const unsubscribe = onPermissionDenied(load);
     // 레이아웃이 바뀌어 사라진 provider의 늦은 응답이 사용자가 고른 페이지를 덮지 않게 합니다.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- DOM ref가 아니라 요청 번호이고, 정리 시점의 최신 값을 무효로 만드는 것이 목적이다.
     return () => { unsubscribe(); latest.current++; };
-  }, [load]);
+  }, [load, initialSession]);
 
   const value = useMemo(() => ({ status, session, refresh }), [status, session, refresh]);
   return <SessionContext value={value}>{children}</SessionContext>;

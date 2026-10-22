@@ -23,7 +23,7 @@ export function MyAttendancePage() {
     {error && <Feedback tone="error">{error} <Button variant="secondary" onClick={() => { setError(""); setLoaded(false); setRetry((value) => value + 1); }}>다시 시도</Button></Feedback>}
     {!loaded && !error && <SkeletonRows count={4} label="출석 기록을 불러오는 중입니다." className={styles.list} />}
     {loaded && items.length === 0 && !error && <p className={styles.empty}>출석 기록이 없습니다.</p>}
-    {!error && loaded && items.length > 0 && <ul className={styles.list} aria-label="행사별 출석 기록">{items.map((item) => <li key={item.eventId}>
+    {!error && loaded && items.length > 0 && <ul className={styles.list} aria-label="일정별 출석 기록">{items.map((item) => <li key={item.eventId}>
       <Link href={`/events/${item.eventId}`}><time dateTime={item.startAt} className={styles.date}>{attendanceDate(item.startAt)}</time><span className={styles.eventTitle}>{item.eventTitle}</span><StatusBadge tone={item.status === "CHECKED_IN" ? "positive" : item.status === "MISSED" ? "negative" : "neutral"}>{memberAttendanceLabel(item)}</StatusBadge><span aria-hidden="true" className={styles.arrow}>→</span></Link>
     </li>)}</ul>}
   </main>;

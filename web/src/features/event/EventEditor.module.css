@@ -19,15 +19,17 @@
 .listHeader { display: flex; align-items: start; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); }
 .listHeader label { font-size: var(--text-small); font-weight: var(--weight-label); }
 .listHeader input { display: block; margin-top: var(--space-1); }
-.eventRow { display: flex; flex-direction: column; gap: var(--space-1); width: 100%; padding: var(--space-4) var(--space-2); border: 0; border-top: 1px solid var(--color-line); background: transparent; font: inherit; font-weight: var(--weight-label); text-align: left; cursor: pointer; }
+.eventRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-1) var(--space-3); width: 100%; padding: var(--space-4) var(--space-2); border: 0; border-top: 1px solid var(--color-line); background: transparent; font: inherit; font-weight: var(--weight-label); text-align: left; cursor: pointer; }
 .eventRow:hover { background: var(--color-subtle); }
 .eventRow span { color: var(--color-muted); font-size: var(--text-small); font-weight: var(--weight-body); }
 .eventRow[aria-pressed="true"] { background: var(--color-selected); color: var(--color-primary); }
+/* 눌러서 여는 행임을 알 수 있게 단원 화면의 목록처럼 오른쪽에 화살표를 둡니다. */
+.eventRow .arrow { grid-area: 1 / 2 / 3; color: var(--color-primary); font-size: var(--text-body); }
 
 .form { display: flex; flex-direction: column; gap: var(--space-2); }
 .form label { font-size: var(--text-label); font-weight: var(--weight-label); }
 .form input:not([type="checkbox"]), .form textarea { margin-bottom: var(--space-2); }
-.check { display: flex; align-items: center; gap: var(--space-2); }
+.check { display: flex; align-items: center; gap: var(--space-2); min-height: var(--control-medium); }
 .form .check { font-weight: var(--weight-body); }
 .hint { margin: 0; color: var(--color-muted); font-size: var(--text-small); }
 .actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }

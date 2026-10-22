@@ -2,7 +2,7 @@
 
 import { Button, Input, Select, Feedback, PageHeader, SkeletonRows } from "../../components/ui";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ApiRequestError } from "../../lib/api";
 import { can, type MemberSession } from "../auth/session";
 import { useSession, useSessionState } from "../auth/SessionProvider";
@@ -102,6 +102,9 @@ export function MemberAccountManager() {
 
   const link = issued && typeof window !== "undefined"
     ? `${window.location.origin}/activate#token=${issued.token}` : "";
+  // 결과는 목록 위에 그려져, 아래쪽 행에서 발급하거나 실패하면 휴대폰에서는 화면 밖에 뜹니다. 그래서 결과로 화면을 옮깁니다.
+  const result = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (link || error) result.current?.scrollIntoView({ block: "center" }); }, [link, error]);
 
   return <section className={styles.page}>
     <PageHeader title="단원 계정" />
@@ -122,7 +125,7 @@ export function MemberAccountManager() {
         </form>
       </details>
     </MemberRegistration>}
-    {error && <Feedback tone="error">{error}</Feedback>}
+    <div ref={result}>{error && <Feedback tone="error">{error}</Feedback>}
     {link && <section className={`${styles.panel} ${styles.issued}`} aria-labelledby="link-title">
       <div className={styles.panelHeader}><h2 id="link-title">발급된 링크</h2></div>
       <p className={styles.hint}>이 링크는 한 번만 표시됩니다. 24시간 안에 해당 단원에게 비공개로 전달해 주세요.</p>
@@ -130,7 +133,7 @@ export function MemberAccountManager() {
       <Input id="issued-link" className={styles.linkInput} value={link} readOnly onFocus={(event) => event.currentTarget.select()} />
       <div className={styles.actions}><Button variant="secondary" type="button"
         onClick={() => navigator.clipboard.writeText(link).catch(() => setError("복사하지 못했습니다. 링크를 직접 선택해 주세요."))}>링크 복사</Button></div>
-    </section>}
+    </section>}</div>
     <section aria-labelledby="members-title" className={styles.memberSection}>
       <h2 id="members-title">계정 목록</h2>
       {!data && error && <Button variant="secondary" type="button" onClick={() => { setError(""); setRefresh((value) => value + 1); }}>다시 시도</Button>}
@@ -167,19 +170,23 @@ function MemberRow({ item, busy, session, onChanged, onRenew, onRevoke, onReopen
     <p>{[item.email, type, status].filter(Boolean).join(" · ")}</p>
     <MemberRoles item={item} session={session} onChanged={onChanged} />
     {can(session, "APPROVE_APPLICATIONS") && (item.status === "REVOKED" || !item.googleLinked && (item.status === "INVITED" || item.status === "APPROVED")) && <div className={styles.actions}>
-      <Button variant="secondary" type="button" disabled={busy} onClick={onRenew}>
+      <Button variant="secondary" type="button" disabled={busy} onClick={onRenew}
+        aria-label={`${item.name} ${item.status === "INVITED" ? "초대 링크 다시 발급" : item.status === "REVOKED" ? "다시 초대" : "계정 연결 링크 발급"}`}>
         {item.status === "INVITED" ? "초대 링크 다시 발급" : item.status === "REVOKED" ? "다시 초대" : "계정 연결 링크 발급"}
       </Button>
     </div>}
     {can(session, "APPROVE_APPLICATIONS") && item.status === "REJECTED" && <div className={styles.actions}>
-      <Button variant="secondary" type="button" disabled={busy} onClick={onReopen}>반려 취소</Button>
+      <Button variant="secondary" type="button" disabled={busy} onClick={onReopen} aria-label={`${item.name} 반려 취소`}>반려 취소</Button>
     </div>}
     {can(session, "REVOKE_ACCESS") && (!leadership || can(session, "MANAGE_SITE_ADMINS")) && (item.status === "APPROVED" || item.status === "INVITED")
-      && item.id !== session.id && <div className={styles.fieldGroup}>
-      <label htmlFor={`revoke-${item.id}`}>접근 해제 이유</label>
-      <Input id={`revoke-${item.id}`} value={reason} maxLength={500} onChange={(event) => setReason(event.target.value)} />
-      <div className={styles.actions}><Button variant="danger" type="button" disabled={busy || !reason.trim()}
-        onClick={() => onRevoke(reason.trim())}>접근 해제</Button></div>
-    </div>}
+      && item.id !== session.id && <details className={styles.more}>
+      <summary>접근 해제</summary>
+      <div className={styles.fieldGroup}>
+        <label htmlFor={`revoke-${item.id}`}>{item.name} 접근 해제 이유</label>
+        <Input id={`revoke-${item.id}`} value={reason} maxLength={500} onChange={(event) => setReason(event.target.value)} />
+        <div className={styles.actions}><Button variant="danger" type="button" disabled={busy || !reason.trim()}
+          onClick={() => onRevoke(reason.trim())}>{item.name} 접근 해제</Button></div>
+      </div>
+    </details>}
   </article>;
 }

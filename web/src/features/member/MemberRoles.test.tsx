@@ -19,7 +19,7 @@ test("직책을 한글로 보여 주고 해제합니다", async () => {
   const onChanged = vi.fn();
   render(<MemberRoles item={item} session={president} onChanged={onChanged} />);
   expect(screen.getByText("알토수석")).toBeInTheDocument();
-  await userEvent.click(screen.getByRole("button", { name: "알토수석 해제" }));
+  await userEvent.click(screen.getByRole("button", { name: "단원 알토수석 해제" }));
   expect(removeMemberRole).toHaveBeenCalledWith(7, 11);
   await waitFor(() => expect(onChanged).toHaveBeenCalled());
 });
@@ -30,7 +30,7 @@ test("부원은 부서와 계를 함께 골라 추가합니다", async () => {
   await userEvent.selectOptions(screen.getByLabelText("추가할 직책"), "DEPARTMENT_MEMBER");
   await userEvent.selectOptions(screen.getByLabelText("부서"), "MANAGEMENT");
   await userEvent.selectOptions(screen.getByLabelText("계"), "SCORES");
-  await userEvent.click(screen.getByRole("button", { name: "직책 추가" }));
+  await userEvent.click(screen.getByRole("button", { name: "단원 직책 추가" }));
   expect(assignMemberRole).toHaveBeenCalledWith(7, { role: "DEPARTMENT_MEMBER", department: "MANAGEMENT", unit: "SCORES" });
 });
 
@@ -48,7 +48,7 @@ test("파트와 기수를 저장합니다", async () => {
   await userEvent.selectOptions(screen.getByLabelText("파트"), "TENOR");
   await userEvent.clear(screen.getByLabelText("기수"));
   await userEvent.type(screen.getByLabelText("기수"), "3");
-  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  await userEvent.click(screen.getByRole("button", { name: "단원 정보 저장" }));
   expect(updateMemberProfile).toHaveBeenCalledWith(7, { part: "TENOR", cohort: 3 });
 });
 
@@ -57,7 +57,7 @@ test("구분이 비어 있는 승인 계정은 미지정으로 보이고, 파트
   render(<MemberRoles item={{ ...item, memberType: null, roles: [] }} session={president} onChanged={vi.fn()} />);
   expect(screen.getByLabelText("단원 구분")).toHaveDisplayValue("미지정");
   await userEvent.selectOptions(screen.getByLabelText("파트"), "TENOR");
-  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  await userEvent.click(screen.getByRole("button", { name: "단원 정보 저장" }));
   expect(updateMemberProfile).toHaveBeenLastCalledWith(7, { part: "TENOR", cohort: 2 });
 });
 
@@ -67,10 +67,10 @@ test("직책이 있는 단원을 OB로 바꾸기 전에 직책 해제를 확인�
   onTestFinished(() => confirm.mockRestore());
   render(<MemberRoles item={item} session={president} onChanged={vi.fn()} />);
   await userEvent.selectOptions(screen.getByLabelText("단원 구분"), "OB");
-  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  await userEvent.click(screen.getByRole("button", { name: "단원 정보 저장" }));
   expect(confirm).toHaveBeenCalledWith(expect.stringContaining("직책(알토수석)이 모두 해제됩니다"));
   expect(updateMemberProfile).not.toHaveBeenCalled();
-  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  await userEvent.click(screen.getByRole("button", { name: "단원 정보 저장" }));
   expect(updateMemberProfile).toHaveBeenCalledWith(7, { part: "ALTO", cohort: 2, memberType: "OB" });
 });
 
@@ -80,13 +80,13 @@ test("직책이 없으면 확인 없이 OB로 바꾸고, 승인 전 계정에는
   onTestFinished(() => confirm.mockRestore());
   const { unmount } = render(<MemberRoles item={{ ...item, roles: [] }} session={president} onChanged={vi.fn()} />);
   await userEvent.selectOptions(screen.getByLabelText("단원 구분"), "OB");
-  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  await userEvent.click(screen.getByRole("button", { name: "단원 정보 저장" }));
   expect(confirm).not.toHaveBeenCalled();
   expect(updateMemberProfile).toHaveBeenLastCalledWith(7, { part: "ALTO", cohort: 2, memberType: "OB" });
   unmount();
 
   render(<MemberRoles item={{ ...item, status: "APPROVAL_PENDING", memberType: null, roles: [] }} session={president} onChanged={vi.fn()} />);
   expect(screen.queryByLabelText("단원 구분")).not.toBeInTheDocument();
-  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  await userEvent.click(screen.getByRole("button", { name: "단원 정보 저장" }));
   expect(updateMemberProfile).toHaveBeenLastCalledWith(7, { part: "ALTO", cohort: 2 });
 });

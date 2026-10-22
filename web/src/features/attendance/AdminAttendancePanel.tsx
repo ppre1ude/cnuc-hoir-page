@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Input, Feedback, PageHeader, SkeletonRows } from "../../components/ui";
+import { Button, Input, Feedback, PageHeader, SkeletonRows, StatusBadge } from "../../components/ui";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -123,7 +123,7 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
 
   async function correct(member: AdminAttendance, status: "CHECKED_IN" | "MISSED") {
     const reason = reasons[member.memberId]?.trim();
-    if (!reason) { setMessage("정정 이유를 입력해 주세요."); return; }
+    if (!reason) return;
     await action(async () => {
       await correctAttendance(eventId, member.memberId, status, reason);
       setReasons((value) => ({ ...value, [member.memberId]: "" }));
@@ -131,8 +131,8 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
   }
 
   return <div className={styles.page}>
-    <Link className={styles.back} href="/admin/events">← 행사 관리로 돌아가기</Link>
-    <PageHeader title={`${event?.title ?? "행사"} 출석 관리`} />
+    <Link className={styles.back} href="/admin/events">← 일정 관리로 돌아가기</Link>
+    <PageHeader title={`${event?.title ?? "일정"} 출석 관리`} />
     <p>출석 창은 열 때부터 10분 동안 유효합니다. 회전하면 이전 QR과 코드는 즉시 사용할 수 없습니다.</p>
     <p><strong>파트연습에는 출석 창을 열지 마세요.</strong> 지금은 파트를 구분하지 않아, 출석 창을 닫거나 유효 시간이 지나면 출석하지 않은 대상 단원 모두가 미출석으로 남습니다.</p>
     {message && <Feedback tone="error">{message}</Feedback>}
@@ -155,14 +155,19 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
       {members === null && !message && <SkeletonRows count={3} label="출석 기록을 불러오는 중입니다." />}
       {members?.length === 0 && <p>출석 대상 단원이 없습니다.</p>}
       {members?.map((member) => <div className={styles.row} key={member.memberId}>
-        <strong>{rosterName(member)}</strong> · {member.status === "NOT_OPEN" && windowOpen ? "출석 전" : attendanceLabel[member.status]}
-        <div className={styles.fieldGroup}><label htmlFor={`reason-${member.memberId}`}>정정 이유</label> <Input id={`reason-${member.memberId}`}
-          value={reasons[member.memberId] ?? ""} maxLength={500}
-          onChange={(event) => setReasons((value) => ({ ...value, [member.memberId]: event.target.value }))} /></div>
-        <div className={styles.actions}><Button variant="primary" type="button" disabled={busy || member.status === "CHECKED_IN"}
-          onClick={() => correct(member, "CHECKED_IN")}>출석으로 정정</Button>
-        <Button variant="secondary" type="button" disabled={busy || member.status === "MISSED"}
-          onClick={() => correct(member, "MISSED")}>미출석으로 정정</Button></div>
+        <strong>{rosterName(member)}</strong> <StatusBadge tone={member.status === "CHECKED_IN" ? "positive" : member.status === "MISSED" ? "negative" : "neutral"}>
+          {member.status === "NOT_OPEN" && windowOpen ? "출석 전" : attendanceLabel[member.status]}</StatusBadge>
+        {/* 정정은 드물게 쓰므로 접어 둡니다. 이유를 적기 전에는 버튼을 꺼 둬, 화면 위쪽에 오류를 띄우지 않습니다. */}
+        <details className={styles.more}>
+          <summary aria-label={`${member.name} 정정`}>정정</summary>
+          <div className={styles.fieldGroup}><label htmlFor={`reason-${member.memberId}`}>{member.name} 정정 이유</label> <Input id={`reason-${member.memberId}`}
+            value={reasons[member.memberId] ?? ""} maxLength={500}
+            onChange={(event) => setReasons((value) => ({ ...value, [member.memberId]: event.target.value }))} /></div>
+          <div className={styles.actions}><Button variant="secondary" type="button" disabled={busy || !reasons[member.memberId]?.trim() || member.status === "CHECKED_IN"}
+            onClick={() => correct(member, "CHECKED_IN")}>{member.name} 출석으로 정정</Button>
+          <Button variant="secondary" type="button" disabled={busy || !reasons[member.memberId]?.trim() || member.status === "MISSED"}
+            onClick={() => correct(member, "MISSED")}>{member.name} 미출석으로 정정</Button></div>
+        </details>
       </div>)}
     </section></div>
   </div>;

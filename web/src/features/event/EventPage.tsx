@@ -41,7 +41,7 @@ export function EventPage() {
       });
       void refreshAttendance();
       timer = window.setInterval(refreshAttendance, 15000);
-    }).catch(() => { if (alive) setError("행사를 불러오지 못했습니다."); });
+    }).catch(() => { if (alive) setError("일정을 불러오지 못했습니다."); });
     return () => { alive = false; if (timer !== undefined) window.clearInterval(timer); };
   }, [id, retry]);
 
@@ -56,11 +56,11 @@ export function EventPage() {
 
   return <main id="member-content" tabIndex={-1} className={styles.eventPage}>
     <Link className={styles.backLink} href="/dashboard">← 일정</Link>
-    <PageHeader title="행사" />
+    <PageHeader title={event?.title ?? "일정"} />
     {error && <Feedback tone="error">{error} <Button variant="secondary" onClick={() => { setError(""); setRetry((value) => value + 1); }}>다시 시도</Button></Feedback>}
-    {!Number.isSafeInteger(Number(id)) || Number(id) < 1 ? <p>행사 주소를 확인해 주세요.</p> :
+    {!Number.isSafeInteger(Number(id)) || Number(id) < 1 ? <p>일정 주소를 확인해 주세요.</p> :
       event ? <div className={styles.eventPageCard}><EventDetail event={event} memberType={session.memberType}
-        checkInOpen={attendance?.checkInOpen ?? false} />
+        checkInOpen={attendance?.checkInOpen ?? false} showTitle={false} />
         {rsvpLoaded && <EventRsvp key={`${event.id}-${event.startAt}`} event={event} memberType={session.memberType} choice={rsvpChoice} onSaved={setRsvpChoice} />}
         {rsvpError && <Feedback tone="error">{rsvpError} <Button variant="secondary" type="button" onClick={() => {
           setRsvpError(""); setRsvpRetry((value) => value + 1);
@@ -68,6 +68,6 @@ export function EventPage() {
         <div className={styles.eventAttendance}><strong>내 출석</strong>{attendance ? <StatusBadge tone={attendance.status === "CHECKED_IN" ? "positive" : attendance.status === "MISSED" ? "negative" : "neutral"}>{memberAttendanceLabel(attendance)}</StatusBadge> : !attendanceError && <span role="status">확인 중</span>}</div>
         {attendanceError && <Feedback tone="error">{attendanceError}</Feedback>}
         {can(session, "MANAGE_EVENTS") && <p><Link href={`/admin/events/${event.id}/attendance`}>운영진 출석 관리</Link></p>}</div>
-        : !error && <SkeletonRows count={4} label="행사를 불러오는 중입니다." />}
+        : !error && <SkeletonRows count={4} label="일정을 불러오는 중입니다." />}
   </main>;
 }

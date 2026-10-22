@@ -2,13 +2,13 @@ import { afterEach, expect, test, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { MemberNavigation } from "./MemberNavigation";
 import { SessionProvider } from "../auth/SessionProvider";
-import { getSession } from "../auth/session";
+import { getSession, rememberSession } from "../auth/session";
 import { renderWithSession, sessionFixture } from "../../test/session";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/dashboard", useRouter: () => ({ replace: vi.fn() }) }));
 vi.mock("../auth/session", async (importOriginal) => ({ ...await importOriginal<typeof import("../auth/session")>(), getSession: vi.fn() }));
 
-afterEach(() => { cleanup(); vi.clearAllMocks(); });
+afterEach(() => { cleanup(); vi.clearAllMocks(); rememberSession(null); });
 
 test("세션을 기다리는 동안에도 로고와 로그아웃을 보여 줍니다", () => {
   vi.mocked(getSession).mockReturnValue(new Promise(() => undefined));

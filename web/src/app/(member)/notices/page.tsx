@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import { PageGate } from "../../../features/auth/PageGate";
 import { NoticeList } from "../../../features/notice/NoticeList";
 import { NoticeListSkeleton } from "../../../features/notice/NoticeListSkeleton";
+
+export const metadata: Metadata = { title: "공지" };
 
 export default async function NoticesPage({ searchParams }: { searchParams: Promise<{ notice?: string | string[] }> }) {
   const { notice } = await searchParams;

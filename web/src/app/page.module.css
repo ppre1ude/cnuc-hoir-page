@@ -23,6 +23,8 @@
 .callToActionTitle { margin: 0; font-size: clamp(28px, 7vw, 40px); font-weight: var(--weight-heading); letter-spacing: -.05em; line-height: 1.2; }
 .page .inverse { border-color: var(--color-surface); background: var(--color-surface); color: var(--color-primary); }
 .page .inverse:hover:not(:disabled) { border-color: var(--color-highlight); background: var(--color-highlight); }
+/* 전역 초점 링은 진한 초록이라 초록 블록 위에서는 보이지 않습니다. */
+.page .inverse:focus-visible { outline-color: var(--color-surface); }
 .footer { padding-block: var(--space-10); border-top: 1px solid var(--color-line); }
 .footerLogo { --logo-width: 250px; }
 @media (max-width: 760px) {

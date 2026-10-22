@@ -2,7 +2,7 @@
 
 :root {
   color-scheme: light;
-  font-family: var(--font-pretendard), "Malgun Gothic", sans-serif;
+  font-family: "Pretendard Variable", "Malgun Gothic", sans-serif;
   background: var(--color-surface);
   color: var(--color-ink);
   font-size: 16px;

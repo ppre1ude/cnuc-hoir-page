@@ -40,7 +40,7 @@ export function MemberNavigation() {
       <Link className={styles.brand} href="/dashboard" aria-label="전남대학교 합창단 일정">
         <BrandLogo priority />
       </Link>
-      <nav className={styles.nav} aria-label="회원 메뉴">
+      <nav className={styles.nav} aria-label="단원 메뉴">
         {links.map((link) => <Link key={link.href} href={link.href}
           aria-current={pathname === link.href || link.href === "/dashboard" && pathname.startsWith("/events/") ? "page" : undefined}>
           {link.label}

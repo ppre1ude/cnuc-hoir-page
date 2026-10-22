@@ -3,7 +3,7 @@ import styles from "./EventEditor.module.css";
 
 const sectionHeight = "calc(var(--text-section) * 1.2)";
 
-// 세션을 기다리는 동안 행사 관리와 같은 틀로 자리를 잡습니다. 라우트의 <main> 안에 놓입니다.
+// 세션을 기다리는 동안 일정 관리와 같은 틀로 자리를 잡습니다. 라우트의 <main> 안에 놓입니다.
 export function EventEditorSkeleton() {
   return <div className={styles.page}>
     <div className={styles.skeletonHeader}><Skeleton width="var(--space-20)" height="calc(var(--text-title) * 1.2)" /></div>

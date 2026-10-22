@@ -3,7 +3,7 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PageGate } from "./PageGate";
 import { SessionProvider, useSession } from "./SessionProvider";
-import { getSession } from "./session";
+import { getSession, rememberSession } from "./session";
 import { renderWithSession, sessionFixture } from "../../test/session";
 
 vi.mock("./session", async (importOriginal) => ({ ...await importOriginal<typeof import("./session")>(), getSession: vi.fn() }));
@@ -12,7 +12,7 @@ vi.mock("../../lib/api", async (importOriginal) => ({ ...await importOriginal<ty
 function Body() { return <p>본문:{useSession().name}</p>; }
 const skeleton = <p>스켈레톤</p>;
 
-beforeEach(() => { vi.mocked(getSession).mockReset(); });
+beforeEach(() => { vi.mocked(getSession).mockReset(); rememberSession(null); });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 test("세션을 기다리는 동안 스켈레톤을 보여 주고 3초 뒤 대기 안내를 띄웁니다", () => {

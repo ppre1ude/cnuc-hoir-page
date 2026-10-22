@@ -28,10 +28,18 @@ describe("운영진 월간 일정 등록", () => {
     fireEvent.click(screen.getByRole("button", { name: "2개 일정 등록" }));
     await waitFor(() => expect(createEventsBatch).toHaveBeenCalledTimes(1));
     expect(createEventsBatch.mock.calls[0][0]).toEqual([
-      expect.objectContaining({ title: "정기 연습", description: "", startAt: "2026-10-04T10:00:00.000Z", endAt: "2026-10-04T12:00:00.000Z" }),
-      expect.objectContaining({ title: "정기 연습", description: "", startAt: "2026-10-11T10:00:00.000Z", endAt: "2026-10-11T12:00:00.000Z" }),
+      expect.objectContaining({ title: "전체연습", description: "", startAt: "2026-10-04T10:00:00.000Z", endAt: "2026-10-04T12:00:00.000Z" }),
+      expect.objectContaining({ title: "전체연습", description: "", startAt: "2026-10-11T10:00:00.000Z", endAt: "2026-10-11T12:00:00.000Z" }),
     ]);
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith("2026-10"));
+  });
+
+  it("월을 지우면 날짜를 고를 수 없고 등록 버튼도 꺼진다", () => {
+    render(<EventBatchCreator onCreated={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "4일" }));
+    fireEvent.change(screen.getByLabelText("월"), { target: { value: "" } });
+    expect(screen.queryByRole("button", { name: "4일" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "0개 일정 등록" })).toBeDisabled();
   });
 
   it("서버가 알려 준 중복 일정 안내를 그대로 보여 준다", async () => {

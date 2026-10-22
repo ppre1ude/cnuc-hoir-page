@@ -14,9 +14,11 @@
 .panel .list { border-top: 0; }
 .panel .row:first-child { padding-top: 0; }
 .panel .row:last-child { padding-bottom: 0; border-bottom: 0; }
-.rowButton { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); width: 100%; min-height: var(--control-large); padding: var(--space-4) 0; border: 0; border-bottom: 1px solid var(--color-line); background: transparent; color: var(--color-ink); font: inherit; font-weight: var(--weight-label); text-align: left; cursor: pointer; }
+.rowButton { display: flex; align-items: center; gap: var(--space-3); width: 100%; min-height: var(--control-large); padding: var(--space-4) 0; border: 0; border-bottom: 1px solid var(--color-line); background: transparent; color: var(--color-ink); font: inherit; font-weight: var(--weight-label); text-align: left; cursor: pointer; }
 .rowButton:hover { color: var(--color-primary); }
-.rowButton span { color: var(--color-muted); font-size: var(--text-small); font-weight: var(--weight-body); white-space: nowrap; }
+.rowButton strong { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+/* 눌러서 여는 행임을 알 수 있게 단원 화면의 목록처럼 오른쪽에 화살표를 둡니다. */
+.arrow { color: var(--color-primary); }
 
 .form { display: flex; flex-direction: column; gap: var(--space-2); }
 .form label, .fieldLabel, .fieldGroup label { font-size: var(--text-label); font-weight: var(--weight-label); }
@@ -24,7 +26,7 @@
 .form > h2, .panel > h2 { margin-bottom: var(--space-3); }
 .form > button { align-self: flex-start; margin-top: var(--space-3); }
 .fieldGroup { display: grid; gap: var(--space-2); margin-top: var(--space-4); }
-.check { display: flex; align-items: center; gap: var(--space-2); }
+.check { display: flex; align-items: center; gap: var(--space-2); min-height: var(--control-medium); }
 .form .check { font-weight: var(--weight-body); }
 .actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); }
 .linkInput { margin-top: var(--space-2); }
@@ -32,6 +34,8 @@
 .more { margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--color-line); }
 .more summary { padding: var(--space-3) 0; color: var(--color-primary); font-size: var(--text-label); font-weight: var(--weight-label); cursor: pointer; }
 .more .hint { margin-bottom: var(--space-4); }
+/* 행 안에서 접는 동작은 행의 구분선과 겹치지 않게 윗선 없이 붙입니다. */
+.row .more { margin-top: var(--space-3); padding-top: 0; border-top: 0; }
 .issued { margin-top: var(--space-6); }
 .pendingRow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) 0; border-bottom: 1px solid var(--color-line); }
 .pendingRow > div { min-width: 0; }
@@ -59,13 +63,14 @@
 
 @media (max-width: 760px) {
   .grid { grid-template-columns: minmax(0, 1fr); }
-  .rowButton { flex-direction: column; align-items: flex-start; gap: var(--space-1); }
 }
 
 .roles { display: grid; gap: var(--space-3); margin-top: var(--space-3); }
+.roles > button { justify-self: start; }
 .inlineForm { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .inlineForm label { font-size: var(--text-small); font-weight: var(--weight-label); }
 .inlineForm select, .inlineForm input { width: auto; min-width: 120px; }
 .roleList { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin: 0; color: var(--color-muted); font-size: var(--text-label); }
 .roleChip { display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-1) var(--space-2); border-radius: var(--radius-small); background: var(--color-selected); color: var(--color-primary); font-weight: var(--weight-label); }
-.roleChip button { color: var(--color-primary); font-size: var(--text-body); line-height: 1; }
+/* 휴대폰에서 누르기 쉽게 44px을 주고, 위아래 음수 여백으로 칩 높이는 거의 그대로 둡니다. */
+.roleChip button { min-width: var(--control-medium); min-height: var(--control-medium); margin-block: calc(var(--space-3) * -1); color: var(--color-primary); font-size: var(--text-body); line-height: 1; }

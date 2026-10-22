@@ -111,7 +111,7 @@ test("코드 제출 전 시작된 상태 조회 오류가 출석 성공 안내�
 test.each([
   ["SESSION_CLOSED", "출석 창이 닫혔거나 유효 시간이 지났습니다."],
   ["ALREADY_CHECKED_IN", "이미 출석이 처리되었습니다."],
-  ["NOT_ELIGIBLE", "이 행사의 출석 대상이 아닙니다."],
+  ["NOT_ELIGIBLE", "이 일정의 출석 대상이 아닙니다."],
   ["APPROVAL_REQUIRED", "가입 승인 후 출석할 수 있습니다."],
 ])("%s 오류를 구분해 안내합니다", async (code, message) => {
   vi.mocked(attendance.submitCheckIn).mockRejectedValue(new ApiRequestError(409, code, "실패"));
@@ -132,4 +132,29 @@ test("잘못된 출석 코드의 오류를 입력과 연결하고 수정하면 �
   expect(input).toHaveAccessibleDescription("출석 코드를 확인해 주세요.");
   fireEvent.change(input, { target: { value: "ABCD2345" } });
   expect(input).not.toHaveAttribute("aria-invalid");
+});
+
+test("제목에 일정 이름을 쓰고 위쪽에 일정으로 돌아가는 링크를 둡니다", async () => {
+  render(<CheckInPanel eventId={3} />);
+  expect(await screen.findByRole("heading", { level: 1, name: "연습 출석" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "← 일정" })).toHaveAttribute("href", "/events/3");
+});
+
+test("코드를 확인하는 동안 입력 칸의 초점을 지키고 틀리면 글자를 선택해 바로 고치게 합니다", async () => {
+  let reject!: (error: Error) => void;
+  vi.mocked(attendance.submitCheckIn).mockReturnValue(new Promise((_, fail) => { reject = fail; }));
+  render(<CheckInPanel eventId={3} />);
+  const input = screen.getByLabelText<HTMLInputElement>("운영진이 알려준 출석 코드");
+  expect(input).toHaveAttribute("enterkeyhint", "go");
+  input.focus();
+  fireEvent.change(input, { target: { value: "BADCODE" } });
+  fireEvent.submit(input.form!);
+  expect(input).toBeEnabled();
+  expect(input).toHaveAttribute("readonly");
+  expect(input).toHaveFocus();
+  reject(new ApiRequestError(400, "INVALID_CREDENTIAL", "실패"));
+  await screen.findByText("출석 코드를 확인해 주세요.");
+  expect(input).toHaveFocus();
+  expect(input).not.toHaveAttribute("readonly");
+  expect([input.selectionStart, input.selectionEnd]).toEqual([0, "BADCODE".length]);
 });

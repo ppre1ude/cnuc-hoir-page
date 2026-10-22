@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SessionProvider, useSession, useSessionState } from "./SessionProvider";
-import { getSession } from "./session";
+import { getSession, logout, rememberSession } from "./session";
 import { ApiRequestError, apiRequest, redirectTo } from "../../lib/api";
 import { sessionFixture } from "../../test/session";
 
@@ -18,7 +18,7 @@ function Probe() {
   </div>;
 }
 
-beforeEach(() => { vi.mocked(getSession).mockReset(); vi.mocked(redirectTo).mockReset(); });
+beforeEach(() => { vi.mocked(getSession).mockReset(); vi.mocked(redirectTo).mockReset(); rememberSession(null); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 test("승인된 세션을 받으면 준비 상태가 됩니다", async () => {
@@ -28,6 +28,33 @@ test("승인된 세션을 받으면 준비 상태가 됩니다", async () => {
   expect(await screen.findByText("상태:ready")).toBeInTheDocument();
   expect(screen.getByText("이름:단원")).toBeInTheDocument();
   expect(getSession).toHaveBeenCalledTimes(1);
+});
+
+test("레이아웃이 바뀌어 새로 생긴 provider는 마지막 세션으로 바로 그리고 다시 받아 맞춥니다", async () => {
+  vi.mocked(getSession).mockResolvedValueOnce(sessionFixture({ name: "단원" }));
+  const first = render(<SessionProvider><Probe /></SessionProvider>);
+  expect(await screen.findByText("상태:ready")).toBeInTheDocument();
+  first.unmount();
+
+  vi.mocked(getSession).mockResolvedValueOnce(sessionFixture({ name: "이름 바뀐 단원" }));
+  render(<SessionProvider><Probe /></SessionProvider>);
+  expect(screen.getByText("상태:ready")).toBeInTheDocument();
+  expect(screen.getByText("이름:단원")).toBeInTheDocument();
+  expect(await screen.findByText("이름:이름 바뀐 단원")).toBeInTheDocument();
+  expect(getSession).toHaveBeenCalledTimes(2);
+});
+
+test("로그아웃하면 기억한 세션을 비워 다음 provider는 다시 대기 상태로 시작합니다", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ token: "csrf" }), { status: 200 })));
+  vi.mocked(getSession).mockResolvedValueOnce(sessionFixture({ name: "단원" }));
+  const first = render(<SessionProvider><Probe /></SessionProvider>);
+  expect(await screen.findByText("상태:ready")).toBeInTheDocument();
+  first.unmount();
+  await logout().catch(() => {});
+
+  vi.mocked(getSession).mockReturnValueOnce(new Promise(() => {}));
+  render(<SessionProvider><Probe /></SessionProvider>);
+  expect(screen.getByText("상태:loading")).toBeInTheDocument();
 });
 
 test("승인되지 않은 계정은 가입 상태 화면으로 보냅니다", async () => {

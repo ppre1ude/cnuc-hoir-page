@@ -86,7 +86,8 @@ export function GoogleButton({ onCredential, onError, reopenUrl }: {
         },
       });
       window.google.accounts.id.renderButton(target.current, {
-        type: "standard", theme: "outline", size: "large", width: 320, text: "signin_with",
+        // 320px 화면에서는 내용 폭이 320보다 좁아 버튼이 잘리고 가로 스크롤이 생깁니다. 구글 버튼의 최소 폭은 200입니다.
+        type: "standard", theme: "outline", size: "large", width: Math.max(200, Math.min(320, target.current.clientWidth)), text: "signin_with",
       });
       setPhase("ready");
     } catch {

@@ -42,9 +42,10 @@ export function NoticePoll({ noticeId, onChanged }: {
     return () => { active = false; };
   }, [noticeId, retry, onChanged]);
 
-  async function submit(event: React.FormEvent) {
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (choice === null || busy) return;
+    const form = event.currentTarget;
     setBusy(true);
     setError("");
     setSaved(false);
@@ -54,6 +55,11 @@ export function NoticePoll({ noticeId, onChanged }: {
       setChoice(result.myChoice);
       setSaved(true);
       onChanged?.(noticeId, result);
+      // 저장하면 "선택 변경" 버튼이 비활성으로 바뀌어 초점이 사라지므로 고른 선택지로 초점을 옮깁니다.
+      // 저장을 기다리는 동안 다른 곳으로 옮겨 간 초점은 빼앗지 않습니다.
+      if (form.contains(document.activeElement) || document.activeElement === document.body) {
+        form.querySelector<HTMLInputElement>(`input[value="${result.myChoice}"]`)?.focus();
+      }
     } catch (caught) {
       if (caught instanceof ApiRequestError && caught.code === "POLL_CLOSED") {
         setError("투표가 마감되었습니다.");
@@ -71,13 +77,14 @@ export function NoticePoll({ noticeId, onChanged }: {
     <div className={styles.heading}><h3 id={`poll-question-${noticeId}`}>{poll.question}</h3><StatusBadge tone={poll.closed ? "neutral" : "positive"}>{poll.closed ? "마감" : "진행 중"}</StatusBadge></div>
     <p className={styles.deadline}>마감 <time dateTime={poll.closesAt}>{deadline(poll.closesAt)}</time> · {total}명 참여</p>
     <p className={styles.deadline}>선택은 이름과 함께 운영진에게 표시됩니다.</p>
-    <fieldset disabled={poll.closed || busy}>
+    {/* 저장 중에 disabled를 걸면 엔터를 누른 선택지에서 초점이 빠지므로, 저장 중에는 선택 변경만 무시합니다. */}
+    <fieldset disabled={poll.closed}>
       <legend className={styles.srOnly}>투표 선택지</legend>
       {[{ value: 1, label: poll.firstOption, count: poll.firstCount },
         { value: 2, label: poll.secondOption, count: poll.secondCount }].map((option) =>
         <label key={option.value} className={`${styles.option} ${choice === option.value ? styles.selected : ""}`}>
           <Input type="radio" name={`poll-${noticeId}`} value={option.value} checked={choice === option.value}
-            onChange={() => { setChoice(option.value); setSaved(false); }} />
+            onChange={() => { if (busy) return; setChoice(option.value); setSaved(false); }} />
           <span className={styles.label}>{option.label}</span>
           <span className={styles.count}>{option.count}명</span>
           <span className={styles.bar} style={{ width: `${total ? option.count / total * 100 : 0}%` }} aria-hidden="true" />
@@ -86,7 +93,8 @@ export function NoticePoll({ noticeId, onChanged }: {
     {poll.myChoice !== null && <p className={styles.mine}>내 선택: {poll.myChoice === 1 ? poll.firstOption : poll.secondOption}</p>}
     {error && <Feedback tone="error">{error}</Feedback>}
     <p className={styles.srOnly} role="status">{saved ? "투표가 저장되었습니다." : ""}</p>
-    {!poll.closed && <Button variant="primary" type="submit" disabled={choice === null || busy || choice === poll.myChoice}>
+    {!poll.closed && <Button variant="primary" type="submit" aria-disabled={busy || undefined}
+      disabled={choice === null || choice === poll.myChoice}>
       {busy ? "저장 중…" : poll.myChoice === null ? "투표하기" : "선택 변경"}
     </Button>}
   </form>;
