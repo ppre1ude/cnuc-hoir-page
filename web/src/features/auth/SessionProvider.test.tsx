@@ -57,6 +57,38 @@ test("로그아웃하면 기억한 세션을 비워 다음 provider는 다시 �
   expect(screen.getByText("상태:loading")).toBeInTheDocument();
 });
 
+test("로그아웃이 시작된 뒤 도착한 예전 응답은 세션으로 기억하지 않습니다", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ token: "csrf" }), { status: 200 })));
+  let arrive!: (value: ReturnType<typeof sessionFixture>) => void;
+  vi.mocked(getSession).mockReturnValueOnce(new Promise((done) => { arrive = done; }));
+  const first = render(<SessionProvider><Probe /></SessionProvider>);
+  await logout().catch(() => {});
+  await act(async () => { arrive(sessionFixture({ name: "로그아웃한 단원" })); });
+  first.unmount();
+
+  vi.mocked(getSession).mockReturnValueOnce(new Promise(() => {}));
+  render(<SessionProvider><Probe /></SessionProvider>);
+  expect(screen.getByText("상태:loading")).toBeInTheDocument();
+});
+
+test("다시 받기에 실패하면 지금 화면은 두되 다음 provider에는 기억한 세션을 쓰지 않습니다", async () => {
+  vi.mocked(getSession).mockResolvedValueOnce(sessionFixture({ name: "단원" }));
+  const first = render(<SessionProvider><Probe /></SessionProvider>);
+  expect(await screen.findByText("상태:ready")).toBeInTheDocument();
+  first.unmount();
+
+  vi.mocked(getSession).mockRejectedValueOnce(new ApiRequestError(502, "BAD_GATEWAY", "서버 오류"));
+  const second = render(<SessionProvider><Probe /></SessionProvider>);
+  expect(screen.getByText("이름:단원")).toBeInTheDocument();
+  await waitFor(() => expect(getSession).toHaveBeenCalledTimes(2));
+  expect(screen.getByText("상태:ready")).toBeInTheDocument();
+  second.unmount();
+
+  vi.mocked(getSession).mockReturnValueOnce(new Promise(() => {}));
+  render(<SessionProvider><Probe /></SessionProvider>);
+  expect(screen.getByText("상태:loading")).toBeInTheDocument();
+});
+
 test("승인되지 않은 계정은 가입 상태 화면으로 보냅니다", async () => {
   vi.mocked(getSession).mockResolvedValue(sessionFixture({ status: "APPROVAL_PENDING", memberType: null }));
   render(<SessionProvider><Probe /></SessionProvider>);

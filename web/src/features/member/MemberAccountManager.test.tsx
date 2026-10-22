@@ -43,6 +43,14 @@ test("운영진이 단원 계정을 만들면 1회용 링크를 표시합니다"
   expect(await screen.findByLabelText("구글 계정 연결 링크")).toHaveValue(
     `${window.location.origin}/activate#token=temporary-private-token`);
   expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
+  expect(screen.getByRole("heading", { name: "발급된 링크" })).toHaveFocus();
+});
+
+test("행마다 접힌 접근 해제에 단원 이름을 붙입니다", async () => {
+  vi.mocked(getMembers).mockResolvedValue({ items: [member(3, "이서연"), member(4, "박민준")], page: 0, size: 20, total: 2 });
+  renderWithSession(<MemberAccountManager />, operator);
+  expect(await screen.findByLabelText("이서연 접근 해제")).toHaveTextContent("접근 해제");
+  expect(screen.getByLabelText("박민준 접근 해제")).toHaveTextContent("접근 해제");
 });
 
 test("권한이 없는 기능은 가리고 조회 권한만 있으면 목록만 보여 줍니다", async () => {

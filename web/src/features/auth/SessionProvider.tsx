@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ApiRequestError, onPermissionDenied, redirectTo } from "../../lib/api";
 import { loginPath } from "../../lib/returnPath";
-import { getSession, isStaff, rememberedSession, rememberSession, type MemberSession } from "./session";
+import { getSession, isStaff, rememberedSession, rememberSession, sessionGeneration, type MemberSession } from "./session";
 
 export type SessionStatus = "loading" | "ready" | "failed";
 type SessionState = { status: SessionStatus; session: MemberSession | null; refresh: () => void };
@@ -29,17 +29,20 @@ export function SessionProvider({ children, requireStaff = false, initialSession
   const load = useCallback((retries = 0) => {
     const attempt = (left: number) => {
       const request = ++latest.current;
+      const since = sessionGeneration();
       getSession().then((value) => {
         if (request !== latest.current) return;
-        if (value.status !== "APPROVED") { redirectTo("/application-status"); return; }
+        if (value.status !== "APPROVED") { rememberSession(null); redirectTo("/application-status"); return; }
+        rememberSession(value, since);
         if (requireStaff && !isStaff(value)) { redirectTo("/dashboard"); return; }
         hasSession.current = true;
-        rememberSession(value);
         setSession(value);
         setStatus("ready");
       }).catch((error: unknown) => {
         if (request !== latest.current) return;
-        if (error instanceof ApiRequestError && error.status === 401) { rememberSession(null); redirectTo(loginPath(window.location)); return; }
+        // 서버가 확인해 주지 못한 세션은 다음 화면에서 먼저 그리지 않습니다.
+        rememberSession(null);
+        if (error instanceof ApiRequestError && error.status === 401) { redirectTo(loginPath(window.location)); return; }
         // 이미 받은 세션이 있으면 다시 받기 실패는 화면을 바꾸지 않습니다.
         if (hasSession.current) return;
         if (left > 0) { attempt(left - 1); return; }

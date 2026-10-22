@@ -105,6 +105,9 @@ export function MemberAccountManager() {
   // 결과는 목록 위에 그려져, 아래쪽 행에서 발급하거나 실패하면 휴대폰에서는 화면 밖에 뜹니다. 그래서 결과로 화면을 옮깁니다.
   const result = useRef<HTMLDivElement>(null);
   useEffect(() => { if (link || error) result.current?.scrollIntoView({ block: "center" }); }, [link, error]);
+  // 초점이 발급 버튼에 남으면 Tab으로 위쪽 링크에 닿지 못하고 화면 읽기 사용자는 결과를 모릅니다.
+  const linkTitle = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { if (link) linkTitle.current?.focus({ preventScroll: true }); }, [link]);
 
   return <section className={styles.page}>
     <PageHeader title="단원 계정" />
@@ -127,7 +130,7 @@ export function MemberAccountManager() {
     </MemberRegistration>}
     <div ref={result}>{error && <Feedback tone="error">{error}</Feedback>}
     {link && <section className={`${styles.panel} ${styles.issued}`} aria-labelledby="link-title">
-      <div className={styles.panelHeader}><h2 id="link-title">발급된 링크</h2></div>
+      <div className={styles.panelHeader}><h2 id="link-title" ref={linkTitle} tabIndex={-1}>발급된 링크</h2></div>
       <p className={styles.hint}>이 링크는 한 번만 표시됩니다. 24시간 안에 해당 단원에게 비공개로 전달해 주세요.</p>
       <label className={styles.fieldLabel} htmlFor="issued-link">구글 계정 연결 링크</label>
       <Input id="issued-link" className={styles.linkInput} value={link} readOnly onFocus={(event) => event.currentTarget.select()} />
@@ -180,7 +183,7 @@ function MemberRow({ item, busy, session, onChanged, onRenew, onRevoke, onReopen
     </div>}
     {can(session, "REVOKE_ACCESS") && (!leadership || can(session, "MANAGE_SITE_ADMINS")) && (item.status === "APPROVED" || item.status === "INVITED")
       && item.id !== session.id && <details className={styles.more}>
-      <summary>접근 해제</summary>
+      <summary aria-label={`${item.name} 접근 해제`}>접근 해제</summary>
       <div className={styles.fieldGroup}>
         <label htmlFor={`revoke-${item.id}`}>{item.name} 접근 해제 이유</label>
         <Input id={`revoke-${item.id}`} value={reason} maxLength={500} onChange={(event) => setReason(event.target.value)} />
