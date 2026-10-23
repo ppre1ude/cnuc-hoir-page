@@ -16,7 +16,7 @@ Spring API를 Render에, PostgreSQL을 Supabase에 준비하고 API의 HTTPS 주
 
 API 앞단 프록시가 전달 IP 헤더를 다루는 방식도 확정해야 합니다. 현재 로컬 Compose Nginx는 연결 주소로 `X-Forwarded-For`를 덮어씁니다. Render 경로에서는 실제 프록시 주소와 헤더 위조 차단을 확인하기 전까지 `TRUSTED_PROXY_CIDRS`를 임의로 설정하지 않습니다. 이 상태에서 IP 기준 시도 제한은 프록시 주소로 합쳐질 수 있습니다. 로그인·출석 시도 제한, API 응답의 `Cache-Control: no-store`, `Secure` 세션 쿠키와 CSRF 처리도 공개 HTTPS 주소에서 확인합니다.
 
-Render와 Supabase의 무료 미리보기 설정 및 제한은 [배포 장소와 절차](hosting-options.md)에 정리했습니다. 메일 서비스를 사용하지 않고 운영진이 계정을 발급합니다.
+Render와 Supabase의 설정과 제한은 [배포 장소와 절차](hosting-options.md)에 정리했습니다. 메일 서비스를 사용하지 않고 운영진이 계정을 발급합니다.
 
 초대 링크는 운영진 화면에서 한 번 표시되고, 24시간 동안 한 번만 사용할 수 있습니다. 운영진은 명단으로 단원을 확인한 뒤 개인별 비공개 채널로 전달합니다. DB 비밀번호는 API 운영 환경의 비밀 저장소에서 관리하고 Git과 웹 프로젝트에 넣지 않습니다. 회원 시범 사용 전 점검 순서는 [운영 절차](../docs/operations.md)를 따릅니다.
 

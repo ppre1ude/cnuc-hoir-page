@@ -2,7 +2,7 @@ services:
   - type: web
     name: cnuc-hoir-api
     runtime: docker
-    plan: free
+    plan: 0.5c-512mb
     region: singapore
     dockerfilePath: ./api/Dockerfile
     dockerContext: ./api

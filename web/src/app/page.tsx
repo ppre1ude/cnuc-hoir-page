@@ -1,15 +1,19 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ActionLink, BrandLogo } from "../components/ui";
-import { ActivityGallery } from "@/features/onboarding/ActivityGallery";
-import { activityPhotos } from "@/features/onboarding/activityPhotos";
-import { HeroScore } from "@/features/onboarding/HeroScore";
-import { HeroEmphasis } from "@/features/onboarding/HeroEmphasis";
-import { RouteJourney } from "@/features/onboarding/RouteJourney";
-import { PublicNews } from "@/features/onboarding/PublicNews";
-import { publicNews } from "@/features/onboarding/newsItems";
-import { choirChannels } from "@/features/onboarding/choirProfile";
-import styles from "./page.module.css";
+import localFont from "next/font/local";
+import { SandLanding } from "@/features/onboarding/SandLanding";
+
+// 공개 메인 글꼴. 페이퍼로지 1.001에서 KS X 1001 한글 2,350자와 기본 라틴·문장부호만 남긴 웹용 파일입니다.
+// 이 범위 밖의 글자는 프리텐다드로 표시됩니다.
+const paperlogy = localFont({
+  src: [
+    { path: "./fonts/Paperlogy-4Regular.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/Paperlogy-5Medium.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/Paperlogy-6SemiBold.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/Paperlogy-7Bold.woff2", weight: "700", style: "normal" },
+  ],
+  variable: "--font-paperlogy",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   description: "합창으로 전하는 울림과 감동의 이야기. 전남대학교 합창단은 교내 유일의 합창 동아리입니다.",
@@ -17,48 +21,8 @@ export const metadata: Metadata = {
 
 export default function Home() {
   return (
-    <main className={styles.page}>
-      <header className={styles.header}>
-        <Link className={styles.brand} href="/" aria-label="전남대학교 합창단 홈">
-          <BrandLogo className={styles.brandLogo} alt="" priority />
-        </Link>
-        <ActionLink variant="secondary" className={`${styles.action} ${styles.login}`} href="/login">단원 로그인</ActionLink>
-      </header>
-
-      <section className={styles.hero} aria-labelledby="hero-title">
-        <div className={styles.heroContent}>
-          <BrandLogo mark className={styles.heroMark} alt="" priority />
-          <HeroScore />
-          <h1 id="hero-title">합창으로 전하는<br /><HeroEmphasis />의 이야기</h1>
-        </div>
-      </section>
-
-      <RouteJourney description="전남대학교 합창단은 교내 유일의 합창 동아리입니다.">
-        <div className={styles.callToAction} id="participate">
-          <h2 className={styles.callToActionTitle} id="participate-title">함께 노래해요.</h2>
-          <ActionLink size="large" className={`${styles.action} ${styles.inverse}`} href={choirChannels.application} target="_blank" rel="noopener noreferrer" aria-describedby="participate-title">지원서 작성하기 <span aria-hidden="true">↗</span></ActionLink>
-        </div>
-      </RouteJourney>
-
-      <section className={styles.activity} id="activity" aria-labelledby="activity-title">
-        <div className={styles.container}>
-          <div className={styles.activityHeading}>
-            <h2 id="activity-title">소식</h2>
-            <nav className={styles.activityLinks} aria-label="공식 채널">
-              <a href={choirChannels.instagram} target="_blank" rel="noopener noreferrer">인스타그램 ↗</a>
-              <a href={choirChannels.youtube} target="_blank" rel="noopener noreferrer">유튜브 ↗</a>
-            </nav>
-          </div>
-          <PublicNews items={publicNews} />
-          <ActivityGallery photos={activityPhotos} />
-        </div>
-      </section>
-
-      <footer className={styles.footer}>
-        <div className={styles.container}>
-          <BrandLogo className={styles.footerLogo} />
-        </div>
-      </footer>
+    <main className={paperlogy.variable}>
+      <SandLanding />
     </main>
   );
 }
