@@ -35,6 +35,10 @@
   --weight-medium: 550;
   --weight-label: 650;
   --weight-heading: 750;
+  /* 공개 메인의 페이퍼로지는 정적 굵기 400·500·600·700만 있어, 가변 글꼴용 550·650·750 대신 이 값을 씁니다. */
+  --weight-public-medium: 500;
+  --weight-public-label: 600;
+  --weight-public-heading: 700;
   --tracking-heading: -0.045em;
   --radius-small: 6px;
   --radius-control: 8px;

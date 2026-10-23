@@ -1,0 +1,143 @@
+/* 공개 메인 모래 장면.
+   긴 스크롤 영역(.landing) 안에 화면 크기의 무대(.stage)를 고정하고, 장면 글을 무대 위에 겹쳐 둡니다.
+   보이는 장면은 엔진(sand/stage.ts)이 data-active로 고르며, 자바스크립트가 없으면 맨 아래 규칙대로 세로로 쌓입니다. */
+.landing {
+  /* 페이퍼로지는 정적 굵기라 공개 메인에서는 굵기 토큰을 그에 맞춥니다. */
+  --weight-medium: var(--weight-public-medium);
+  --weight-label: var(--weight-public-label);
+  --weight-heading: var(--weight-public-heading);
+  position: relative;
+  height: calc(700vh + 100dvh);
+  font-family: var(--font-paperlogy), var(--font-pretendard), "Malgun Gothic", sans-serif;
+  word-break: keep-all;
+}
+:where(.landing) :is(h1, h2, h3, p, ol, ul) { margin: 0; } /* :where로 우선순위를 낮춰 아래 클래스 규칙의 여백이 이기게 합니다. */
+:where(.landing) :is(ol, ul) { padding: 0; list-style: none; }
+:where(.landing) a { text-decoration: none; }
+.stage { position: sticky; top: 0; width: 100%; height: 100dvh; min-height: 520px; overflow: hidden; }
+.canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; pointer-events: none; }
+
+/* 머리글: 작은 로고와 단원 로그인. 첫 장면에서는 큰 심벌이 있어 작은 로고를 숨깁니다. 높이는 엔진의 HEADER_HEIGHT와 같습니다. */
+.header { position: absolute; inset: 0 0 auto 0; z-index: 6; display: flex; align-items: center; justify-content: space-between; height: 64px; padding-left: max(var(--space-5), env(safe-area-inset-left, 0px)); padding-right: max(var(--space-5), env(safe-area-inset-right, 0px)); }
+.home { display: flex; }
+.headerLogo { --logo-width: min(44vw, 190px); transition: opacity .7s ease; }
+.landing[data-current="0"] .headerLogo { opacity: 0; }
+.login { white-space: nowrap; }
+
+/* 오른쪽 목차(PC): 지금 장면의 줄이 길어지고 상징색이 됩니다. */
+.nav { position: absolute; top: 50%; right: 28px; z-index: 5; display: none; flex-direction: column; transform: translateY(-50%); }
+.nav button { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); height: 40px; padding: 0; border: 0; background: none; color: var(--color-muted); font-size: .75rem; transition: color .3s; }
+.nav i { display: block; width: 8px; height: 1.5px; background: var(--color-line); transition: width .3s, background-color .3s; }
+.nav button[aria-current] { color: var(--color-ink); font-weight: var(--weight-label); }
+.nav button[aria-current] i { width: 20px; background: var(--color-brand); }
+
+/* 장면: 꺼지면 투명해지고 26px 아래로 내려가며 조작에서 빠집니다. */
+.scene { position: absolute; opacity: 0; pointer-events: none; transform: translateY(26px); transition: opacity .7s ease, transform .7s var(--motion-ease); }
+.scene[data-active] { opacity: 1; transform: none; pointer-events: auto; }
+.copy { left: 6%; right: 6%; bottom: 7%; display: flex; flex-direction: column; gap: var(--space-3); }
+.eyebrow { display: flex; align-items: center; gap: 10px; color: var(--color-brand); font-size: var(--text-label); font-weight: var(--weight-label); }
+.eyebrow::before { content: ""; width: 18px; height: 1.5px; background: var(--color-brand); }
+.eyebrow span { color: var(--color-muted); font-weight: var(--weight-medium); }
+.title { font-size: clamp(28px, 7.6vw, 40px); font-weight: var(--weight-heading); letter-spacing: -.05em; line-height: 1.25; }
+.title strong { color: var(--color-primary); }
+.centered { left: 0; right: 0; top: 34%; display: flex; flex-direction: column; align-items: center; gap: 14px; padding-inline: var(--space-6); text-align: center; }
+.centered .title { font-size: clamp(30px, 8vw, 44px); }
+.lead { max-width: 30em; color: var(--color-muted); font-size: var(--text-body); line-height: 1.6; }
+/* 장면 본문: 제목 아래에서 꼬리표와 제목 사이를 풀어 주는 한두 문장 */
+.body { max-width: 26em; color: var(--color-muted); font-size: .9375rem; line-height: 1.65; }
+
+/* 아래 안내 버튼 둘은 장면 전환 transform과 겹치지 않도록 transform 없이 가운데 정렬합니다. */
+.cue, .top { left: 0; right: 0; bottom: var(--space-4); z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; width: fit-content; margin-inline: auto; padding: var(--space-2) var(--space-4); border: 0; background: none; color: var(--color-muted); font-size: var(--text-small); }
+.cue i { position: relative; display: block; width: 22px; height: 34px; border: 1.5px solid var(--color-line); border-radius: 11px; }
+.cue i::after { content: ""; position: absolute; left: 50%; top: 7px; width: 3px; height: 6px; margin-left: -1.5px; border-radius: 2px; background: var(--color-brand); animation: wheelHint 2s ease-in-out infinite; }
+@keyframes wheelHint { 0%, 100% { transform: translateY(0); opacity: 1; } 70% { transform: translateY(11px); opacity: 0; } }
+.top i { position: relative; display: block; width: 34px; height: 34px; border: 1.5px solid var(--color-line); border-radius: 50%; transition: border-color .3s, background-color .3s; }
+.top i::after { content: ""; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -2px 0 0 -4px; border-left: 1.5px solid var(--color-brand); border-top: 1.5px solid var(--color-brand); transform: rotate(45deg); }
+.top:hover i { border-color: var(--color-brand); background: var(--color-subtle); }
+
+/* 04 → 05: 사진 하나가 두 장면을 오갑니다. 자리는 투명한 요소로 잡고 엔진이 그 좌표로 사진을 옮깁니다.
+   자리 요소는 transform을 쓰지 않으므로 offset 값이 곧 화면에 보이는 위치입니다. 모서리 반지름은 엔진의 PHOTO_RADIUS와 같습니다. */
+.photoAnchor { position: absolute; left: 6%; right: 6%; top: 10%; height: 48%; display: flex; justify-content: center; align-items: flex-start; visibility: hidden; pointer-events: none; }
+.photoAnchor i { display: block; width: 100%; max-height: 100%; aspect-ratio: 4 / 3; }
+.photo { position: absolute; left: 0; top: 0; width: 0; height: 0; overflow: hidden; border-radius: 14px; opacity: 0; pointer-events: none; transition: opacity 1s ease, left .82s var(--motion-ease), top .82s var(--motion-ease), width .82s var(--motion-ease), height .82s var(--motion-ease); }
+.photo[data-show] { opacity: 1; }
+.photo img { object-fit: cover; }
+
+/* 05 걸어온 길: 위에는 04에서 넓어져 올라온 사진 자리(.banner), 아래에 제목과 연도별 길.
+   길(선과 연도 점)은 입자가 그리고, 보이지 않는 .dot이 입자 좌표의 기준 자리입니다. */
+.history { left: 6%; right: 6%; top: 76px; bottom: var(--space-4); display: flex; flex-direction: column; gap: 22px; }
+.history[data-active] { transition-delay: .3s; } /* 사진이 먼저 날아와 앉은 뒤 글이 나타나도록 살짝 늦춥니다. */
+.banner { flex: 1 1 auto; min-height: 120px; max-height: 220px; }
+.historyBody { flex: 0 0 auto; display: flex; flex-direction: column; gap: var(--space-3); }
+.historyBody .title { font-size: clamp(26px, 6.4vw, 32px); }
+.years { position: relative; display: flex; flex-direction: column; gap: var(--space-4); margin-top: 6px; padding-left: 28px; }
+.year { position: relative; }
+.dot { position: absolute; left: -28px; top: 4px; width: 14px; height: 14px; visibility: hidden; }
+.year h3 { font-size: 1.375rem; font-weight: var(--weight-heading); letter-spacing: -.03em; line-height: 1.1; }
+.events { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; padding-left: var(--space-10); } /* 날짜 줄은 연도 아래로 40px 들여씁니다. */
+.events li { display: grid; grid-template-columns: 3.4em minmax(0, 1fr); gap: 10px; font-size: .9375rem; line-height: 1.4; }
+.events time { color: var(--color-primary); font-weight: var(--weight-label); font-variant-numeric: tabular-nums; }
+.events small { display: block; color: var(--color-muted); font-size: var(--text-small); }
+.footLogo { --logo-width: 150px; margin-top: var(--space-3); }
+/* 높이가 낮은 휴대폰에서는 연혁이 화면 밖으로 넘치므로 아래 로고를 숨깁니다. 머리글에 로고가 이미 보입니다. */
+@media (max-width: 760px) and (max-height: 700px) { .footLogo { display: none; } }
+
+/* 지원: 지원서 버튼 아래에 공식 채널 링크. 첫 장면보다 요소 사이를 조금 더 띄웁니다. */
+.join { gap: 22px; }
+.join .apply { gap: 10px; padding: 14px 26px; font-size: 1.0625rem; }
+.channels { display: flex; gap: 22px; margin-top: 2px; color: var(--color-muted); font-size: .9375rem; }
+.channels a { padding-bottom: 2px; border-bottom: 1px solid var(--color-line); transition: color .2s, border-color .2s; }
+.channels a:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
+@media (min-width: 761px) {
+  .header { height: 76px; padding-left: max(var(--space-10), env(safe-area-inset-left, 0px)); padding-right: max(var(--space-10), env(safe-area-inset-right, 0px)); }
+  .nav { display: flex; }
+  /* 내용은 화면 가운데 띠(최대 900px, 좌우 140px 이상 비워 오른쪽 목차와 겹치지 않음) 안에 모읍니다.
+     띠의 왼쪽 36%는 글, 40%부터 끝까지는 그림입니다. 엔진의 band()와 같은 계산입니다. */
+  .stage { --band: min(900px, 100% - 280px); --band-left: calc((100% - var(--band)) / 2); }
+  .copy { left: var(--band-left); right: auto; bottom: auto; top: 50%; width: calc(var(--band) * .36); gap: 18px; transform: translateY(calc(-50% + 26px)); }
+  .copy[data-active] { transform: translateY(-50%); }
+  .title { font-size: 40px; }
+  .centered { top: 44%; }
+  .centered .title { font-size: 48px; }
+  .join { gap: 26px; }
+  .lead { font-size: 1.125rem; }
+  .body { font-size: 1.0625rem; }
+  .photoAnchor { left: calc(var(--band-left) + var(--band) * .4); right: auto; top: 0; bottom: 0; width: calc(var(--band) * .6); height: auto; align-items: center; }
+  .history { left: var(--band-left); right: auto; width: var(--band); top: 92px; bottom: var(--space-6); gap: 28px; }
+  .banner { max-height: 400px; }
+  .historyBody { gap: 14px; }
+  .historyBody .title { font-size: 32px; }
+  .years { flex-direction: row; gap: var(--space-8); margin-top: 14px; padding-left: 0; }
+  .year { flex: 1 1 0; padding-top: 34px; }
+  .dot { left: 0; top: 0; }
+  .year h3 { font-size: 1.75rem; }
+  .footLogo { --logo-width: 170px; margin-top: var(--space-4); }
+  .cue, .top { bottom: var(--space-6); }
+}
+
+/* 모션 줄이기: 장면은 제자리에서 바뀌고 사진은 날아가지 않습니다. PC의 글 블록은 세로 가운데 정렬만 남깁니다. */
+@media (prefers-reduced-motion: reduce) {
+  .scene, .headerLogo, .photo { transition: opacity .2s; }
+  .scene, .scene[data-active] { transform: none; }
+  .cue i::after { animation: none; }
+}
+@media (prefers-reduced-motion: reduce) and (min-width: 761px) {
+  .copy, .copy[data-active] { transform: translateY(-50%); }
+}
+
+/* 자바스크립트가 없으면 무대를 풀어 장면을 세로로 쌓습니다. 길은 왼쪽 세로선과 점으로 그립니다. */
+@media (scripting: none) {
+  .landing { height: auto; }
+  .landing .stage { position: static; display: flex; flex-direction: column; gap: var(--space-16); height: auto; min-height: 0; padding-bottom: var(--space-16); overflow: visible; }
+  .landing .canvas, .landing .nav, .landing .cue, .landing .top, .landing .photoAnchor, .landing .banner { display: none; }
+  .landing .header { position: static; }
+  .landing[data-current] .headerLogo { opacity: 1; }
+  .landing .scene { position: static; width: min(100% - 2 * var(--page-gutter), 900px); margin-inline: auto; opacity: 1; transform: none; pointer-events: auto; }
+  .landing .centered { padding-inline: 0; }
+  .landing .photo { position: relative; width: min(100% - 2 * var(--page-gutter), 900px); height: auto; margin: calc(-1 * var(--space-8)) auto 0; aspect-ratio: 4 / 3; opacity: 1; }
+  .landing .years { flex-direction: column; gap: var(--space-4); padding-left: 28px; }
+  .landing .years::before { content: ""; position: absolute; left: 6px; top: var(--space-2); bottom: 0; width: 2px; background: var(--color-brand); }
+  .landing .year { padding-top: 0; }
+  .landing .dot { left: -28px; top: 4px; visibility: visible; border-radius: 50%; background: var(--color-brand); }
+}
