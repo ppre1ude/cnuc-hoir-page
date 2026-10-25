@@ -163,16 +163,18 @@ function run(root: HTMLElement, { stage, canvas, photoBox, photoImg, anchorBox, 
     return out;
   }
 
-  /** 심벌은 그 장면 글 블록 바로 위에 매달립니다. 글 위 끝에서 간격을 띄우고, 머리글과 글 사이에 들어가도록 높이를 제한합니다. */
+  /** 심벌과 그 장면 글 블록을 한 묶음으로 보고 화면 세로 가운데에 놓습니다.
+   *  심벌은 폭 비율만큼 그리되 묶음이 머리글 아래 여백 안에 들어가도록 높이를 제한하고,
+   *  글 블록은 CSS의 --mark-offset으로 (심벌 높이 + 간격)의 절반만큼 가운데에서 내려옵니다. */
   function markBox(scene: number, widthRatio: number) {
     const copy = root.querySelector<HTMLElement>(`[data-sand-mark="${scene}"]`);
-    const copyTop = copy ? offsetIn(copy).y : size.h * .44;
+    const copyH = copy ? copy.offsetHeight : size.h * .16;
     const gap = size.mobile ? 24 : 36;
-    const header = size.mobile ? HEADER_HEIGHT.mobile : HEADER_HEIGHT.desktop;
-    const maxH = Math.max(80, copyTop - gap - header - 16);
-    const w = Math.min(size.w * widthRatio, maxH * markAspect);
-    const h = w / markAspect;
-    return { x: size.w / 2 - w / 2, y: copyTop - gap - h, w, h };
+    const margin = (size.mobile ? HEADER_HEIGHT.mobile : HEADER_HEIGHT.desktop) + 16;
+    const h = Math.max(80, Math.min(size.w * widthRatio / markAspect, size.h - 2 * margin - gap - copyH));
+    const w = h * markAspect;
+    copy?.style.setProperty("--mark-offset", `${(h + gap) / 2}px`);
+    return { x: size.w / 2 - w / 2, y: (size.h - (h + gap + copyH)) / 2, w, h };
   }
   function markTargets(scene: number, widthRatio: number) {
     const c = scratchClear();
@@ -182,7 +184,7 @@ function run(root: HTMLElement, { stage, canvas, photoBox, photoImg, anchorBox, 
   }
   /** 첫 진입: 심벌 폭만큼의 물결선에서 시작해 심벌로 모입니다. */
   function introLine(): Target[] {
-    const box = markBox(0, size.mobile ? .62 : .3);
+    const box = markBox(0, size.mobile ? .54 : .26);
     const w = box.w * 1.15;
     const cy = box.y + box.h / 2;
     return Array.from({ length: size.count }, () => {
@@ -330,13 +332,13 @@ function run(root: HTMLElement, { stage, canvas, photoBox, photoImg, anchorBox, 
     // 캔버스나 이미지가 아직 없으면 흩어진 채로 두고 저장하지 않습니다. 이미지가 준비되면 다시 계산합니다.
     const needsMark = scene === 0 || scene === 6;
     if (!sctx || (needsMark && !imageReady(markImg)) || (scene === 4 && !imageReady(photoImg))) return fitTargets([], size);
-    const targets = scene === 0 ? markTargets(0, size.mobile ? .62 : .3)
+    const targets = scene === 0 ? markTargets(0, size.mobile ? .54 : .26)
       : scene === 1 ? waveTargets()
       : scene === 2 ? noteTargets()
       : scene === 3 ? chordTargets()
       : scene === 4 ? photoTargets()
       : scene === 5 ? pathTargets()
-      : markTargets(6, size.mobile ? .5 : .24);
+      : markTargets(6, size.mobile ? .44 : .21);
     cache[scene] = targets;
     return targets;
   }
