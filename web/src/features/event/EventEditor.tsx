@@ -42,6 +42,8 @@ export function EventEditor() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
+    // 월 입력을 지우면 ""가 들어옵니다. 그대로 조회하면 날짜 계산이 예외를 내 화면 전체가 멈춥니다.
+    if (!/^\d{4}-\d{2}$/.test(month)) return;
     let alive = true;
     const requestVersion = ++listRequestVersion.current;
     const { from, to } = monthBounds(month);
@@ -51,7 +53,7 @@ export function EventEditor() {
       }
     }).catch(() => {
       if (!alive || listRequestVersion.current !== requestVersion || currentMonth.current !== month) return;
-      setListError("행사 목록을 불러오지 못했습니다.");
+      setListError("일정 목록을 불러오지 못했습니다.");
     });
     return () => { alive = false; };
   }, [month, retry]);
@@ -73,7 +75,7 @@ export function EventEditor() {
     if (busy) return;
     const start = utcInput(startAt);
     const end = utcInput(endAt);
-    if (!start || !end || start >= end) { setError("행사 시작과 종료 시각을 확인해 주세요."); return; }
+    if (!start || !end || start >= end) { setError("일정 시작과 종료 시각을 확인해 주세요."); return; }
     setBusy(true); setError(""); setSaved(false);
     try {
       const input = { title: title.trim(), description, startAt: start, endAt: end, obEligible, publicVisible };
@@ -81,7 +83,7 @@ export function EventEditor() {
       else await createEvent(input);
       clear(); setSaved(true);
     } catch {
-      setError("행사를 저장하지 못했습니다."); setBusy(false); return;
+      setError("일정을 저장하지 못했습니다."); setBusy(false); return;
     }
     const refreshMonth = currentMonth.current;
     const refreshVersion = ++listRequestVersion.current;
@@ -92,11 +94,12 @@ export function EventEditor() {
       setEvents(refreshed); setLoadedMonth(refreshMonth); setListError("");
     } catch {
       if (currentMonth.current === refreshMonth && listRequestVersion.current === refreshVersion) {
-        setEvents(null); setListError("행사는 저장됐지만 목록을 새로고침하지 못했습니다.");
+        setEvents(null); setListError("일정은 저장됐지만 목록을 새로고침하지 못했습니다.");
       }
     } finally { setBusy(false); }
   }
 
+  const validMonth = /^\d{4}-\d{2}$/.test(month);
   const visible = loadedMonth === month && !listError ? events : null;
   function refreshList(createdMonth: string) {
     currentMonth.current = createdMonth;
@@ -105,33 +108,34 @@ export function EventEditor() {
     setRetry((value) => value + 1);
   }
   return <div className={styles.page}>
-    <PageHeader title="행사 관리" actions={<ActionLink variant="secondary" href="/dashboard">회원 달력으로 돌아가기</ActionLink>} />
+    <PageHeader title="일정 관리" actions={<ActionLink variant="secondary" href="/dashboard">일정으로 가기</ActionLink>} />
     {listError && <Feedback tone="error">{listError} <Button variant="secondary" type="button" onClick={() => { setListError(""); setRetry(retry + 1); }}>다시 시도</Button></Feedback>}
-    {saved && <p role="status">행사를 저장했습니다.</p>}
+    {saved && <p role="status">일정을 저장했습니다.</p>}
     <EventBatchCreator onCreated={refreshList} />
     <div className={`${styles.grid} ${!selected ? styles.singleColumn : ""}`}>
       <section className={styles.card}>
-        <div className={styles.listHeader}><h2>{month.replace("-", "년 ")}월 행사</h2>
+        <div className={styles.listHeader}><h2>{validMonth ? `${month.replace("-", "년 ")}월 일정` : "일정"}</h2>
           <label>조회 월 <Input type="month" value={month} onChange={(change) => { currentMonth.current = change.target.value; setMonth(change.target.value); setLoadedMonth(""); }} /></label>
         </div>
-        {!visible && !listError && <SkeletonRows count={5} label="행사를 불러오는 중입니다." />}
-        {visible?.length === 0 && <p>이번 달 등록된 행사가 없습니다.</p>}
+        {!validMonth && <p>조회할 월을 골라 주세요.</p>}
+        {validMonth && !visible && !listError && <SkeletonRows count={5} label="일정을 불러오는 중입니다." />}
+        {visible?.length === 0 && <p>이번 달 등록된 일정이 없습니다.</p>}
         {visible?.map((event) => <Button variant="unstyled" type="button" key={event.id} className={styles.eventRow} aria-pressed={selected?.id === event.id} onClick={() => edit(event)}>
-          <strong>{event.title}</strong><span>{seoulDateTime(event.startAt)}</span>
+          <strong>{event.title}</strong><span>{seoulDateTime(event.startAt)}</span><span aria-hidden="true" className={styles.arrow}>→</span>
         </Button>)}
       </section>
       {selected && <section className={styles.card}>
-        <h2>행사 수정</h2>
-        {selected && <p><Link href={`/admin/events/${selected.id}/attendance`}>이 행사 출석 관리</Link></p>}
+        <h2>일정 수정</h2>
+        {selected && <p><Link href={`/admin/events/${selected.id}/attendance`}>이 일정 출석 관리</Link></p>}
         {error && <Feedback tone="error">{error}</Feedback>}
         <form onSubmit={save} className={styles.form}>
           <label htmlFor="event-title">제목</label><Input id="event-title" value={title} onChange={(change) => setTitle(change.target.value)} maxLength={200} required />
           <label htmlFor="event-description">내용 (선택)</label><Textarea id="event-description" value={description} onChange={(change) => setDescription(change.target.value)} maxLength={10000} rows={7} />
           <label htmlFor="event-start">시작 시각 (한국 시간)</label><Input id="event-start" type="datetime-local" value={startAt} onChange={(change) => setStartAt(change.target.value)} required />
           <label htmlFor="event-end">종료 시각 (한국 시간)</label><Input id="event-end" type="datetime-local" value={endAt} onChange={(change) => setEndAt(change.target.value)} required />
-          <label className={styles.check}><Input type="checkbox" checked={obEligible} onChange={(change) => setObEligible(change.target.checked)} /> OB도 출석 대상</label>
+          <label className={styles.check}><Input type="checkbox" checked={obEligible} onChange={(change) => setObEligible(change.target.checked)} /> OB도 참여 대상</label>
           <label className={styles.check}><Input type="checkbox" checked={publicVisible} onChange={(change) => setPublicVisible(change.target.checked)} /> 향후 공개 아카이브 대상</label>
-          <p className={styles.hint}>공개 대상으로 표시해도 현재는 외부에 행사를 노출하지 않습니다.</p>
+          <p className={styles.hint}>공개 대상으로 표시해도 현재는 외부에 일정을 노출하지 않습니다.</p>
           <div className={styles.actions}><Button variant="primary" type="submit" disabled={busy || !title.trim()}>{busy ? "저장 중..." : "저장"}</Button>
             <Button variant="secondary" type="button" onClick={clear}>닫기</Button></div>
         </form>

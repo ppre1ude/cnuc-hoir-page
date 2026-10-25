@@ -39,3 +39,37 @@ describe("행사 참석 응답", () => {
     expect(setEventRsvp).not.toHaveBeenCalled();
   });
 });
+
+describe("참석 응답 표시", () => {
+  beforeEach(() => { setEventRsvp.mockReset(); });
+  afterEach(cleanup);
+  const past = { ...event, startAt: "2020-10-04T10:00:00Z" };
+
+  it("지난 일정의 목록 응답은 출석과 헷갈리지 않게 응답이라고 쓴다", () => {
+    const view = render(<EventRsvp event={past} memberType="ACTIVE" choice="ATTENDING" onSaved={vi.fn()} compact />);
+    expect(screen.getByRole("group")).toHaveTextContent("참석 응답");
+    view.rerender(<EventRsvp event={past} memberType="ACTIVE" choice={null} onSaved={vi.fn()} compact />);
+    expect(screen.getByRole("group")).toHaveTextContent("미응답");
+  });
+
+  it("목록 버튼 이름에 날짜를 붙여 같은 이름의 일정을 구분한다", () => {
+    render(<EventRsvp event={event} memberType="ACTIVE" choice={null} onSaved={vi.fn()} compact />);
+    expect(screen.getByRole("button", { name: "10월 4일 정기 연습 참석" })).toHaveTextContent(/^참석$/);
+  });
+
+  it("저장하는 동안 누른 버튼을 끄지 않아 초점을 지키고 다시 눌러도 한 번만 보낸다", async () => {
+    let resolve!: (value: unknown) => void;
+    setEventRsvp.mockReturnValue(new Promise((done) => { resolve = done; }));
+    render(<EventRsvp event={event} memberType="ACTIVE" choice={null} onSaved={vi.fn()} />);
+    const button = screen.getByRole("button", { name: "참석" });
+    button.focus();
+    fireEvent.click(button);
+    expect(button).toBeEnabled();
+    expect(button).toHaveAttribute("aria-disabled", "true");
+    expect(button).toHaveFocus();
+    fireEvent.click(button);
+    expect(setEventRsvp).toHaveBeenCalledTimes(1);
+    resolve({ eventId: 7, choice: "ATTENDING" });
+    await waitFor(() => expect(button).not.toHaveAttribute("aria-disabled"));
+  });
+});

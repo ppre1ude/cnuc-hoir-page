@@ -10,7 +10,7 @@ const links: { href: string; label: string; permission: Permission }[] = [
   { href: "/admin/members", label: "단원 계정", permission: "VIEW_MEMBERS" },
   { href: "/admin/applications", label: "가입 승인", permission: "APPROVE_APPLICATIONS" },
   { href: "/admin/notices", label: "공지 관리", permission: "MANAGE_EVENTS" },
-  { href: "/admin/events", label: "행사 관리", permission: "MANAGE_EVENTS" },
+  { href: "/admin/events", label: "일정 관리", permission: "MANAGE_EVENTS" },
 ];
 
 export function AdminNavigation() {

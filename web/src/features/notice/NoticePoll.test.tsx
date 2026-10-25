@@ -50,4 +50,22 @@ describe("공지 투표", () => {
     expect(screen.queryByRole("button", { name: "선택 변경" })).not.toBeInTheDocument();
     expect(voteNoticePoll).not.toHaveBeenCalled();
   });
+
+  it("저장하는 동안 선택지를 끄지 않고, 저장 뒤 고른 선택지로 초점을 돌려준다", async () => {
+    let resolve!: (value: unknown) => void;
+    getNoticePoll.mockResolvedValue(openPoll);
+    voteNoticePoll.mockReturnValue(new Promise((done) => { resolve = done; }));
+    render(<NoticePoll noticeId={7} />);
+    const radio = await screen.findByRole("radio", { name: /^참석/ });
+    fireEvent.click(radio);
+    const button = screen.getByRole("button", { name: "투표하기" });
+    button.focus();
+    fireEvent.click(button);
+    expect(radio).toBeEnabled();
+    expect(button).toHaveAttribute("aria-disabled", "true");
+    expect(button).toHaveFocus();
+    resolve({ ...openPoll, firstCount: 1, myChoice: 1 });
+    expect(await screen.findByText("내 선택: 참석")).toBeInTheDocument();
+    expect(radio).toHaveFocus();
+  });
 });

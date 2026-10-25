@@ -33,7 +33,7 @@ const VALUES: { eyebrow: string; title: ReactNode; body: string }[] = [
 ];
 
 /** 입자로 그릴 심벌. 원본 비율을 그대로 쓰고, 그릴 때는 줄인 이미지를 받습니다. */
-const MARK = { src: "/images/choir-mark.png", width: 3169, height: 2449 };
+const MARK = { src: "/images/choir-mark.png", width: 2775, height: 1845 }; // 투명 여백 없이 그림 경계로 자른 원본 크기
 
 const pad = (n: number) => String(n).padStart(2, "0");
 

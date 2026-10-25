@@ -1,18 +1,12 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+// 2MB 통짜 글꼴 대신 글자 범위별 조각을 써서 화면에 나온 글자가 든 조각만 받습니다.
+import "./fonts/pretendardvariable-dynamic-subset.css";
 import "./globals.css";
-
-const pretendard = localFont({
-  src: "./fonts/PretendardVariable.woff2",
-  variable: "--font-pretendard",
-  weight: "45 920",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://cnuc-hoir-page.vercel.app"),
-  title: "전남대학교 합창단",
-  description: "전남대학교 합창단 회원 포털",
+  title: { default: "전남대학교 합창단", template: "%s | 전남대학교 합창단" },
+  description: "전남대학교 합창단 단원 포털",
   openGraph: {
     title: "전남대학교 합창단",
     siteName: "전남대학교 합창단",
@@ -26,7 +20,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ko" className={pretendard.variable}>
+    <html lang="ko">
       <body>{children}</body>
     </html>
   );

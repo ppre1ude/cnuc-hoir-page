@@ -22,7 +22,7 @@ type Props = { onCreated: (month: string) => void };
 export function EventBatchCreator({ onCreated }: Props) {
   const [month, setMonth] = useState(() => seoulDateKey(new Date()).slice(0, 7));
   const [dates, setDates] = useState<string[]>([]);
-  const [title, setTitle] = useState("정기 연습");
+  const [title, setTitle] = useState("전체연습");
   const [description, setDescription] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
@@ -44,14 +44,15 @@ export function EventBatchCreator({ onCreated }: Props) {
     if (!startTime || !endTime || startTime >= endTime) {
       setError("시작 시각과 종료 시각을 확인해 주세요."); return;
     }
-    const items: EventInput[] = dates.map((date) => ({
-      title: title.trim(), description: description.trim(),
-      startAt: new Date(`${date}T${startTime}:00+09:00`).toISOString(),
-      endAt: new Date(`${date}T${endTime}:00+09:00`).toISOString(),
-      obEligible, publicVisible: false,
-    }));
     setBusy(true); setError(""); setSaved("");
     try {
+      // 시각이 어긋나 toISOString이 예외를 내도 아무 반응 없이 끝나지 않게, try 안에서 만들어 안내 문구를 띄웁니다.
+      const items: EventInput[] = dates.map((date) => ({
+        title: title.trim(), description: description.trim(),
+        startAt: new Date(`${date}T${startTime}:00+09:00`).toISOString(),
+        endAt: new Date(`${date}T${endTime}:00+09:00`).toISOString(),
+        obEligible, publicVisible: false,
+      }));
       await createEventsBatch(items);
       setSaved(`${items.length}개 일정을 등록했습니다.`);
       setDates([]);
@@ -63,7 +64,9 @@ export function EventBatchCreator({ onCreated }: Props) {
     }
   }
 
-  const days = Array.from({ length: monthDays(month) }, (_, index) => index + 1);
+  // 월 입력을 지우면 ""가 들어옵니다. 그때는 날짜를 그리지 않고 등록도 막습니다.
+  const valid = /^\d{4}-\d{2}$/.test(month);
+  const days = valid ? Array.from({ length: monthDays(month) }, (_, index) => index + 1) : [];
   return <section className={`${styles.card} ${styles.batch}`}>
     <h2>일정 한 번에 등록</h2>
     <form onSubmit={create} className={styles.form}>
@@ -73,7 +76,7 @@ export function EventBatchCreator({ onCreated }: Props) {
       }} required />
       <div className={styles.batchWeekdays}>{["월", "화", "수", "목", "금", "토", "일"].map((day) => <span key={day}>{day}</span>)}</div>
       <div className={styles.batchDays} aria-label="등록할 날짜">
-        {Array.from({ length: mondayOffset(month) }, (_, index) => <span key={`blank-${index}`} />)}
+        {valid && Array.from({ length: mondayOffset(month) }, (_, index) => <span key={`blank-${index}`} />)}
         {days.map((day) => {
           const date = `${month}-${String(day).padStart(2, "0")}`;
           return <Button variant="secondary" key={date} type="button" aria-pressed={dates.includes(date)}
@@ -90,7 +93,7 @@ export function EventBatchCreator({ onCreated }: Props) {
       <label className={styles.check}><Input type="checkbox" checked={obEligible} onChange={(event) => setObEligible(event.target.checked)} /> OB도 참여 대상</label>
       {error && <Feedback tone="error">{error}</Feedback>}
       {saved && <Feedback>{saved}</Feedback>}
-      <div className={styles.actions}><Button variant="primary" type="submit" disabled={busy || dates.length === 0 || !title.trim()}>
+      <div className={styles.actions}><Button variant="primary" type="submit" disabled={busy || !valid || dates.length === 0 || !title.trim()}>
         {busy ? "등록 중..." : `${dates.length}개 일정 등록`}
       </Button></div>
     </form>

@@ -21,6 +21,7 @@ export function CheckInPanel({ eventId }: { eventId: number }) {
   const statusRequestVersion = useRef(0);
   const qrSubmissionInFlight = useRef(false);
   const completedRef = useRef(false);
+  const codeInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let alive = true;
@@ -96,9 +97,12 @@ export function CheckInPanel({ eventId }: { eventId: number }) {
       setCompleted(true);
       setCode("");
     } catch (error) {
-      setCodeError(error instanceof ApiRequestError && error.code === "INVALID_CREDENTIAL");
+      const invalid = error instanceof ApiRequestError && error.code === "INVALID_CREDENTIAL";
+      setCodeError(invalid);
       setMessage(errorMessage(error));
       setBusy(false);
+      // 틀린 코드는 지우지 않고 선택해 두어 바로 덮어 쓸 수 있게 합니다.
+      if (invalid) { codeInput.current?.focus(); codeInput.current?.select(); }
       return;
     }
     try {
@@ -124,22 +128,26 @@ export function CheckInPanel({ eventId }: { eventId: number }) {
     finally { setBusy(false); }
   }
 
+  // 저장 중에 disabled를 걸면 엔터를 누른 입력 칸에서 초점이 빠지고 휴대폰 자판이 닫힙니다.
+  // 그래서 저장 중에는 readOnly와 aria-disabled로 막고, disabled는 출석을 마친 뒤에만 겁니다.
   return <section aria-label="현장 출석" className={styles.panel}>
-    <PageHeader title="현장 출석" />
+    <Link className={styles.backLink} href={`/events/${eventId}`}>← 일정</Link>
+    <PageHeader title={status ? `${status.eventTitle} 출석` : "현장 출석"} />
     {status && <p className={styles.state}>현재 상태 <strong><StatusBadge tone={status.status === "CHECKED_IN" ? "positive" : status.status === "MISSED" ? "negative" : "neutral"}>{memberAttendanceLabel(status)}</StatusBadge></strong></p>}
     <form className={styles.form} onSubmit={submit}>
       <label htmlFor="check-in-code">운영진이 알려준 출석 코드</label>
-      <Input id="check-in-code" value={code} maxLength={8} autoComplete="off"
+      <Input id="check-in-code" ref={codeInput} value={code} maxLength={8} autoComplete="off" enterKeyHint="go"
         name="code" required autoCapitalize="characters" spellCheck={false} aria-invalid={codeError || undefined}
         aria-describedby={codeError ? "check-in-feedback" : undefined}
-        onChange={(event) => { setCode(event.target.value); if (codeError) setMessage(""); setCodeError(false); }} disabled={busy || completed || status?.status === "CHECKED_IN"} />
-      <Button variant="primary" size="large" type="submit" disabled={busy || completed || !code.trim() || status?.status === "CHECKED_IN"}>
+        onChange={(event) => { setCode(event.target.value); if (codeError) setMessage(""); setCodeError(false); }}
+        readOnly={busy} disabled={completed || status?.status === "CHECKED_IN"} />
+      <Button variant="primary" size="large" type="submit" aria-disabled={busy || undefined}
+        disabled={completed || !code.trim() || status?.status === "CHECKED_IN"}>
         {busy ? "확인 중..." : "출석하기"}
       </Button>
     </form>
     <div id="check-in-feedback">{message && <Feedback tone={completed && !statusRefreshFailed ? "success" : "error"}>{message}</Feedback>}</div>
-    {(statusRefreshFailed || statusLoadFailed) && <Button variant="secondary" type="button" disabled={busy} onClick={retryStatus}>상태 다시 확인</Button>}
-    <p><Link href={`/events/${eventId}`}>행사로 돌아가기</Link></p>
+    {(statusRefreshFailed || statusLoadFailed) && <Button variant="secondary" type="button" aria-disabled={busy || undefined} onClick={retryStatus}>상태 다시 확인</Button>}
   </section>;
 }
 
@@ -148,7 +156,7 @@ function errorMessage(error: unknown) {
   switch (error.code) {
     case "SESSION_CLOSED": return "출석 창이 닫혔거나 유효 시간이 지났습니다.";
     case "ALREADY_CHECKED_IN": return "이미 출석이 처리되었습니다.";
-    case "NOT_ELIGIBLE": return "이 행사의 출석 대상이 아닙니다.";
+    case "NOT_ELIGIBLE": return "이 일정의 출석 대상이 아닙니다.";
     case "APPROVAL_REQUIRED": return "가입 승인 후 출석할 수 있습니다.";
     case "INVALID_CREDENTIAL": return "출석 코드를 확인해 주세요.";
     case "RATE_LIMITED": return "시도가 많습니다. 잠시 후 다시 시도해 주세요.";

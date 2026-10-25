@@ -53,7 +53,7 @@ export function Feedback({ tone = "success", className, ...props }:
 export function BrandLogo({ mark = false, className, alt = "전남대학교 합창단", priority = false }:
   { mark?: boolean; className?: string; alt?: string; priority?: boolean }) {
   return <Image src={mark ? "/images/choir-mark.png" : "/images/choir-logo-horizontal.png"}
-    width={mark ? 168 : 280} height={mark ? 130 : 61} alt={alt} priority={priority}
+    width={mark ? 168 : 280} height={mark ? 112 : 61} alt={alt} priority={priority}
     className={join(styles.logo, mark ? styles.mark : undefined, className)} />;
 }
 

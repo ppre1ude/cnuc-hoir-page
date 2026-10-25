@@ -134,7 +134,7 @@ test("운영진 초대부터 출석 정정 반영까지 실제 서비스 흐름"
     for (const [route, heading] of [
       ["/admin/members", "단원 계정"],
       ["/admin/notices", "공지 관리"],
-      ["/admin/events", "행사 관리"],
+      ["/admin/events", "일정 관리"],
       [`/admin/events/${eventId}/attendance`, `${eventTitle} 출석 관리`],
     ]) {
       await adminPage.goto(route);

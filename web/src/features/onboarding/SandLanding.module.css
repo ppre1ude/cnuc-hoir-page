@@ -8,7 +8,7 @@
   --weight-heading: var(--weight-public-heading);
   position: relative;
   height: calc(700vh + 100dvh);
-  font-family: var(--font-paperlogy), var(--font-pretendard), "Malgun Gothic", sans-serif;
+  font-family: var(--font-paperlogy), "Pretendard Variable", "Malgun Gothic", sans-serif;
   word-break: keep-all;
 }
 :where(.landing) :is(h1, h2, h3, p, ol, ul) { margin: 0; } /* :where로 우선순위를 낮춰 아래 클래스 규칙의 여백이 이기게 합니다. */
@@ -40,7 +40,10 @@
 .eyebrow span { color: var(--color-muted); font-weight: var(--weight-medium); }
 .title { font-size: clamp(28px, 7.6vw, 40px); font-weight: var(--weight-heading); letter-spacing: -.05em; line-height: 1.25; }
 .title strong { color: var(--color-primary); }
-.centered { left: 0; right: 0; top: 34%; display: flex; flex-direction: column; align-items: center; gap: 14px; padding-inline: var(--space-6); text-align: center; }
+/* 가운데 장면(소개·지원): 심벌과 글을 한 묶음으로 세로 가운데에 둡니다. 엔진이 --mark-offset에 (심벌 높이 + 간격)의 절반을 넣고,
+   그 전까지는 심벌 폭 비율(모바일 54vw, PC 26vw)로 어림한 값을 씁니다. 세로 이동은 transform이 아닌 top에 두어 장면 전환 transform과 겹치지 않습니다. */
+.centered { left: 0; right: 0; top: calc(50% + var(--mark-offset, 18vw + 12px)); display: flex; flex-direction: column; align-items: center; gap: 14px; padding-inline: var(--space-6); transform: translateY(calc(-50% + 26px)); text-align: center; }
+.centered[data-active] { transform: translateY(-50%); }
 .centered .title { font-size: clamp(30px, 8vw, 44px); }
 .lead { max-width: 30em; color: var(--color-muted); font-size: var(--text-body); line-height: 1.6; }
 /* 장면 본문: 제목 아래에서 꼬리표와 제목 사이를 풀어 주는 한두 문장 */
@@ -98,7 +101,7 @@
   .copy { left: var(--band-left); right: auto; bottom: auto; top: 50%; width: calc(var(--band) * .36); gap: 18px; transform: translateY(calc(-50% + 26px)); }
   .copy[data-active] { transform: translateY(-50%); }
   .title { font-size: 40px; }
-  .centered { top: 44%; }
+  .centered { --mark-offset: 8.6vw + 18px; }
   .centered .title { font-size: 48px; }
   .join { gap: 26px; }
   .lead { font-size: 1.125rem; }
@@ -120,6 +123,7 @@
 @media (prefers-reduced-motion: reduce) {
   .scene, .headerLogo, .photo { transition: opacity .2s; }
   .scene, .scene[data-active] { transform: none; }
+  .centered, .centered[data-active] { transform: translateY(-50%); }
   .cue i::after { animation: none; }
 }
 @media (prefers-reduced-motion: reduce) and (min-width: 761px) {

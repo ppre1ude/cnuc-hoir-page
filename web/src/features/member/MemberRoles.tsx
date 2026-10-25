@@ -58,57 +58,59 @@ export function MemberRoles({ item, session, onChanged }: { item: MemberItem; se
     </p>;
   }
 
+  // 한 화면에 단원마다 같은 입력과 버튼이 반복되므로, 화면 읽기 프로그램에는 이름을 붙여 구분합니다.
   return <div className={styles.roles}>
     <form className={styles.inlineForm} onSubmit={saveProfile}>
       {approved && <>
         <label htmlFor={`member-type-${item.id}`}>단원 구분</label>
-        <Select id={`member-type-${item.id}`} value={memberType} onChange={(event) => setMemberType(event.target.value as "ACTIVE" | "OB" | "")}>
+        <Select id={`member-type-${item.id}`} aria-label={`${item.name} 단원 구분`} value={memberType} onChange={(event) => setMemberType(event.target.value as "ACTIVE" | "OB" | "")}>
           {item.memberType === null && <option value="">미지정</option>}
           <option value="ACTIVE">활동 단원</option><option value="OB">OB</option>
         </Select>
       </>}
       <label htmlFor={`part-${item.id}`}>파트</label>
-      <Select id={`part-${item.id}`} value={profilePart} onChange={(event) => setProfilePart(event.target.value as Part | "")}>
+      <Select id={`part-${item.id}`} aria-label={`${item.name} 파트`} value={profilePart} onChange={(event) => setProfilePart(event.target.value as Part | "")}>
         <option value="">미지정</option>{parts.map((value) => <option key={value} value={value}>{partLabel[value]}</option>)}
       </Select>
       <label htmlFor={`cohort-${item.id}`}>기수</label>
-      <Input id={`cohort-${item.id}`} type="number" min={1} value={cohort} onChange={(event) => setCohort(event.target.value)} />
-      <Button variant="secondary" size="small" type="submit" disabled={busy}>저장</Button>
+      <Input id={`cohort-${item.id}`} aria-label={`${item.name} 기수`} type="number" min={1} value={cohort} onChange={(event) => setCohort(event.target.value)} />
+      <Button variant="secondary" type="submit" disabled={busy} aria-label={`${item.name} 정보 저장`}>저장</Button>
     </form>
     <p className={styles.roleList}>
       {item.roles.length === 0 && <span>직책 없음</span>}
       {item.roles.map((assigned) => <span key={assigned.id} className={styles.roleChip}>{describeRole(assigned)}
         {(leadership || (assigned.role !== "PRESIDENT" && assigned.role !== "VICE_PRESIDENT")) && <Button variant="unstyled" type="button" disabled={busy}
-          aria-label={`${describeRole(assigned)} 해제`} onClick={() => void run(() => removeMemberRole(item.id, assigned.id), "직책을 해제하지 못했습니다.")}>×</Button>}
+          aria-label={`${item.name} ${describeRole(assigned)} 해제`} onClick={() => void run(() => removeMemberRole(item.id, assigned.id), "직책을 해제하지 못했습니다.")}>×</Button>}
       </span>)}
       {item.admin && <StatusBadge tone="neutral">사이트 관리자</StatusBadge>}
     </p>
     {eligible && <form className={styles.inlineForm} onSubmit={add}>
       <label htmlFor={`role-${item.id}`}>추가할 직책</label>
-      <Select id={`role-${item.id}`} value={role} onChange={(event) => setRole(event.target.value as Role)}>
+      <Select id={`role-${item.id}`} aria-label={`${item.name} 추가할 직책`} value={role} onChange={(event) => setRole(event.target.value as Role)}>
         {choices.map((value) => <option key={value} value={value}>{roleLabel[value]}</option>)}
       </Select>
       {(role === "DEPARTMENT_HEAD" || role === "DEPARTMENT_MEMBER") && <>
         <label htmlFor={`department-${item.id}`}>부서</label>
-        <Select id={`department-${item.id}`} value={department} onChange={(event) => { const next = event.target.value as Department; setDepartment(next); setUnit(unitsOf[next][0]); }}>
+        <Select id={`department-${item.id}`} aria-label={`${item.name} 부서`} value={department} onChange={(event) => { const next = event.target.value as Department; setDepartment(next); setUnit(unitsOf[next][0]); }}>
           {departments.map((value) => <option key={value} value={value}>{departmentLabel[value]}</option>)}
         </Select>
       </>}
       {role === "DEPARTMENT_MEMBER" && <>
         <label htmlFor={`unit-${item.id}`}>계</label>
-        <Select id={`unit-${item.id}`} value={unit} onChange={(event) => setUnit(event.target.value as Unit)}>
+        <Select id={`unit-${item.id}`} aria-label={`${item.name} 계`} value={unit} onChange={(event) => setUnit(event.target.value as Unit)}>
           {unitsOf[department].map((value) => <option key={value} value={value}>{unitLabel[value]}</option>)}
         </Select>
       </>}
       {role === "SECTION_LEAD" && <>
         <label htmlFor={`lead-part-${item.id}`}>파트</label>
-        <Select id={`lead-part-${item.id}`} value={part} onChange={(event) => setPart(event.target.value as Part)}>
+        <Select id={`lead-part-${item.id}`} aria-label={`${item.name} 수석 파트`} value={part} onChange={(event) => setPart(event.target.value as Part)}>
           {parts.map((value) => <option key={value} value={value}>{partLabel[value]}</option>)}
         </Select>
       </>}
-      <Button variant="secondary" size="small" type="submit" disabled={busy}>직책 추가</Button>
+      <Button variant="secondary" type="submit" disabled={busy} aria-label={`${item.name} 직책 추가`}>직책 추가</Button>
     </form>}
-    {leadership && eligible && item.id !== session.id && <Button variant={item.admin ? "danger" : "secondary"} size="small" type="button" disabled={busy}
+    {leadership && eligible && item.id !== session.id && <Button variant={item.admin ? "danger" : "secondary"} type="button" disabled={busy}
+      aria-label={`${item.name} ${item.admin ? "사이트 관리자 해제" : "사이트 관리자 지정"}`}
       onClick={() => void run(() => setSiteAdmin(item.id, !item.admin), "사이트 관리자 권한을 바꾸지 못했습니다.")}>
       {item.admin ? "사이트 관리자 해제" : "사이트 관리자 지정"}</Button>}
     {error && <Feedback tone="error">{error}</Feedback>}

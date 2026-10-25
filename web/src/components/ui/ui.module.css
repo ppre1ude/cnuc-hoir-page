@@ -28,6 +28,8 @@
 .small { min-height: var(--control-small); padding: 6px var(--space-3); font-size: var(--text-small); }
 .large { min-height: var(--control-large); padding: var(--space-3) var(--space-5); font-size: var(--text-body); }
 .action:disabled { opacity: .5; cursor: default; }
+/* 흐린 초록은 눌러도 되는 버튼처럼 보여 꺼진 주요 버튼은 회색으로 둡니다. */
+.primary:disabled { opacity: 1; border-color: var(--color-line); background: var(--color-neutral-background); color: var(--color-muted); }
 .unstyled { border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
 .unstyled:disabled { opacity: .5; cursor: default; }
 .control {

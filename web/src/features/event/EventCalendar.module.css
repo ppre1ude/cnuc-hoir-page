@@ -44,8 +44,9 @@
 .quickRsvp:has([role="alert"]) { flex-basis: 100%; }
 .quickRsvp p[role="alert"] { flex-basis: 100%; margin: 0; }
 .quickStatus { color: var(--color-muted); font-size: var(--text-label); }
+/* 저장 중인 응답 버튼은 초점을 지키려고 disabled 대신 aria-disabled를 쓰므로 같은 흐린 모양을 직접 줍니다. */
+.quickRsvp button[aria-disabled="true"], .rsvpButtons button[aria-disabled="true"] { opacity: .5; cursor: default; }
 .rsvp { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-6); padding-top: var(--space-6); border-top: 1px solid var(--color-line); font-size: var(--text-body); }
-.rsvpStatus { color: var(--color-primary); font-weight: var(--weight-label); }
 .rsvpButtons { display: flex; width: 100%; gap: var(--space-2); }
 .rsvpButtons button { flex: 1; min-height: var(--control-large); font-size: var(--text-body); }
 .rsvp p[role="alert"] { width: 100%; margin: 0; }

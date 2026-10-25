@@ -22,6 +22,8 @@ function member(id: number, name: string): MemberItem {
 }
 
 beforeEach(() => {
+  // jsdom에는 scrollIntoView가 없어 결과로 화면을 옮기는 호출만 확인합니다.
+  Element.prototype.scrollIntoView = vi.fn();
   vi.mocked(getSession).mockResolvedValue(operator);
   vi.mocked(getMembers).mockResolvedValue({ items: [], page: 0, size: 20, total: 0 });
   vi.mocked(getAllowlist).mockResolvedValue({ items: [], page: 0, size: 20, total: 0 });
@@ -40,15 +42,24 @@ test("운영진이 단원 계정을 만들면 1회용 링크를 표시합니다"
   expect(inviteMember).toHaveBeenCalledWith({ name: "새 단원", email: "member@example.org", memberType: "ACTIVE" });
   expect(await screen.findByLabelText("구글 계정 연결 링크")).toHaveValue(
     `${window.location.origin}/activate#token=temporary-private-token`);
+  expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
+  expect(screen.getByRole("heading", { name: "발급된 링크" })).toHaveFocus();
+});
+
+test("행마다 접힌 접근 해제에 단원 이름을 붙입니다", async () => {
+  vi.mocked(getMembers).mockResolvedValue({ items: [member(3, "이서연"), member(4, "박민준")], page: 0, size: 20, total: 2 });
+  renderWithSession(<MemberAccountManager />, operator);
+  expect(await screen.findByLabelText("이서연 접근 해제")).toHaveTextContent("접근 해제");
+  expect(screen.getByLabelText("박민준 접근 해제")).toHaveTextContent("접근 해제");
 });
 
 test("권한이 없는 기능은 가리고 조회 권한만 있으면 목록만 보여 줍니다", async () => {
   vi.mocked(getMembers).mockResolvedValue({ items: [member(2, "단원")], page: 0, size: 20, total: 1 });
   renderWithSession(<MemberAccountManager />, sessionFixture({ name: "부장", permissions: ["VIEW_MEMBERS"] }));
   await screen.findByRole("heading", { name: "단원" });
-  expect(screen.queryByRole("button", { name: "접근 해제" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /접근 해제/ })).not.toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: "단원 추가" })).not.toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "저장" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /저장/ })).not.toBeInTheDocument();
 });
 
 test("자기 행의 직책을 바꾸면 세션을 다시 받습니다", async () => {
@@ -56,7 +67,7 @@ test("자기 행의 직책을 바꾸면 세션을 다시 받습니다", async ()
   renderWithSession(<MemberAccountManager />, operator);
   const own = (await screen.findByRole("heading", { name: "관리자" })).closest("article")!;
   expect(getSession).not.toHaveBeenCalled();
-  await userEvent.click(within(own).getByRole("button", { name: "직책 추가" }));
+  await userEvent.click(within(own).getByRole("button", { name: "관리자 직책 추가" }));
   expect(assignMemberRole).toHaveBeenCalledWith(1, { role: "TREASURER" });
   await waitFor(() => expect(getSession).toHaveBeenCalledTimes(1));
 });
@@ -65,7 +76,7 @@ test("다른 단원의 직책을 바꾸면 세션을 다시 받지 않습니다"
   vi.mocked(getMembers).mockResolvedValue({ items: [member(1, "관리자"), member(2, "단원")], page: 0, size: 20, total: 2 });
   renderWithSession(<MemberAccountManager />, operator);
   const other = (await screen.findByRole("heading", { name: "단원" })).closest("article")!;
-  await userEvent.click(within(other).getByRole("button", { name: "직책 추가" }));
+  await userEvent.click(within(other).getByRole("button", { name: "단원 직책 추가" }));
   expect(assignMemberRole).toHaveBeenCalledWith(2, { role: "TREASURER" });
   await waitFor(() => expect(getMembers).toHaveBeenCalledTimes(2));
   expect(getSession).not.toHaveBeenCalled();
@@ -79,16 +90,16 @@ test("반려된 계정은 반려를 취소해 가입 신청으로 되돌립니�
   renderWithSession(<MemberAccountManager />, operator);
   const row = (await screen.findByRole("heading", { name: "반려된 단원" })).closest("article")!;
   const approved = screen.getByRole("heading", { name: "단원" }).closest("article")!;
-  expect(within(approved).queryByRole("button", { name: "반려 취소" })).not.toBeInTheDocument();
-  await userEvent.click(within(row).getByRole("button", { name: "반려 취소" }));
+  expect(within(approved).queryByRole("button", { name: /반려 취소/ })).not.toBeInTheDocument();
+  await userEvent.click(within(row).getByRole("button", { name: "반려된 단원 반려 취소" }));
   expect(cancelRejection).toHaveBeenCalledWith(3);
   expect(await within(row).findByText(/이전 가입 승인 대기/)).toBeInTheDocument();
-  expect(within(row).queryByRole("button", { name: "반려 취소" })).not.toBeInTheDocument();
+  expect(within(row).queryByRole("button", { name: /반려 취소/ })).not.toBeInTheDocument();
 });
 
 test("가입 승인 권한이 없으면 반려 취소를 보여 주지 않습니다", async () => {
   vi.mocked(getMembers).mockResolvedValue({ items: [{ ...member(3, "반려된 단원"), status: "REJECTED" }], page: 0, size: 20, total: 1 });
   renderWithSession(<MemberAccountManager />, sessionFixture({ name: "부장", permissions: ["VIEW_MEMBERS"] }));
   await screen.findByRole("heading", { name: "반려된 단원" });
-  expect(screen.queryByRole("button", { name: "반려 취소" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /반려 취소/ })).not.toBeInTheDocument();
 });
