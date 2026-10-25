@@ -169,7 +169,7 @@ function run(root: HTMLElement, { stage, canvas, photoBox, photoImg, anchorBox, 
   function markBox(scene: number, widthRatio: number) {
     const copy = root.querySelector<HTMLElement>(`[data-sand-mark="${scene}"]`);
     const copyH = copy ? copy.offsetHeight : size.h * .16;
-    const gap = size.mobile ? 24 : 36;
+    const gap = size.mobile ? 48 : 72; // 심벌 파일에 여백이 없으므로 잉크와 글 사이 숨을 여기서 둡니다.
     const margin = (size.mobile ? HEADER_HEIGHT.mobile : HEADER_HEIGHT.desktop) + 16;
     const h = Math.max(80, Math.min(size.w * widthRatio / markAspect, size.h - 2 * margin - gap - copyH));
     const w = h * markAspect;
