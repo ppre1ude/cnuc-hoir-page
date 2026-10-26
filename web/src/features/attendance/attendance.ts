@@ -25,8 +25,9 @@ export function attendanceDate(startAt: string) {
 }
 
 export function getMyAttendance(): Promise<AttendanceState[]> { return apiRequest("/attendance/me"); }
+// 출석 창 상태와 명단은 연습 중에 실시간으로 바뀌므로 기억하지 않습니다.
 export function getEventAttendance(eventId: number): Promise<AttendanceState> {
-  return apiRequest(`/events/${eventId}/attendance/me`);
+  return apiRequest(`/events/${eventId}/attendance/me`, { cache: "no-store" });
 }
 export function submitCheckIn(eventId: number, credential: string): Promise<void> {
   return apiRequest(`/events/${eventId}/check-ins`, {
@@ -43,10 +44,10 @@ export function closeCheckIn(eventId: number): Promise<void> {
   return apiRequest(`/admin/events/${eventId}/check-in-session/close`, { method: "POST" });
 }
 export function getCheckInSession(eventId: number): Promise<SessionStatus> {
-  return apiRequest(`/admin/events/${eventId}/check-in-session`);
+  return apiRequest(`/admin/events/${eventId}/check-in-session`, { cache: "no-store" });
 }
 export function getAdminAttendance(eventId: number): Promise<AdminAttendance[]> {
-  return apiRequest(`/admin/events/${eventId}/attendance`);
+  return apiRequest(`/admin/events/${eventId}/attendance`, { cache: "no-store" });
 }
 export function correctAttendance(eventId: number, memberId: number, status: "CHECKED_IN" | "MISSED", reason: string): Promise<void> {
   return apiRequest(`/admin/events/${eventId}/attendance/${memberId}`, {
