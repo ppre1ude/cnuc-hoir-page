@@ -30,6 +30,8 @@ describe("공지 투표", () => {
     fireEvent.click(await screen.findByRole("radio", { name: /^참석/ }));
     fireEvent.click(screen.getByRole("button", { name: "투표하기" }));
     expect(await screen.findByText("내 선택: 참석")).toBeInTheDocument();
+    // 내 선택은 서버 응답 전에 먼저 보이므로, 저장이 끝나 버튼 이름이 바뀔 때까지 기다립니다.
+    await waitFor(() => expect(screen.getByRole("button", { name: "선택 변경" })).toBeInTheDocument());
     fireEvent.click(screen.getByRole("radio", { name: /^불참/ }));
     fireEvent.click(screen.getByRole("button", { name: "선택 변경" }));
     expect(await screen.findByText("내 선택: 불참")).toBeInTheDocument();
@@ -67,5 +69,29 @@ describe("공지 투표", () => {
     resolve({ ...openPoll, firstCount: 1, myChoice: 1 });
     expect(await screen.findByText("내 선택: 참석")).toBeInTheDocument();
     expect(radio).toHaveFocus();
+  });
+});
+
+describe("낙관적 집계 표시", () => {
+  afterEach(cleanup);
+  beforeEach(() => {
+    getNoticePoll.mockReset();
+    voteNoticePoll.mockReset();
+  });
+
+  it("투표를 누르면 서버 응답 전에 집계와 내 선택이 바뀌고, 실패하면 되돌아간다", async () => {
+    let reject!: (reason: unknown) => void;
+    getNoticePoll.mockResolvedValue(openPoll);
+    voteNoticePoll.mockReturnValue(new Promise((_, fail) => { reject = fail; }));
+    render(<NoticePoll noticeId={7} />);
+    fireEvent.click(await screen.findByRole("radio", { name: /^참석/ }));
+    fireEvent.click(screen.getByRole("button", { name: "투표하기" }));
+    expect(screen.getByText("내 선택: 참석")).toBeInTheDocument();
+    expect(screen.getByText(/1명 참여/)).toBeInTheDocument();
+    reject(new Error("서버 오류"));
+    expect(await screen.findByText("투표를 저장하지 못했습니다. 다시 시도해 주세요.")).toBeInTheDocument();
+    // 되돌리기는 저장 작업이 끝난 뒤 그려지므로 기다립니다.
+    await waitFor(() => expect(screen.queryByText("내 선택: 참석")).toBeNull());
+    expect(screen.getByText(/0명 참여/)).toBeInTheDocument();
   });
 });

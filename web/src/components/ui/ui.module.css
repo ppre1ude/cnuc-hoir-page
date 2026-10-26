@@ -75,3 +75,9 @@
   .surface { padding: var(--space-5); }
 }
 .textLink { color: var(--color-primary); }
+.screen { composes: readingPage; display: grid; justify-items: start; gap: var(--space-4); }
+.screen > p { margin: 0; }
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+/* 연결이 끊겼을 때 화면 아래에 띄우는 알림. 건너뛰기 링크(50)보다 아래, 상단 메뉴(20)보다 위에 둡니다. */
+.offline { position: fixed; inset: auto 0 0; z-index: 40; display: flex; justify-content: center; padding: var(--space-3) var(--page-gutter); pointer-events: none; }
+.offline > p { margin: 0; pointer-events: auto; }

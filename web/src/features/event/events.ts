@@ -81,8 +81,8 @@ export function setEventRsvp(id: number, choice: EventRsvpChoice): Promise<MyEve
   });
 }
 
-export function getAdminEventRsvps(id: number): Promise<AdminEventRsvps> {
-  return apiRequest<AdminEventRsvps>(`/admin/events/${id}/rsvps`);
+export function getAdminEventRsvps(id: number, cache?: RequestCache): Promise<AdminEventRsvps> {
+  return apiRequest<AdminEventRsvps>(`/admin/events/${id}/rsvps`, { cache });
 }
 
 export function updateEvent(id: number, input: EventInput): Promise<ChoirEvent> {

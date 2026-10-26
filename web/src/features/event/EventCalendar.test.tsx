@@ -98,6 +98,13 @@ describe("일정 중심 단원 화면", () => {
     expect(getMyEventRsvps).toHaveBeenLastCalledWith("2026-10-31T15:00:00.000Z", "2026-11-30T15:00:00.000Z");
   });
 
+  it("이달 요청의 끝 시각은 한 시간 단위로 올려 주소를 고정하고 범위를 줄이지 않는다", async () => {
+    vi.setSystemTime(new Date("2026-10-29T03:20:00Z"));
+    getEvents.mockResolvedValue([]);
+    renderWithSession(<EventCalendar />, sessionFixture({ memberType: "ACTIVE" }));
+    await waitFor(() => expect(getEvents).toHaveBeenCalledWith("2026-09-30T15:00:00.000Z", "2026-11-12T04:00:00.000Z"));
+  });
+
   it("일정과 출석을 조회하는 동안 빈 기록으로 잘못 안내하지 않는다", () => {
     getEvents.mockReturnValue(new Promise(() => {}));
     getMyAttendance.mockReturnValue(new Promise(() => {}));
@@ -147,6 +154,8 @@ describe("일정 중심 단원 화면", () => {
     fireEvent.click(await screen.findByRole("button", { name: "9월 30일 가을 공연 참석" }));
     await waitFor(() => expect(setEventRsvp).toHaveBeenCalledWith(2, "ATTENDING"));
     expect(await screen.findByRole("button", { name: "9월 30일 가을 공연 참석" })).toHaveAttribute("aria-pressed", "true");
+    // 눌린 표시는 서버 응답 전에 먼저 바뀌므로, 저장이 끝난 뒤에 다음 응답을 누릅니다.
+    await waitFor(() => expect(screen.getByRole("group", { name: "가을 공연 참석 응답" })).toHaveAttribute("aria-busy", "false"));
     fireEvent.click(screen.getByRole("button", { name: "9월 30일 가을 공연 불참" }));
     await waitFor(() => expect(setEventRsvp).toHaveBeenCalledWith(2, "ABSENT"));
   });

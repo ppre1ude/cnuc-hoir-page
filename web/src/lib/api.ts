@@ -28,9 +28,36 @@ export function onPermissionDenied(listener: () => void): () => void {
   return () => { permissionDeniedListeners.delete(listener); };
 }
 
-export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const headers = new Headers(init?.headers);
+// GET 응답을 1분 동안 기억합니다. 뒤로 가기나 탭 이동으로 같은 화면을 다시 그릴 때 스켈레톤 없이 바로 보이고,
+// 같은 요청이 동시에 나가면 한 번만 보냅니다. 쓰기 요청이 끝나면(실패 포함) 전부 비워 내가 바꾼 내용은 바로 다시 받습니다.
+// init.cache는 fetch와 같은 뜻입니다. "reload"는 기억을 건너뛰고 새로 받아 두고, "no-store"는 기억하지 않습니다.
+// ponytail: TTL 60초 하나. 다른 사람이 바꾼 내용이 최대 1분 늦게 보입니다. 화면별로 달라야 하면 init에 maxAge를 받으세요.
+const REMEMBER_MS = 60_000;
+const remembered = new Map<string, { at: number; promise: Promise<unknown> }>();
+
+export function clearRequestCache(): void { remembered.clear(); }
+
+export function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const method = (init?.method ?? "GET").toUpperCase();
+  // 세션 확인(/auth/me)은 provider가 스스로 기억하고, 권한이 바뀌었을 때는 반드시 새로 받아야 합니다.
+  // 취소 신호가 달린 요청은 다른 호출자와 나눠 쓰면 한쪽의 취소가 다른 쪽까지 끊으므로 기억하지 않습니다.
+  const remember = method === "GET" && !path.startsWith("/auth/") && init?.cache !== "no-store" && !init?.signal;
+  if (remember && init?.cache !== "reload") {
+    const hit = remembered.get(path);
+    if (hit && Date.now() - hit.at < REMEMBER_MS) return hit.promise as Promise<T>;
+  }
+  const promise = send<T>(path, init, method);
+  if (remember) {
+    remembered.set(path, { at: Date.now(), promise });
+    promise.catch(() => { if (remembered.get(path)?.promise === promise) remembered.delete(path); });
+  } else if (method !== "GET") {
+    promise.then(clearRequestCache, clearRequestCache);
+  }
+  return promise;
+}
+
+async function send<T>(path: string, init: RequestInit | undefined, method: string): Promise<T> {
+  const headers = new Headers(init?.headers);
   if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
     const csrfResponse = await fetch("/api/v1/auth/csrf", {
       credentials: "same-origin",
