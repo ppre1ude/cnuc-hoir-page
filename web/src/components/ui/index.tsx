@@ -41,7 +41,7 @@ export function PageHeader({ title, actions, className, id }:
 }
 
 export function StatusBadge({ tone = "neutral", className, ...props }:
-  ComponentProps<"span"> & { tone?: "positive" | "neutral" | "negative" }) {
+  ComponentProps<"span"> & { tone?: "positive" | "neutral" | "negative" | "attention" }) {
   return <span className={join(styles.badge, styles[tone], className)} {...props} />;
 }
 export function Feedback({ tone = "success", className, ...props }:
