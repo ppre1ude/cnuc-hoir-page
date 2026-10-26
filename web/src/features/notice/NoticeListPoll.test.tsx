@@ -49,6 +49,8 @@ describe("공지 목록 투표 미리보기", () => {
     await waitFor(() => expect(trigger).toHaveAccessibleDescription("참석"));
     fireEvent.click(screen.getByRole("radio", { name: /^불참/ }));
     expect(trigger).toHaveAccessibleDescription("참석");
+    // 내 선택은 서버 응답 전에 먼저 보이므로, 저장이 끝나 버튼 이름이 바뀔 때까지 기다립니다.
+    await waitFor(() => expect(screen.getByRole("button", { name: "선택 변경" })).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: "선택 변경" }));
     await waitFor(() => expect(trigger).toHaveAccessibleDescription("불참"));
     fireEvent.click(screen.getByRole("button", { name: "닫기" }));

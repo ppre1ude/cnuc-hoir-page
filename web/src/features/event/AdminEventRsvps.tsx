@@ -14,7 +14,8 @@ export function AdminEventRsvps({ eventId }: { eventId: number }) {
 
   useEffect(() => {
     let alive = true;
-    getAdminEventRsvps(eventId).then((result) => { if (alive) setData(result); })
+    // 새로고침과 다시 시도는 기억해 둔 응답을 건너뛰고 새로 받습니다.
+    getAdminEventRsvps(eventId, retry ? "reload" : undefined).then((result) => { if (alive) setData(result); })
       .catch(() => { if (alive) setError("참석 응답 현황을 불러오지 못했습니다."); });
     return () => { alive = false; };
   }, [eventId, retry]);

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 // 2MB 통짜 글꼴 대신 글자 범위별 조각을 써서 화면에 나온 글자가 든 조각만 받습니다.
 import "./fonts/pretendardvariable-dynamic-subset.css";
 import "./globals.css";
+import { OfflineNotice } from "../components/ui/OfflineNotice";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://cnuc-hoir-page.vercel.app"),
@@ -21,7 +22,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ko">
-      <body>{children}</body>
+      <body>
+        {children}
+        <OfflineNotice />
+      </body>
     </html>
   );
 }

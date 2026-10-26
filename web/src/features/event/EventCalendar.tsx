@@ -33,8 +33,11 @@ function mondayOffset(month: string) {
 function eventRange(month: string) {
   const bounds = monthBounds(month);
   if (month !== seoulDateKey(new Date()).slice(0, 7)) return bounds;
-  const soon = new Date(Date.now() + 14 * 86_400_000).toISOString();
-  return soon > bounds.to ? { from: bounds.from, to: soon } : bounds;
+  const soon = new Date(Date.now() + 14 * 86_400_000);
+  // 요청 주소를 한 시간 단위로 고정해, 같은 달을 1분 안에 다시 열면 기억한 응답을 쓸 수 있게 합니다.
+  soon.setUTCMinutes(0, 0, 0);
+  const to = soon.toISOString();
+  return to > bounds.to ? { from: bounds.from, to } : bounds;
 }
 
 export function EventCalendar() {

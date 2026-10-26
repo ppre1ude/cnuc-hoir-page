@@ -147,6 +147,8 @@ describe("일정 중심 단원 화면", () => {
     fireEvent.click(await screen.findByRole("button", { name: "9월 30일 가을 공연 참석" }));
     await waitFor(() => expect(setEventRsvp).toHaveBeenCalledWith(2, "ATTENDING"));
     expect(await screen.findByRole("button", { name: "9월 30일 가을 공연 참석" })).toHaveAttribute("aria-pressed", "true");
+    // 눌린 표시는 서버 응답 전에 먼저 바뀌므로, 저장이 끝난 뒤에 다음 응답을 누릅니다.
+    await waitFor(() => expect(screen.getByRole("group", { name: "가을 공연 참석 응답" })).toHaveAttribute("aria-busy", "false"));
     fireEvent.click(screen.getByRole("button", { name: "9월 30일 가을 공연 불참" }));
     await waitFor(() => expect(setEventRsvp).toHaveBeenCalledWith(2, "ABSENT"));
   });

@@ -73,3 +73,23 @@ describe("참석 응답 표시", () => {
     await waitFor(() => expect(button).not.toHaveAttribute("aria-disabled"));
   });
 });
+
+describe("낙관적 응답 표시", () => {
+  beforeEach(() => { setEventRsvp.mockReset(); });
+  afterEach(cleanup);
+
+  it("응답을 누르면 서버 응답 전에 배지가 바뀌고, 실패하면 이전 값으로 돌아간다", async () => {
+    let reject!: (reason: unknown) => void;
+    setEventRsvp.mockReturnValue(new Promise((_, fail) => { reject = fail; }));
+    render(<EventRsvp event={event} memberType="ACTIVE" choice={null} onSaved={vi.fn()} />);
+    const button = screen.getByRole("button", { name: "참석" });
+    fireEvent.click(button);
+    expect(button).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByText("미응답")).toBeNull();
+    reject(new Error("서버 오류"));
+    expect(await screen.findByText("응답을 저장하지 못했습니다. 다시 시도해 주세요.")).toBeInTheDocument();
+    // 되돌리기는 저장 작업이 끝난 뒤 그려지므로 기다립니다.
+    await waitFor(() => expect(button).toHaveAttribute("aria-pressed", "false"));
+    expect(screen.getByText("미응답")).toBeInTheDocument();
+  });
+});
