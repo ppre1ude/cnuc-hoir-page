@@ -98,6 +98,13 @@ describe("일정 중심 단원 화면", () => {
     expect(getMyEventRsvps).toHaveBeenLastCalledWith("2026-10-31T15:00:00.000Z", "2026-11-30T15:00:00.000Z");
   });
 
+  it("이달 요청의 끝 시각은 한 시간 단위로 올려 주소를 고정하고 범위를 줄이지 않는다", async () => {
+    vi.setSystemTime(new Date("2026-10-29T03:20:00Z"));
+    getEvents.mockResolvedValue([]);
+    renderWithSession(<EventCalendar />, sessionFixture({ memberType: "ACTIVE" }));
+    await waitFor(() => expect(getEvents).toHaveBeenCalledWith("2026-09-30T15:00:00.000Z", "2026-11-12T04:00:00.000Z"));
+  });
+
   it("일정과 출석을 조회하는 동안 빈 기록으로 잘못 안내하지 않는다", () => {
     getEvents.mockReturnValue(new Promise(() => {}));
     getMyAttendance.mockReturnValue(new Promise(() => {}));

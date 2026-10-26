@@ -40,7 +40,8 @@ export function clearRequestCache(): void { remembered.clear(); }
 export function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const method = (init?.method ?? "GET").toUpperCase();
   // 세션 확인(/auth/me)은 provider가 스스로 기억하고, 권한이 바뀌었을 때는 반드시 새로 받아야 합니다.
-  const remember = method === "GET" && !path.startsWith("/auth/") && init?.cache !== "no-store";
+  // 취소 신호가 달린 요청은 다른 호출자와 나눠 쓰면 한쪽의 취소가 다른 쪽까지 끊으므로 기억하지 않습니다.
+  const remember = method === "GET" && !path.startsWith("/auth/") && init?.cache !== "no-store" && !init?.signal;
   if (remember && init?.cache !== "reload") {
     const hit = remembered.get(path);
     if (hit && Date.now() - hit.at < REMEMBER_MS) return hit.promise as Promise<T>;

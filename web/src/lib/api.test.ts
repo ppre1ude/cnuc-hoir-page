@@ -124,3 +124,11 @@ test("실패한 GET과 cache: \"reload\"는 새로 받고, 세션 확인은 기�
   await apiRequest("/auth/me");
   expect(fetchMock).toHaveBeenCalledTimes(5);
 });
+
+test("취소 신호가 달린 GET은 기억하지 않습니다", async () => {
+  const fetchMock = vi.fn().mockResolvedValue(ok([]));
+  vi.stubGlobal("fetch", fetchMock);
+  await apiRequest("/notices", { signal: new AbortController().signal });
+  await apiRequest("/notices", { signal: new AbortController().signal });
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+});
