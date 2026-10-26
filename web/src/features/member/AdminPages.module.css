@@ -71,6 +71,3 @@
 .inlineForm label { font-size: var(--text-small); font-weight: var(--weight-label); }
 .inlineForm select, .inlineForm input { width: auto; min-width: 120px; }
 .roleList { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin: 0; color: var(--color-muted); font-size: var(--text-label); }
-.roleChip { display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-1) var(--space-2); border-radius: var(--radius-small); background: var(--color-selected); color: var(--color-primary); font-weight: var(--weight-label); }
-/* 휴대폰에서 누르기 쉽게 44px을 주고, 위아래 음수 여백으로 칩 높이는 거의 그대로 둡니다. */
-.roleChip button { min-width: var(--control-medium); min-height: var(--control-medium); margin-block: calc(var(--space-3) * -1); color: var(--color-primary); font-size: var(--text-body); line-height: 1; }

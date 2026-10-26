@@ -19,6 +19,7 @@ test("직책을 한글로 보여 주고 해제합니다", async () => {
   const onChanged = vi.fn();
   render(<MemberRoles item={item} session={president} onChanged={onChanged} />);
   expect(screen.getByText("알토수석")).toBeInTheDocument();
+  expect(screen.getByText("정보 수정").closest("details")).not.toHaveAttribute("open");
   await userEvent.click(screen.getByRole("button", { name: "단원 알토수석 해제" }));
   expect(removeMemberRole).toHaveBeenCalledWith(7, 11);
   await waitFor(() => expect(onChanged).toHaveBeenCalled());
@@ -27,6 +28,7 @@ test("직책을 한글로 보여 주고 해제합니다", async () => {
 test("부원은 부서와 계를 함께 골라 추가합니다", async () => {
   vi.mocked(assignMemberRole).mockResolvedValue({ id: 12, role: "DEPARTMENT_MEMBER", department: "MANAGEMENT", unit: "SCORES", part: null });
   render(<MemberRoles item={item} session={president} onChanged={vi.fn()} />);
+  expect(screen.getByRole("button", { name: "단원 직책 추가" })).toBeDisabled();
   await userEvent.selectOptions(screen.getByLabelText("추가할 직책"), "DEPARTMENT_MEMBER");
   await userEvent.selectOptions(screen.getByLabelText("부서"), "MANAGEMENT");
   await userEvent.selectOptions(screen.getByLabelText("계"), "SCORES");

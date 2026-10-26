@@ -67,6 +67,7 @@ test("자기 행의 직책을 바꾸면 세션을 다시 받습니다", async ()
   renderWithSession(<MemberAccountManager />, operator);
   const own = (await screen.findByRole("heading", { name: "관리자" })).closest("article")!;
   expect(getSession).not.toHaveBeenCalled();
+  await userEvent.selectOptions(within(own).getByLabelText("관리자 추가할 직책"), "TREASURER");
   await userEvent.click(within(own).getByRole("button", { name: "관리자 직책 추가" }));
   expect(assignMemberRole).toHaveBeenCalledWith(1, { role: "TREASURER" });
   await waitFor(() => expect(getSession).toHaveBeenCalledTimes(1));
@@ -76,6 +77,7 @@ test("다른 단원의 직책을 바꾸면 세션을 다시 받지 않습니다"
   vi.mocked(getMembers).mockResolvedValue({ items: [member(1, "관리자"), member(2, "단원")], page: 0, size: 20, total: 2 });
   renderWithSession(<MemberAccountManager />, operator);
   const other = (await screen.findByRole("heading", { name: "단원" })).closest("article")!;
+  await userEvent.selectOptions(within(other).getByLabelText("단원 추가할 직책"), "TREASURER");
   await userEvent.click(within(other).getByRole("button", { name: "단원 직책 추가" }));
   expect(assignMemberRole).toHaveBeenCalledWith(2, { role: "TREASURER" });
   await waitFor(() => expect(getMembers).toHaveBeenCalledTimes(2));

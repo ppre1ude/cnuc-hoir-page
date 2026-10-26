@@ -170,7 +170,7 @@ function MemberRow({ item, busy, session, onChanged, onRenew, onRevoke, onReopen
   const type = item.memberType === "OB" ? "OB" : item.memberType === "ACTIVE" ? "활동 단원" : "구분 미지정";
   return <article className={styles.row}>
     <h2>{item.name}</h2>
-    <p>{[item.email, type, status].filter(Boolean).join(" · ")}</p>
+    <p>{[item.email, type, status, item.admin && "사이트 관리자"].filter(Boolean).join(" · ")}</p>
     <MemberRoles item={item} session={session} onChanged={onChanged} />
     {can(session, "APPROVE_APPLICATIONS") && (item.status === "REVOKED" || !item.googleLinked && (item.status === "INVITED" || item.status === "APPROVED")) && <div className={styles.actions}>
       <Button variant="secondary" type="button" disabled={busy} onClick={onRenew}
