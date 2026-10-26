@@ -1,0 +1,73 @@
+/* 단원 로그인 포스터. 초록 종이(--color-primary) 한 장에 흰 잉크로 찍습니다.
+   .paper가 종이색과 잉크색을 잡아 두고, .poster 안에서는 색 토큰을 뒤집습니다(주요 동작·글자·초점은 잉크, 바탕은 종이).
+   그래서 구글 버튼 안내, 다시 시도 버튼, 다른 브라우저로 열기 링크, 대기 그림 같은 공용 요소가 손대지 않아도 초록 위에서 보입니다. */
+.paper {
+  --paper: var(--color-primary);
+  --ink: var(--color-surface);
+  --ink-soft: var(--color-highlight);
+  /* 페이퍼로지는 정적 굵기라 공개 메인처럼 굵기 토큰을 그에 맞춥니다. */
+  --weight-medium: var(--weight-public-medium);
+  --weight-label: var(--weight-public-label);
+  --weight-heading: var(--weight-public-heading);
+  display: flex;
+  min-height: 100svh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-paperlogy), "Pretendard Variable", "Malgun Gothic", sans-serif;
+  word-break: keep-all;
+}
+.poster {
+  --color-primary: var(--ink);
+  --color-primary-hover: var(--ink-soft);
+  --color-brand: var(--ink);
+  --color-surface: var(--paper);
+  --color-ink: var(--ink);
+  --color-muted: var(--ink-soft);
+  --color-subtle: color-mix(in srgb, var(--ink) 14%, transparent);
+  --color-line: color-mix(in srgb, var(--ink) 45%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  width: min(100% - 2 * var(--page-gutter), 1040px);
+  margin: auto;
+  padding: var(--space-10) 0;
+}
+.poster ::selection { background: var(--ink); color: var(--paper); }
+
+/* 심벌 상자: 입자 캔버스가 상자를 꽉 채우고, 대체 이미지는 캔버스를 못 쓰거나 자바스크립트가 없을 때만 흰색으로 보입니다. */
+.mark { position: relative; width: min(100%, 300px); aspect-ratio: 2775 / 1845; }
+.canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; pointer-events: none; }
+.fallback { display: none; width: 100%; height: auto; filter: brightness(0) invert(1); }
+.mark[data-sand-mark="fallback"] .fallback { display: block; }
+@media (scripting: none) { .fallback { display: block; } }
+
+.copy { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4); width: 100%; max-width: 420px; }
+.heading { display: grid; gap: 6px; margin-bottom: var(--space-2); }
+.brand { margin: 0; font-size: .9375rem; font-weight: var(--weight-label); }
+.title { margin: 0; font-size: clamp(40px, 10vw, 60px); font-weight: var(--weight-heading); letter-spacing: -.05em; line-height: 1.1; }
+.copy p:not([class]) { margin: 0; max-width: 30em; color: var(--color-muted); font-size: var(--text-label); line-height: 1.6; }
+/* 구글 버튼은 상자 폭(최대 320px)으로 그려지고, 버튼이 오기 전에도 자리를 잡아 둡니다. 버튼은 iframe이라 초점 테두리를 상자에 그립니다. */
+.copy [aria-label="구글 로그인"] { width: min(100%, 320px); min-height: var(--control-medium); }
+.copy [aria-label="구글 로그인"]:focus-within { outline: 2px solid var(--color-primary); outline-offset: 4px; border-radius: var(--radius-small); }
+.home {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-medium);
+  margin-top: var(--space-4);
+  font-size: .9375rem;
+  font-weight: var(--weight-label);
+  text-decoration: underline;
+  text-decoration-color: var(--color-line);
+  text-underline-offset: 5px;
+  transition: text-decoration-color var(--motion-fast);
+}
+.home:hover { text-decoration-color: currentColor; }
+
+/* PC: 공개 메인의 띠처럼 글은 왼쪽, 심벌은 오른쪽에 두고 세로 가운데로 맞춥니다. */
+@media (min-width: 761px) {
+  .poster { flex-direction: row-reverse; align-items: center; justify-content: space-between; gap: var(--space-16); padding: var(--space-12) 0; }
+  .mark { flex: 1 1 320px; width: auto; max-width: 560px; }
+  .copy { flex: 0 1 420px; }
+  .brand { font-size: 1.0625rem; }
+  .title { font-size: 60px; }
+}
