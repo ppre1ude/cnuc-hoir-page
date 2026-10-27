@@ -13,6 +13,7 @@ import java.time.ZoneOffset;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Set;
 import kr.ac.jnu.choir.common.ApiException;
 import kr.ac.jnu.choir.member.Member;
 import org.springframework.http.HttpStatus;
@@ -26,6 +27,8 @@ public class CheckInService {
     // 출석 창은 행사 시작 30분 전부터 열 수 있고 끝나면 닫힙니다. 시작 15분 뒤부터 찍은 출석은 지각입니다. 규정이 바뀌면 여기만 고칩니다.
     static final Duration OPEN_BEFORE = Duration.ofMinutes(30);
     static final Duration LATE_AFTER = Duration.ofMinutes(15);
+    // 출석 시각이 남는 상태. 정정으로 넣을 때도 정정 시각을 출석 시각으로 적습니다.
+    private static final Set<String> PRESENT = Set.of("CHECKED_IN", "LATE");
     private final JdbcTemplate jdbc;
     private final Clock clock;
     private final SecureRandom random = new SecureRandom();
@@ -145,8 +148,10 @@ public class CheckInService {
                 + "ORDER BY name,id",
                 (rs, row) -> {
                     MemberRow target = new MemberRow(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getString(4));
+                    AttendanceRow stored = attendanceRow(eventId, target.id());
                     return new AdminAttendance(target.id(), target.name(), rs.getString(5),
-                            rs.getObject(6, Integer.class), state(event, target).status());
+                            rs.getObject(6, Integer.class), state(event, target).status(),
+                            stored == null ? null : stored.checkedInAt(), stored == null ? null : stored.correctedAt());
                 }, event.obEligible(), eventId, eventId);
     }
 
@@ -174,10 +179,10 @@ public class CheckInService {
         Instant now = clock.instant();
         if (attendance(eventId, memberId) == null) {
             jdbc.update("INSERT INTO attendance (event_id,member_id,status,checked_in_at,corrected_at) VALUES (?,?,?,?,?)",
-                    eventId, memberId, newStatus, newStatus.equals("CHECKED_IN") ? time(now) : null, time(now));
+                    eventId, memberId, newStatus, PRESENT.contains(newStatus) ? time(now) : null, time(now));
         } else {
             jdbc.update("UPDATE attendance SET status = ?, checked_in_at = ?, corrected_at = ? WHERE event_id = ? AND member_id = ?",
-                    newStatus, newStatus.equals("CHECKED_IN") ? time(now) : null, time(now), eventId, memberId);
+                    newStatus, PRESENT.contains(newStatus) ? time(now) : null, time(now), eventId, memberId);
         }
         jdbc.update("INSERT INTO admin_action_log (actor_member_id,target_member_id,action,previous_status,new_status,reason,acted_at,event_id) "
                 + "VALUES (?,?,'ATTENDANCE_CORRECT',?,?,?,?,?)", actor.getId(), memberId, previous.status(),
@@ -214,10 +219,15 @@ public class CheckInService {
     }
 
     private String attendance(long eventId, long memberId) {
-        List<String> rows = jdbc.query("SELECT status FROM attendance WHERE event_id = ? AND member_id = ?",
-                (rs, row) -> rs.getString(1), eventId, memberId);
+        AttendanceRow row = attendanceRow(eventId, memberId);
+        return row == null ? null : row.status();
+    }
+    private AttendanceRow attendanceRow(long eventId, long memberId) {
+        List<AttendanceRow> rows = jdbc.query("SELECT status,checked_in_at,corrected_at FROM attendance WHERE event_id = ? AND member_id = ?",
+                (rs, row) -> new AttendanceRow(rs.getString(1), instant(rs.getTimestamp(2)), instant(rs.getTimestamp(3))), eventId, memberId);
         return rows.isEmpty() ? null : rows.getFirst();
     }
+    private static Instant instant(Timestamp value) { return value == null ? null : value.toInstant(); }
 
     private EventRow lockEvent(long eventId) { return eventRow(eventId, true); }
     private EventRow findEvent(long eventId) { return eventRow(eventId, false); }
@@ -302,5 +312,7 @@ public class CheckInService {
     // sessionId는 닫힌 창도 포함한 가장 최근 창, expiresAt은 행사 종료 시각, code는 열려 있을 때만, opensAt은 열 수 있는 시각입니다.
     public record SessionStatus(Long sessionId, Instant expiresAt, boolean open, String code, Instant opensAt) {}
     public record AttendanceState(Long eventId, String eventTitle, Instant startAt, String status, boolean checkInOpen) {}
-    public record AdminAttendance(Long memberId, String name, String part, Integer cohort, String status) {}
+    private record AttendanceRow(String status, Instant checkedInAt, Instant correctedAt) {}
+    public record AdminAttendance(Long memberId, String name, String part, Integer cohort, String status,
+            Instant checkedInAt, Instant correctedAt) {}
 }

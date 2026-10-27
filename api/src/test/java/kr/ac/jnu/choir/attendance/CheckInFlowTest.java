@@ -504,4 +504,23 @@ class CheckInFlowTest {
         assertThat(check(id, session(active), "0000")).isEqualTo(409);
         assertThat(check(id, session(active), qrToken)).isEqualTo(204);
     }
+
+    @Test void adminCanCorrectToLateAndSeesTimes() throws Exception {
+        Member admin = member("ACTIVE", true);
+        Member active = member("ACTIVE", false);
+        Member absent = member("ACTIVE", false);
+        long id = event(false);
+        String code = field(open(id, session(admin)), "code");
+        assertThat(check(id, session(active), code)).isEqualTo(204);
+        MockHttpSession adminSession = session(admin);
+        assertThat(mvc.perform(put("/api/v1/admin/events/" + id + "/attendance/" + absent.getId())
+                .session(adminSession).header("X-CSRF-TOKEN", csrf(adminSession)).contentType("application/json")
+                .content("{\"status\":\"LATE\",\"reason\":\"늦게 와서 직접 확인\"}")).andReturn().getResponse().getStatus()).isEqualTo(204);
+        String list = mvc.perform(get("/api/v1/admin/events/" + id + "/attendance").session(adminSession))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(list).contains("\"memberId\":" + active.getId() + ",", "\"status\":\"CHECKED_IN\",\"checkedInAt\":\"2026-09-27T10:00:00Z\",\"correctedAt\":null")
+                .contains("\"memberId\":" + absent.getId() + ",", "\"status\":\"LATE\",\"checkedInAt\":\"2026-09-27T10:00:00Z\",\"correctedAt\":\"2026-09-27T10:00:00Z\"");
+        assertThat(own(id, absent)).contains("\"status\":\"LATE\"");
+        assertThat(myList(absent)).contains("\"eventId\":" + id + ",", "\"status\":\"LATE\"");
+    }
 }
