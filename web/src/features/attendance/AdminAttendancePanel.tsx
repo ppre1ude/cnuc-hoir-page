@@ -107,8 +107,8 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
       if (result !== undefined) {
         setQrImage("");
         setIssued(result);
-        setSession(result ? { sessionId: result.sessionId, expiresAt: result.expiresAt, open: true }
-          : { sessionId: null, expiresAt: null, open: false });
+        setSession((current) => result ? { sessionId: result.sessionId, expiresAt: result.expiresAt, open: true, code: result.code, opensAt: current?.opensAt ?? result.expiresAt }
+          : { sessionId: null, expiresAt: null, open: false, code: null, opensAt: current?.opensAt ?? "" });
       }
     } catch (error) {
       setMessage(error instanceof ApiRequestError ? error.message : "요청을 처리하지 못했습니다.");

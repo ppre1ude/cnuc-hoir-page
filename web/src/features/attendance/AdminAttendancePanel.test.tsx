@@ -27,9 +27,9 @@ test("출석 창 열기 성공 후 목록 갱신 실패는 조회만 재시도�
     endAt: "2026-09-27T12:00:00Z", obEligible: false, publicVisible: false, createdAt: "2026-09-01T00:00:00Z",
     updatedAt: "2026-09-01T00:00:00Z" });
   vi.mocked(attendance.getCheckInSession)
-    .mockResolvedValueOnce({ sessionId: null, expiresAt: null, open: false })
+    .mockResolvedValueOnce({ sessionId: null, expiresAt: null, open: false, code: null, opensAt: "2026-09-27T08:30:00Z" })
     .mockRejectedValueOnce(new Error("조회 실패"))
-    .mockResolvedValueOnce({ sessionId: 7, expiresAt: "2026-09-27T10:10:00Z", open: true });
+    .mockResolvedValueOnce({ sessionId: 7, expiresAt: "2026-09-27T10:10:00Z", open: true, code: "ABCD2345", opensAt: "2026-09-27T08:30:00Z" });
   vi.mocked(attendance.getAdminAttendance).mockResolvedValue([]);
   vi.mocked(attendance.openCheckIn).mockResolvedValue({ sessionId: 7, expiresAt: "2026-09-27T10:10:00Z",
     qrUrl: "/events/3/check-in#token=secret", code: "ABCD2345" });
@@ -61,12 +61,12 @@ const issued = { sessionId: 7, expiresAt: "2026-09-27T10:10:00Z", qrUrl: "/event
 async function renderWithOpenWindow() {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   vi.setSystemTime(new Date("2026-09-27T10:00:00Z"));
-  const server = { session: { sessionId: null as number | null, expiresAt: null as string | null, open: false } };
+  const server = { session: { sessionId: null as number | null, expiresAt: null as string | null, open: false, code: null as string | null, opensAt: "2026-09-27T08:30:00Z" } };
   vi.mocked(events.getEvent).mockResolvedValue(rehearsal);
   vi.mocked(attendance.getCheckInSession).mockImplementation(async () => server.session);
   vi.mocked(attendance.getAdminAttendance).mockResolvedValue([]);
   vi.mocked(attendance.openCheckIn).mockImplementation(async () => {
-    server.session = { sessionId: 7, expiresAt: issued.expiresAt, open: true };
+    server.session = { sessionId: 7, expiresAt: issued.expiresAt, open: true, code: "ABCD2345", opensAt: "2026-09-27T08:30:00Z" };
     return issued;
   });
   const view = renderWithSession(<AdminAttendancePanel eventId={3} />, sessionFixture({ admin: true }));
@@ -79,7 +79,7 @@ test("유효 시간이 지나면 QR과 코드를 거두고 출석 창 열기를 
   const { server } = await renderWithOpenWindow();
   expect(await screen.findByRole("img", { name: "현장 출석 QR 코드" })).toBeInTheDocument();
 
-  server.session = { sessionId: 7, expiresAt: issued.expiresAt, open: false };
+  server.session = { sessionId: 7, expiresAt: issued.expiresAt, open: false, code: null, opensAt: "2026-09-27T08:30:00Z" };
   await act(() => vi.advanceTimersByTimeAsync(10 * 60 * 1000));
 
   expect(await screen.findByRole("button", { name: "출석 창 열기" })).toBeInTheDocument();
@@ -91,7 +91,7 @@ test("유효 시간이 지나면 QR과 코드를 거두고 출석 창 열기를 
 
 test("재발급이 실패하면 서버의 출석 창 상태를 다시 받아 보입니다", async () => {
   const { server } = await renderWithOpenWindow();
-  server.session = { sessionId: 7, expiresAt: issued.expiresAt, open: false };
+  server.session = { sessionId: 7, expiresAt: issued.expiresAt, open: false, code: null, opensAt: "2026-09-27T08:30:00Z" };
   vi.mocked(attendance.rotateCheckIn).mockRejectedValue(new ApiRequestError(409, "SESSION_CLOSED", "출석 창이 닫혔거나 만료되었습니다."));
   const sessionCalls = vi.mocked(attendance.getCheckInSession).mock.calls.length;
 
@@ -105,7 +105,7 @@ test("재발급이 실패하면 서버의 출석 창 상태를 다시 받아 보
 
 test("출석 창을 열기 전에 파트연습에는 열지 말라는 경고와 미출석 규칙을 보입니다", async () => {
   vi.mocked(events.getEvent).mockResolvedValue(rehearsal);
-  vi.mocked(attendance.getCheckInSession).mockResolvedValue({ sessionId: null, expiresAt: null, open: false });
+  vi.mocked(attendance.getCheckInSession).mockResolvedValue({ sessionId: null, expiresAt: null, open: false, code: null, opensAt: "2026-09-27T08:30:00Z" });
   vi.mocked(attendance.getAdminAttendance).mockResolvedValue([]);
   renderWithSession(<AdminAttendancePanel eventId={3} />, sessionFixture({ admin: true }));
 
@@ -114,13 +114,13 @@ test("출석 창을 열기 전에 파트연습에는 열지 말라는 경고와 
   expect(screen.getByText(/출석하지 않은 대상 단원 모두가 미출석으로 남습니다/)).toBeInTheDocument();
 });
 
-const sora = { memberId: 11, name: "김소라", part: "SOPRANO" as const, cohort: 5 };
+const sora = { memberId: 11, name: "김소라", part: "SOPRANO" as const, cohort: 5, checkedInAt: null, correctedAt: null };
 
 test("출석 명단은 이메일 없이 이름 옆에 파트와 기수를 보입니다", async () => {
   vi.mocked(events.getEvent).mockResolvedValue(rehearsal);
-  vi.mocked(attendance.getCheckInSession).mockResolvedValue({ sessionId: null, expiresAt: null, open: false });
+  vi.mocked(attendance.getCheckInSession).mockResolvedValue({ sessionId: null, expiresAt: null, open: false, code: null, opensAt: "2026-09-27T08:30:00Z" });
   vi.mocked(attendance.getAdminAttendance).mockResolvedValue([{ ...sora, status: "CHECKED_IN" },
-    { memberId: 12, name: "이하늘", part: null, cohort: null, status: "MISSED" }]);
+    { memberId: 12, name: "이하늘", part: null, cohort: null, status: "MISSED", checkedInAt: null, correctedAt: null }]);
   renderWithSession(<AdminAttendancePanel eventId={3} />, sessionFixture({ admin: true }));
 
   expect(await screen.findByText("김소라 · 소프라노 5기")).toBeInTheDocument();
@@ -130,9 +130,9 @@ test("출석 명단은 이메일 없이 이름 옆에 파트와 기수를 보입
 
 test("정정 이유를 적기 전에는 정정 버튼이 꺼져 있고, 적으면 그 단원만 정정합니다", async () => {
   vi.mocked(events.getEvent).mockResolvedValue(rehearsal);
-  vi.mocked(attendance.getCheckInSession).mockResolvedValue({ sessionId: null, expiresAt: null, open: false });
+  vi.mocked(attendance.getCheckInSession).mockResolvedValue({ sessionId: null, expiresAt: null, open: false, code: null, opensAt: "2026-09-27T08:30:00Z" });
   vi.mocked(attendance.getAdminAttendance).mockResolvedValue([{ ...sora, status: "MISSED" },
-    { memberId: 12, name: "이하늘", part: null, cohort: null, status: "MISSED" }]);
+    { memberId: 12, name: "이하늘", part: null, cohort: null, status: "MISSED", checkedInAt: null, correctedAt: null }]);
   vi.mocked(attendance.correctAttendance).mockResolvedValue();
   renderWithSession(<AdminAttendancePanel eventId={3} />, sessionFixture({ admin: true }));
 
@@ -177,7 +177,7 @@ test("출석 창이 열린 동안 15초마다 명단을 다시 받고 QR과 코�
 test("출석 창을 닫거나 화면을 떠나면 명단 자동 갱신을 멈춥니다", async () => {
   const { server, view } = await renderWithOpenWindow();
   vi.mocked(attendance.closeCheckIn).mockImplementation(async () => {
-    server.session = { sessionId: null, expiresAt: null, open: false };
+    server.session = { sessionId: null, expiresAt: null, open: false, code: null, opensAt: "2026-09-27T08:30:00Z" };
   });
   fireEvent.click(screen.getByRole("button", { name: "출석 창 닫기" }));
   await screen.findByRole("button", { name: "출석 창 열기" });

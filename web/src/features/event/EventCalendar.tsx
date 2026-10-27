@@ -9,7 +9,7 @@ import { getNotices, type Notice } from "../notice/notices";
 import { type ChoirEvent, type EventRsvpChoice, getEvents, getMyEventRsvps, monthBounds, seoulDateKey } from "./events";
 import { EventDetail } from "./EventDetail";
 import { EventRsvp } from "./EventRsvp";
-import { attendanceDate, getEventAttendance, getMyAttendance, memberAttendanceLabel, type AttendanceState } from "../attendance/attendance";
+import { attendanceDate, attendanceTone, getEventAttendance, getMyAttendance, memberAttendanceLabel, type AttendanceState } from "../attendance/attendance";
 import { memberLinks } from "../member/memberLinks";
 import styles from "./EventCalendar.module.css";
 
@@ -231,7 +231,7 @@ export function EventCalendar() {
         {!attendanceError && !attendanceLoaded && <SkeletonRows count={3} label="출석 기록을 불러오는 중입니다." />}
         {!attendanceError && attendanceLoaded && attendance.length === 0 && <p className={styles.empty}>출석 기록이 없습니다.</p>}
         {!attendanceError && attendanceLoaded && attendance.slice(0, 3).map((item) => <Link key={item.eventId} href={`/events/${item.eventId}`} className={styles.attendanceRow}>
-          <span><time dateTime={item.startAt} className={styles.eventDate}>{attendanceDate(item.startAt)}</time> {item.eventTitle}</span><StatusBadge tone={item.status === "CHECKED_IN" ? "positive" : item.status === "MISSED" ? "negative" : "neutral"}>{memberAttendanceLabel(item)}</StatusBadge>
+          <span><time dateTime={item.startAt} className={styles.eventDate}>{attendanceDate(item.startAt)}</time> {item.eventTitle}</span><StatusBadge tone={attendanceTone(item.status)}>{memberAttendanceLabel(item)}</StatusBadge>
         </Link>)}
       </section>
     </div>
