@@ -130,10 +130,9 @@ class CheckInFlowTest {
         String availability = mvc.perform(get("/api/v1/events/" + id + "/attendance/me").session(session(active)))
                 .andReturn().getResponse().getContentAsString();
         assertThat(availability).contains("\"checkInOpen\":true").doesNotContain(code);
-        assertThat(code).hasSize(8);
+        assertThat(code).matches("\\d{4}");
         assertThat(field(issued, "qrUrl")).startsWith("/events/" + id + "/check-in#token=");
-        assertThat(jdbc.queryForObject("SELECT code_hash FROM check_in_session WHERE event_id = ?", String.class, id))
-                .doesNotContain(code).hasSize(64);
+        assertThat(jdbc.queryForObject("SELECT code FROM check_in_session WHERE event_id = ?", String.class, id)).isEqualTo(code);
         assertThat(check(id, session(active), code)).isEqualTo(204);
         assertThat(check(id, session(active), code)).isEqualTo(409);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM attendance WHERE event_id = ? AND member_id = ?", Long.class,
@@ -481,5 +480,28 @@ class CheckInFlowTest {
 
         assertThat(check(upcoming, session(active), field(open(upcoming, session(admin)), "code"))).isEqualTo(204);
         assertThat(myList(active)).contains("곧 시작할 연습", "\"status\":\"CHECKED_IN\"");
+    }
+
+    @Test void sessionStatusCarriesCodeAndOpeningTime() throws Exception {
+        Member admin = member("ACTIVE", true);
+        long id = eventAt("2026-09-27 10:20:00", "2026-09-27 12:00:00");
+        String before = mvc.perform(get("/api/v1/admin/events/" + id + "/check-in-session").session(session(admin)))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(before).contains("\"open\":false", "\"code\":null", "\"opensAt\":\"2026-09-27T09:50:00Z\"",
+                "\"expiresAt\":\"2026-09-27T12:00:00Z\"");
+        String code = field(open(id, session(admin)), "code");
+        String during = mvc.perform(get("/api/v1/admin/events/" + id + "/check-in-session").session(session(admin)))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(during).contains("\"open\":true", "\"code\":\"" + code + "\"");
+    }
+
+    @Test void legacySessionWithoutPlainCodeRefusesEveryCode() throws Exception {
+        Member admin = member("ACTIVE", true);
+        Member active = member("ACTIVE", false);
+        long id = event(false);
+        String qrToken = field(open(id, session(admin)), "qrUrl").split("#token=", 2)[1];
+        jdbc.update("UPDATE check_in_session SET code = NULL WHERE event_id = ?", id);
+        assertThat(check(id, session(active), "0000")).isEqualTo(409);
+        assertThat(check(id, session(active), qrToken)).isEqualTo(204);
     }
 }
