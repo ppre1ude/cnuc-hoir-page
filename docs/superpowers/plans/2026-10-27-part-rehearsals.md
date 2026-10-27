@@ -12,7 +12,7 @@
 
 - 용어는 `CONTEXT.md`를 따른다. 화면 문구는 "일정", "참석 응답", "출석", "단원"을 쓴다.
 - 실제 사람 이름, 학과, 학번은 코드·테스트·문서에 넣지 않는다.
-- 이미 적용된 마이그레이션 파일은 고치지 않는다. 새 파일은 `api/src/main/resources/db/postgresql/V6__event_kind.sql`이다.
+- 이미 적용된 마이그레이션 파일은 고치지 않는다. 새 파일은 `api/src/main/resources/db/postgresql/V7__event_kind.sql`이다.
 - 모든 권한은 서버에서 다시 검사한다. 화면은 숨기기만 한다.
 - 새 CSS는 `web/src/styles/tokens.css`의 토큰만 쓴다. 새 라이브러리를 추가하지 않는다.
 - 주석은 한국어로 쓰고, 동작이 바뀐 곳의 기존 주석도 함께 고친다.
@@ -86,7 +86,7 @@ API (`api/src/main/java/kr/ac/jnu/choir/`):
 - `attendance/AttendanceController.java` — 파트연습의 운영진 출석 기능 권한
 - `auth/Permission.java` — `MANAGE_PART_ATTENDANCE` 추가
 - `auth/Permissions.java` — 단장·부단장·총무에게 `MANAGE_PART_ATTENDANCE`, `leadParts(...)` 추가(수석 직책의 파트 집합)
-- `resources/db/postgresql/V6__event_kind.sql` — 마이그레이션 (새로 만듦)
+- `resources/db/postgresql/V7__event_kind.sql` — 마이그레이션 (새로 만듦)
 
 API 테스트 (`api/src/test/java/kr/ac/jnu/choir/`):
 - `event/EventAccessTest.java` — 순수 단위 테스트 (새로 만듦)
@@ -112,7 +112,7 @@ API 테스트 (`api/src/test/java/kr/ac/jnu/choir/`):
 
 ### Task 1: 종류·파트 열과 입력 (API)
 
-**Files:** `V6__event_kind.sql`, `EventKind.java`, `Event.java`, `EventService.java`, `EventController.java`, 기존 테스트 5개
+**Files:** `V7__event_kind.sql`, `EventKind.java`, `Event.java`, `EventService.java`, `EventController.java`, 기존 테스트 5개
 
 **Interfaces:**
 - Produces: `enum EventKind { FULL_REHEARSAL, PART_REHEARSAL, EVENT }`, `EventInput(title, description, startAt, endAt, @NotNull kind, part, obEligible, publicVisible)`, `EventItem`에 `kind`, `part` 추가, `EventService.create/update(..., EventKind kind, Part part, ...)`
@@ -200,7 +200,7 @@ API 테스트 (`api/src/test/java/kr/ac/jnu/choir/`):
 
 ## 배포 뒤 할 일
 
-- 운영 DB 백업을 남긴 뒤 배포하고, Render 로그에서 Flyway `V6` 적용을 확인한다.
+- 운영 DB 백업을 남긴 뒤 배포하고, Render 로그에서 Flyway `V7` 적용을 확인한다.
 - API와 웹이 둘 다 새 버전으로 바뀌기 전에는 일정을 등록하지 않는다. 새 웹이 옛 API에 종류를 보내면 옛 API는 그 값을 모른 채 행사로 저장할 수 있다.
 - 테너수석 직책에 파트 "테너"가 지정돼 있는지, 테너 단원들의 단원 정보 파트가 "테너"인지 `/admin/members`에서 확인한다.
 - 테너 단원 몇 명으로 파트연습 등록 → 참석 응답 → 출석 창 → 코드·QR 출석 → 창 닫기 → 다른 파트 단원의 내 출석에 기록이 없는지까지 시범한다.

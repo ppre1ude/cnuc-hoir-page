@@ -114,6 +114,6 @@ public class AttendanceController {
     }
 
     public record CredentialInput(@NotBlank @Size(max = 128) String credential) {}
-    public record CorrectionInput(@NotBlank @Pattern(regexp = "CHECKED_IN|MISSED") String status,
+    public record CorrectionInput(@NotBlank @Pattern(regexp = "CHECKED_IN|LATE|MISSED") String status,
             @NotBlank @Size(max = 500) String reason) {}
 }

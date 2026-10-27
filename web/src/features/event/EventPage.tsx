@@ -10,7 +10,7 @@ import { useSession } from "../auth/SessionProvider";
 import { getEvent, getMyEventRsvp, type ChoirEvent, type EventRsvpChoice } from "./events";
 import { EventDetail } from "./EventDetail";
 import { EventRsvp } from "./EventRsvp";
-import { getEventAttendance, memberAttendanceLabel, type AttendanceState } from "../attendance/attendance";
+import { attendanceTone, getEventAttendance, memberAttendanceLabel, type AttendanceState } from "../attendance/attendance";
 import styles from "./EventCalendar.module.css";
 
 export function EventPage() {
@@ -65,7 +65,7 @@ export function EventPage() {
         {rsvpError && <Feedback tone="error">{rsvpError} <Button variant="secondary" type="button" onClick={() => {
           setRsvpError(""); setRsvpRetry((value) => value + 1);
         }}>다시 시도</Button></Feedback>}
-        <div className={styles.eventAttendance}><strong>내 출석</strong>{attendance ? <StatusBadge tone={attendance.status === "CHECKED_IN" ? "positive" : attendance.status === "MISSED" ? "negative" : "neutral"}>{memberAttendanceLabel(attendance)}</StatusBadge> : !attendanceError && <span role="status">확인 중</span>}</div>
+        <div className={styles.eventAttendance}><strong>내 출석</strong>{attendance ? <StatusBadge tone={attendanceTone(attendance.status)}>{memberAttendanceLabel(attendance)}</StatusBadge> : !attendanceError && <span role="status">확인 중</span>}</div>
         {attendanceError && <Feedback tone="error">{attendanceError}</Feedback>}
         {canManageRoster(session, event) && <p><Link href={`/admin/events/${event.id}/attendance`}>운영진 출석 관리</Link></p>}</div>
         : !error && <SkeletonRows count={4} label="일정을 불러오는 중입니다." />}

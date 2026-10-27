@@ -27,6 +27,17 @@ test("출석 창이 열려 있고 아직 출석하지 않았으면 출석 전으
   expect(await screen.findByText("출석 전")).toBeInTheDocument();
 });
 
+test("코드 입력칸은 숫자 4자리만 받고 지각 상태에서도 잠깁니다", async () => {
+  vi.mocked(attendance.getEventAttendance).mockResolvedValue({ eventId: 3, eventTitle: "연습", startAt: "2026-09-27T07:30:00Z",
+    status: "LATE", checkInOpen: true });
+  render(<CheckInPanel eventId={3} />);
+  expect(await screen.findByText("지각")).toBeInTheDocument();
+  const input = screen.getByLabelText("운영진이 알려준 출석 코드");
+  expect(input).toHaveAttribute("maxlength", "4");
+  expect(input).toHaveAttribute("inputmode", "numeric");
+  expect(input).toBeDisabled();
+});
+
 test("QR 토큰을 주소에서 즉시 지우고 본문으로 제출합니다", async () => {
   window.history.replaceState(null, "", "/events/3/check-in#token=secret-token");
   vi.mocked(attendance.submitCheckIn).mockResolvedValue();
@@ -109,7 +120,7 @@ test("코드 제출 전 시작된 상태 조회 오류가 출석 성공 안내�
 });
 
 test.each([
-  ["SESSION_CLOSED", "출석 창이 닫혔거나 유효 시간이 지났습니다."],
+  ["SESSION_CLOSED", "출석 창이 열리지 않았거나 연습이 끝났습니다."],
   ["ALREADY_CHECKED_IN", "이미 출석이 처리되었습니다."],
   ["NOT_ELIGIBLE", "이 일정의 출석 대상이 아닙니다."],
   ["APPROVAL_REQUIRED", "가입 승인 후 출석할 수 있습니다."],

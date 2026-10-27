@@ -5,7 +5,7 @@ import { Button, Input, Feedback, PageHeader, StatusBadge } from "../../componen
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ApiRequestError } from "../../lib/api";
-import { getEventAttendance, memberAttendanceLabel, submitCheckIn, type AttendanceState } from "./attendance";
+import { attendanceTone, checkedStatuses, getEventAttendance, memberAttendanceLabel, submitCheckIn, type AttendanceState } from "./attendance";
 import styles from "./CheckInPanel.module.css";
 
 export function CheckInPanel({ eventId }: { eventId: number }) {
@@ -92,7 +92,7 @@ export function CheckInPanel({ eventId }: { eventId: number }) {
     setMessage("");
     setCodeError(false);
     try {
-      await submitCheckIn(eventId, code.trim().toUpperCase());
+      await submitCheckIn(eventId, code.trim());
       completedRef.current = true;
       setCompleted(true);
       setCode("");
@@ -133,16 +133,17 @@ export function CheckInPanel({ eventId }: { eventId: number }) {
   return <section aria-label="현장 출석" className={styles.panel}>
     <Link className={styles.backLink} href={`/events/${eventId}`}>← 일정</Link>
     <PageHeader title={status ? `${status.eventTitle} 출석` : "현장 출석"} />
-    {status && <p className={styles.state}>현재 상태 <strong><StatusBadge tone={status.status === "CHECKED_IN" ? "positive" : status.status === "MISSED" ? "negative" : "neutral"}>{memberAttendanceLabel(status)}</StatusBadge></strong></p>}
+    {status && <p className={styles.state}>현재 상태 <strong><StatusBadge tone={attendanceTone(status.status)}>{memberAttendanceLabel(status)}</StatusBadge></strong></p>}
     <form className={styles.form} onSubmit={submit}>
       <label htmlFor="check-in-code">운영진이 알려준 출석 코드</label>
-      <Input id="check-in-code" ref={codeInput} value={code} maxLength={8} autoComplete="off" enterKeyHint="go"
-        name="code" required autoCapitalize="characters" spellCheck={false} aria-invalid={codeError || undefined}
+      {/* pattern은 두지 않습니다. 브라우저 자체 말풍선이 뜨면 우리 오류 안내 대신 보이고, 틀린 코드는 서버가 거릅니다. */}
+      <Input id="check-in-code" ref={codeInput} value={code} maxLength={4} inputMode="numeric" autoComplete="off" enterKeyHint="go"
+        name="code" required autoCapitalize="off" spellCheck={false} aria-invalid={codeError || undefined}
         aria-describedby={codeError ? "check-in-feedback" : undefined}
         onChange={(event) => { setCode(event.target.value); if (codeError) setMessage(""); setCodeError(false); }}
-        readOnly={busy} disabled={completed || status?.status === "CHECKED_IN"} />
+        readOnly={busy} disabled={completed || (status !== null && checkedStatuses.includes(status.status))} />
       <Button variant="primary" size="large" type="submit" aria-disabled={busy || undefined}
-        disabled={completed || !code.trim() || status?.status === "CHECKED_IN"}>
+        disabled={completed || !code.trim() || (status !== null && checkedStatuses.includes(status.status))}>
         {busy ? "확인 중..." : "출석하기"}
       </Button>
     </form>
@@ -154,7 +155,7 @@ export function CheckInPanel({ eventId }: { eventId: number }) {
 function errorMessage(error: unknown) {
   if (!(error instanceof ApiRequestError)) return "출석을 처리하지 못했습니다. 다시 시도해 주세요.";
   switch (error.code) {
-    case "SESSION_CLOSED": return "출석 창이 닫혔거나 유효 시간이 지났습니다.";
+    case "SESSION_CLOSED": return "출석 창이 열리지 않았거나 연습이 끝났습니다.";
     case "ALREADY_CHECKED_IN": return "이미 출석이 처리되었습니다.";
     case "NOT_ELIGIBLE": return "이 일정의 출석 대상이 아닙니다.";
     case "APPROVAL_REQUIRED": return "가입 승인 후 출석할 수 있습니다.";
