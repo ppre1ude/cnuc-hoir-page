@@ -420,4 +420,16 @@ class CheckInFlowTest {
         assertThat(list).contains("지난주 연습", "\"startAt\":\"2026-09-20T09:00:00Z\"").doesNotContain("저녁 연습", "다음 주 연습");
         assertThat(list.indexOf("\"eventId\":" + recent + ",")).isNotNegative().isLessThan(list.indexOf("지난주 연습"));
     }
+
+    @Test void attendanceListShowsUpcomingEventOnceCheckInOpens() throws Exception {
+        Member admin = member("ACTIVE", true);
+        Member active = member("ACTIVE", false);
+        jdbc.update("INSERT INTO event (title,description,start_at,end_at,ob_eligible,public_visible,created_at,updated_at) "
+                + "VALUES ('곧 시작할 연습','설명','2026-09-27 10:10:00','2026-09-27 12:00:00',FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))");
+        long upcoming = jdbc.queryForObject("SELECT MAX(id) FROM event", Long.class);
+        assertThat(myList(active)).doesNotContain("곧 시작할 연습");
+
+        assertThat(check(upcoming, session(active), field(open(upcoming, session(admin)), "code"))).isEqualTo(204);
+        assertThat(myList(active)).contains("곧 시작할 연습", "\"status\":\"CHECKED_IN\"");
+    }
 }

@@ -118,7 +118,9 @@ public class CheckInService {
     public List<AttendanceState> myList(Member member) {
         MemberRow target = memberRow(member.getId());
         // ob_eligible로 거르지 않고 계산된 상태로 거릅니다. 활동 단원 시절에 남은 출석·미출석 기록을 OB가 된 뒤에도 보여야 합니다.
-        return jdbc.query("SELECT id,title,ob_eligible,start_at FROM event WHERE start_at <= ? ORDER BY start_at DESC,id DESC", (rs, row) ->
+        // 시작 전이라도 출석 창을 연 행사는 넣습니다. 연습 10분 전에 출석해도 바로 목록에서 확인할 수 있어야 합니다.
+        return jdbc.query("SELECT id,title,ob_eligible,start_at FROM event e WHERE start_at <= ? "
+                + "OR EXISTS (SELECT 1 FROM check_in_session s WHERE s.event_id = e.id) ORDER BY start_at DESC,id DESC", (rs, row) ->
                 state(new EventRow(rs.getLong(1), rs.getString(2), rs.getBoolean(3), eventTime(rs)), target),
                 // event 시각은 UTC 기준 TIMESTAMP라 JVM 시간대를 타는 Timestamp 대신 UTC LocalDateTime으로 비교합니다.
                 LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC))
