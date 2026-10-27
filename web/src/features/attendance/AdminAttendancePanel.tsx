@@ -33,6 +33,8 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
   const [reasons, setReasons] = useState<Record<number, string>>({});
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  // 열 수 있는 시각과 연습 종료를 넘겼는지는 이 값으로 판단합니다. 타이머가 그 시각에 맞춰 다시 그립니다.
+  const [now, setNow] = useState(() => Date.now());
 
   // 15초 갱신, 버튼, 동작 뒤 갱신이 겹칠 수 있어 가장 나중에 보낸 요청의 응답만 화면에 씁니다.
   // 화면에 쓰지 않은 응답이면 false를 돌려줘 호출한 쪽이 안내 문구를 건드리지 않게 합니다.
@@ -81,6 +83,7 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
     // 명단 요청이 늦어져도 지난 QR과 코드가 남지 않게 먼저 닫고, 서버 상태는 뒤이어 맞춥니다.
     const timer = window.setTimeout(() => {
       setSession((value) => value && { ...value, open: false });
+      setNow(Date.now());
       refresh().catch(() => undefined);
     }, Math.max(0, new Date(session.expiresAt).getTime() - Date.now()));
     return () => window.clearTimeout(timer);
@@ -125,7 +128,6 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
   }
 
   // 아직 열 수 있는 시각 전이면 버튼을 끄고, 그 시각이 되면 다시 그려 버튼을 켭니다.
-  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!session || session.open) return;
     const wait = new Date(session.opensAt).getTime() - Date.now();
@@ -134,6 +136,8 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
     return () => window.clearTimeout(timer);
   }, [session]);
   const beforeOpen = session !== null && !session.open && new Date(session.opensAt).getTime() > now;
+  // 연습이 끝나면 서버가 열기를 거절하므로 버튼 대신 정정을 안내합니다.
+  const ended = session !== null && session.expiresAt !== null && new Date(session.expiresAt).getTime() <= now;
 
   async function correct(member: AdminAttendance, status: Correction) {
     const reason = reasons[member.memberId]?.trim();
@@ -153,9 +157,10 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
     <div className={styles.grid}>{session && <section className={styles.panel} aria-label="출석 창">
       <div className={styles.panelHeader}><h2>출석 창</h2></div>
       <p>현재 창: {session.open ? `연습 끝 ${seoulDateTime(session.expiresAt!)}까지`
-        : session.sessionId ? "출석 창이 닫혀 있습니다. 늦게 온 단원이 있으면 다시 열어 주세요."
-        : beforeOpen ? `출석 창은 ${seoulDateTime(session.opensAt)}부터 열 수 있습니다.` : "열려 있지 않음"}</p>
-      <div className={styles.actions}>{!session.open && <Button variant="primary" type="button" disabled={busy || beforeOpen} onClick={() => action(() => openCheckIn(eventId))}>
+        : ended ? "연습이 끝나 출석 창을 열 수 없습니다. 늦게 온 단원은 아래에서 정정해 주세요."
+        : beforeOpen ? `출석 창은 ${seoulDateTime(session.opensAt)}부터 열 수 있습니다.`
+        : session.sessionId ? "출석 창이 닫혀 있습니다. 늦게 온 단원이 있으면 다시 열어 주세요." : "열려 있지 않음"}</p>
+      <div className={styles.actions}>{!session.open && !ended && <Button variant="primary" type="button" disabled={busy || beforeOpen} onClick={() => action(() => openCheckIn(eventId))}>
         {session.sessionId ? "다시 열기" : "출석 받기"}</Button>}
       {session.open && <><Button variant="secondary" type="button" disabled={busy} onClick={() => action(() => rotateCheckIn(eventId, session.sessionId!))}>QR과 코드 재발급</Button>
         <Button variant="danger" type="button" disabled={busy} onClick={() => action(async () => { await closeCheckIn(eventId); return null; })}>출석 창 닫기</Button></>}</div>

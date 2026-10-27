@@ -75,18 +75,32 @@ async function renderWithOpenWindow() {
   return { server, view };
 }
 
-test("연습이 끝나면 QR과 코드를 거두고 다시 열기를 보입니다", async () => {
+test("연습이 끝나면 QR과 코드를 거두고 다시 열기 대신 정정을 안내합니다", async () => {
   const { server } = await renderWithOpenWindow();
   expect(await screen.findByRole("img", { name: "현장 출석 QR 코드" })).toBeInTheDocument();
 
   server.session = { sessionId: 7, expiresAt: issued.expiresAt, open: false, code: null, opensAt: "2026-09-27T08:30:00Z" };
   await act(() => vi.advanceTimersByTimeAsync(10 * 60 * 1000));
 
-  expect(await screen.findByRole("button", { name: "다시 열기" })).toBeInTheDocument();
+  expect(await screen.findByText(/연습이 끝나 출석 창을 열 수 없습니다/)).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "다시 열기" })).toBeNull();
   expect(screen.queryByText("ABCD2345")).toBeNull();
   expect(screen.queryByRole("img", { name: "현장 출석 QR 코드" })).toBeNull();
   expect(screen.queryByText(/연습 끝 .*까지/)).toBeNull();
-  expect(screen.getByText(/닫혀 있습니다/)).toBeInTheDocument();
+});
+
+test("연습이 끝난 행사는 한 번도 열지 않았어도 출석 받기 버튼을 숨깁니다", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-09-27T13:00:00Z"));
+  vi.mocked(events.getEvent).mockResolvedValue(rehearsal);
+  vi.mocked(attendance.getCheckInSession).mockResolvedValue({ sessionId: null, expiresAt: "2026-09-27T12:00:00Z", open: false,
+    code: null, opensAt: "2026-09-27T08:30:00Z" });
+  vi.mocked(attendance.getAdminAttendance).mockResolvedValue([]);
+  renderWithSession(<AdminAttendancePanel eventId={3} />, sessionFixture({ admin: true }));
+
+  expect(await screen.findByText(/연습이 끝나 출석 창을 열 수 없습니다/)).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "출석 받기" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "다시 열기" })).toBeNull();
 });
 
 test("재발급이 실패하면 서버의 출석 창 상태를 다시 받아 보입니다", async () => {
@@ -243,7 +257,7 @@ test("명단 요청이 멈춰 있어도 유효 시간이 지나면 바로 QR과 
 
   await act(() => vi.advanceTimersByTimeAsync(10 * 60 * 1000));
 
-  expect(screen.getByRole("button", { name: "다시 열기" })).toBeInTheDocument();
+  expect(screen.getByText(/연습이 끝나 출석 창을 열 수 없습니다/)).toBeInTheDocument();
   expect(screen.queryByText("ABCD2345")).toBeNull();
 });
 
