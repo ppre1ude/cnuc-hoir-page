@@ -24,7 +24,7 @@ afterEach(() => { cleanup(); vi.useRealTimers(); vi.clearAllMocks(); });
 
 test("출석 창 열기 성공 후 목록 갱신 실패는 조회만 재시도합니다", async () => {
   vi.mocked(events.getEvent).mockResolvedValue({ id: 3, title: "연습", description: "설명", startAt: "2026-09-27T09:00:00Z",
-    endAt: "2026-09-27T12:00:00Z", obEligible: false, publicVisible: false, createdAt: "2026-09-01T00:00:00Z",
+    endAt: "2026-09-27T12:00:00Z", kind: "EVENT", part: null, obEligible: false, publicVisible: false, createdAt: "2026-09-01T00:00:00Z",
     updatedAt: "2026-09-01T00:00:00Z" });
   vi.mocked(attendance.getCheckInSession)
     .mockResolvedValueOnce({ sessionId: null, expiresAt: null, open: false })
@@ -55,7 +55,7 @@ test("출석 기록을 받는 동안 빈 목록 안내 대신 불러오는 중�
 });
 
 const rehearsal = { id: 3, title: "연습", description: "설명", startAt: "2026-09-27T09:00:00Z", endAt: "2026-09-27T12:00:00Z",
-  obEligible: false, publicVisible: false, createdAt: "2026-09-01T00:00:00Z", updatedAt: "2026-09-01T00:00:00Z" };
+  kind: "EVENT" as const, part: null, obEligible: false, publicVisible: false, createdAt: "2026-09-01T00:00:00Z", updatedAt: "2026-09-01T00:00:00Z" };
 const issued = { sessionId: 7, expiresAt: "2026-09-27T10:10:00Z", qrUrl: "/events/3/check-in#token=secret", code: "ABCD2345" };
 
 async function renderWithOpenWindow() {
@@ -103,15 +103,16 @@ test("재발급이 실패하면 서버의 출석 창 상태를 다시 받아 보
   expect(vi.mocked(attendance.getCheckInSession).mock.calls.length).toBeGreaterThan(sessionCalls);
 });
 
-test("출석 창을 열기 전에 파트연습에는 열지 말라는 경고와 미출석 규칙을 보입니다", async () => {
-  vi.mocked(events.getEvent).mockResolvedValue(rehearsal);
+test("출석 창을 열기 전에 출석 대상과 미출석 규칙을 보입니다", async () => {
+  vi.mocked(events.getEvent).mockResolvedValue({ ...rehearsal, kind: "PART_REHEARSAL", part: "TENOR", obEligible: true });
   vi.mocked(attendance.getCheckInSession).mockResolvedValue({ sessionId: null, expiresAt: null, open: false });
   vi.mocked(attendance.getAdminAttendance).mockResolvedValue([]);
   renderWithSession(<AdminAttendancePanel eventId={3} />, sessionFixture({ admin: true }));
 
   await screen.findByRole("button", { name: "출석 창 열기" });
-  expect(screen.getByText("파트연습에는 출석 창을 열지 마세요.")).toBeInTheDocument();
-  expect(screen.getByText(/출석하지 않은 대상 단원 모두가 미출석으로 남습니다/)).toBeInTheDocument();
+  expect(screen.getByText("테너 단원 · OB")).toBeInTheDocument();
+  expect(screen.getByText(/출석하지 않은 대상 단원은 미출석으로 남습니다/)).toBeInTheDocument();
+  expect(screen.queryByText("파트연습에는 출석 창을 열지 마세요.")).not.toBeInTheDocument();
 });
 
 const sora = { memberId: 11, name: "김소라", part: "SOPRANO" as const, cohort: 5 };

@@ -6,7 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSession } from "../auth/SessionProvider";
 import { getNotices, type Notice } from "../notice/notices";
-import { type ChoirEvent, type EventRsvpChoice, getEvents, getMyEventRsvps, monthBounds, seoulDateKey } from "./events";
+import type { Part } from "../auth/session";
+import { type ChoirEvent, type EventRsvpChoice, getEvents, getMyEventRsvps, isEventTarget, monthBounds, seoulDateKey } from "./events";
 import { EventDetail } from "./EventDetail";
 import { EventKindIcon, eventKind } from "./EventKind";
 import { EventRsvp } from "./EventRsvp";
@@ -43,9 +44,9 @@ function eventRange(month: string) {
 type Chip = { tone: "positive" | "neutral" | "negative" | "attention"; label: string };
 
 // 목록 행은 응답을 받지 않고 상태만 보여 줍니다. 지난 일정의 "참석"이 출석으로 읽히지 않게 응답임을 밝힙니다.
-function rsvpChip(event: ChoirEvent, memberType: "ACTIVE" | "OB" | null, choice: EventRsvpChoice | null | undefined): Chip | null {
-  const eligible = memberType === "ACTIVE" || (memberType === "OB" && event.obEligible);
-  if (!eligible) return { tone: "neutral", label: "대상 아님" };
+function rsvpChip(event: ChoirEvent, member: { memberType: "ACTIVE" | "OB" | null; part?: Part | null },
+  choice: EventRsvpChoice | null | undefined): Chip | null {
+  if (!isEventTarget(event, member)) return { tone: "neutral", label: "대상 아님" };
   if (choice === undefined) return null;
   const closed = new Date(event.startAt).getTime() <= Date.now();
   if (choice === "ATTENDING") return closed ? { tone: "neutral", label: "참석 응답" } : { tone: "positive", label: "참석" };
@@ -230,7 +231,7 @@ export function EventCalendar() {
         {eventsLoaded && sortedEvents.length === 0 && <p className={styles.empty}>등록된 일정이 없습니다.</p>}
         {sortedEvents.length > 0 && <ul className={styles.eventList} ref={listRef}>
           {sortedEvents.map((event) => {
-            const chip = rsvpChip(event, session.memberType, rsvpLoadedMonth === month ? rsvpByEvent[event.id] ?? null : undefined);
+            const chip = rsvpChip(event, session, rsvpLoadedMonth === month ? rsvpByEvent[event.id] ?? null : undefined);
             // 어제까지 끝난 일정만 흐리게 둡니다. 오늘 일정은 가장 먼저 찾아야 하므로 그대로 둡니다.
             const past = seoulDateKey(new Date(new Date(event.endAt).getTime() - 1)) < today;
             return <li key={event.id} className={`${styles.eventRow} ${selected?.id === event.id ? styles.activeEvent : ""} ${past ? styles.pastEvent : ""}`}>
@@ -249,10 +250,10 @@ export function EventCalendar() {
       </section>
       <section aria-label="선택한 일정" className={`${styles.card} ${styles.detail}`} ref={detailRef}>
         {selected ? <>
-          <EventDetail event={selected} memberType={session.memberType}
+          <EventDetail event={selected} memberType={session.memberType} part={session.part}
             checkInOpen={selectedAttendance?.eventId === selected.id && selectedAttendance.checkInOpen} link />
           {rsvpLoadedMonth === month && <EventRsvp key={`${selected.id}-${selected.startAt}`} event={selected} memberType={session.memberType}
-            choice={rsvpByEvent[selected.id] ?? null}
+            part={session.part} choice={rsvpByEvent[selected.id] ?? null}
             onSaved={(choice) => setRsvpByEvent((current) => ({ ...current, [selected.id]: choice }))} />}
         </> : eventsLoaded ? <p className={styles.empty}>일정을 고르면 여기에 자세한 내용이 보입니다.</p>
           : !error && <SkeletonRows count={3} label="선택한 일정을 불러오는 중입니다." />}

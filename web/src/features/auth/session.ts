@@ -5,7 +5,7 @@ export type Role = "PRESIDENT" | "VICE_PRESIDENT" | "TREASURER" | "DEPARTMENT_HE
 export type Department = "PLANNING_PR" | "MANAGEMENT";
 export type Unit = "PLANNING" | "PR" | "SCORES" | "SUPPLIES";
 export type Permission = "MANAGE_SITE_ADMINS" | "MANAGE_ROLES" | "REVOKE_ACCESS" | "MANAGE_ALLOWLIST"
-  | "APPROVE_APPLICATIONS" | "MANAGE_FULL_REHEARSALS" | "MANAGE_PART_REHEARSALS" | "MANAGE_EVENTS"
+  | "APPROVE_APPLICATIONS" | "MANAGE_FULL_REHEARSALS" | "MANAGE_PART_REHEARSALS" | "MANAGE_PART_ATTENDANCE" | "MANAGE_EVENTS"
   | "WRITE_MINUTES" | "DELETE_MINUTES" | "VIEW_MEMBERS" | "VIEW_MINUTES";
 export type MemberRoleItem = { id: number; role: Role; department: Department | null; unit: Unit | null; part: Part | null };
 
@@ -25,6 +25,30 @@ export type MemberSession = {
 // 사이트 관리자는 모든 권한을 가집니다. 서버가 권한 목록을 함께 주지만 화면은 이 함수로만 판단합니다.
 export function can(session: MemberSession | null | undefined, permission: Permission): boolean {
   return Boolean(session && session.status === "APPROVED" && (session.admin || session.permissions?.includes(permission)));
+}
+
+// 수석 직책에 붙은 파트입니다. 수석은 이 파트의 파트연습만 다룹니다.
+export function leadParts(session: MemberSession | null | undefined): Part[] {
+  if (!session || session.status !== "APPROVED" || session.memberType !== "ACTIVE") return [];
+  return (session.roles ?? []).flatMap((role) => role.role === "SECTION_LEAD" && role.part ? [role.part] : []);
+}
+
+// 일정 등록·수정 권한입니다. 서버의 EventAccess.canManage와 같습니다.
+// 전체연습은 단장·부단장, 파트연습은 단장·부단장과 그 파트 수석, 행사는 운영진 전원입니다.
+export function canManageEvent(session: MemberSession | null | undefined, kind: "FULL_REHEARSAL" | "PART_REHEARSAL" | "EVENT",
+  part: Part | null): boolean {
+  if (kind === "FULL_REHEARSAL") return can(session, "MANAGE_FULL_REHEARSALS");
+  if (kind === "PART_REHEARSAL") return can(session, "MANAGE_PART_REHEARSALS") || (part != null && leadParts(session).includes(part));
+  return can(session, "MANAGE_EVENTS");
+}
+
+// 응답 집계와 출석 관리 권한입니다. 파트연습은 단장단(총무 포함)과 그 파트 수석, 그 밖은 운영진 전원입니다.
+export function canManageRoster(session: MemberSession | null | undefined,
+  event: { kind: "FULL_REHEARSAL" | "PART_REHEARSAL" | "EVENT"; part: Part | null }): boolean {
+  if (event.kind === "PART_REHEARSAL") {
+    return can(session, "MANAGE_PART_ATTENDANCE") || (event.part != null && leadParts(session).includes(event.part));
+  }
+  return can(session, "MANAGE_EVENTS");
 }
 
 // 회원 메뉴에 "운영진"을 보여 줄지 정합니다. 회의록 보기는 모든 활동 단원의 권한이라 제외합니다.

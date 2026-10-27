@@ -1,5 +1,9 @@
 import { apiRequest } from "../../lib/api";
-import type { Part } from "../auth/session";
+import type { MemberSession, Part } from "../auth/session";
+import { partLabel } from "../member/roles";
+
+export type ScheduleKind = "FULL_REHEARSAL" | "PART_REHEARSAL" | "EVENT";
+export const scheduleKindLabel: Record<ScheduleKind, string> = { FULL_REHEARSAL: "전체연습", PART_REHEARSAL: "파트연습", EVENT: "행사" };
 
 export type ChoirEvent = {
   id: number;
@@ -7,13 +11,15 @@ export type ChoirEvent = {
   description: string;
   startAt: string;
   endAt: string;
+  kind: ScheduleKind;
+  part: Part | null;
   obEligible: boolean;
   publicVisible: boolean;
   createdAt: string;
   updatedAt: string;
 };
 
-export type EventInput = Pick<ChoirEvent, "title" | "description" | "startAt" | "endAt" | "obEligible" | "publicVisible">;
+export type EventInput = Pick<ChoirEvent, "title" | "description" | "startAt" | "endAt" | "kind" | "part" | "obEligible" | "publicVisible">;
 export type EventRsvpChoice = "ATTENDING" | "ABSENT";
 export type MyEventRsvp = { eventId: number; choice: EventRsvpChoice | null };
 export type AdminEventRsvps = {
@@ -23,6 +29,25 @@ export type AdminEventRsvps = {
   unanswered: number;
   members: { memberId: number; name: string; part: Part | null; cohort: number | null; choice: EventRsvpChoice | null }[];
 };
+
+// 참석 응답과 출석의 대상인지 봅니다. 활동 단원(OB 참여 대상이면 OB도)이고, 파트연습이면 그 파트 단원이어야 합니다.
+// 서버의 EventAccess.target과 같은 규칙입니다. 다른 파트의 운영진은 파트연습을 보기만 합니다.
+export function isEventTarget(event: Pick<ChoirEvent, "kind" | "part" | "obEligible">,
+  member: { memberType: MemberSession["memberType"]; part?: Part | null }): boolean {
+  const type = member.memberType === "ACTIVE" || (member.memberType === "OB" && event.obEligible);
+  return type && (event.kind !== "PART_REHEARSAL" || (member.part != null && member.part === event.part));
+}
+
+// "테너 단원 · OB", "활동 단원"처럼 참석 대상을 적습니다.
+export function eventAudience(event: Pick<ChoirEvent, "kind" | "part" | "obEligible">): string {
+  const members = event.kind === "PART_REHEARSAL" && event.part ? `${partLabel[event.part]} 단원` : "활동 단원";
+  return event.obEligible ? `${members} · OB` : members;
+}
+
+// 일정 관리 목록에 쓰는 종류 이름입니다. 파트연습은 "테너 파트연습"처럼 파트를 붙입니다.
+export function eventKindText(event: Pick<ChoirEvent, "kind" | "part">): string {
+  return event.kind === "PART_REHEARSAL" && event.part ? `${partLabel[event.part]} 파트연습` : scheduleKindLabel[event.kind];
+}
 
 export function monthBounds(month: string) {
   const [year, number] = month.split("-").map(Number);

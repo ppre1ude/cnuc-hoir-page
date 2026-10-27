@@ -10,7 +10,7 @@ vi.mock("./events", async (importOriginal) => ({
 
 const event = {
   id: 7, title: "정기 연습", description: "", startAt: "2099-10-04T10:00:00Z", endAt: "2099-10-04T12:00:00Z",
-  obEligible: false, publicVisible: false, createdAt: "2026-09-01T00:00:00Z", updatedAt: "2026-09-01T00:00:00Z",
+  kind: "EVENT" as const, part: null, obEligible: false, publicVisible: false, createdAt: "2026-09-01T00:00:00Z", updatedAt: "2026-09-01T00:00:00Z",
 };
 
 describe("행사 참석 응답", () => {

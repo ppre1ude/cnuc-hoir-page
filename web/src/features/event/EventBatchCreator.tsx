@@ -1,10 +1,13 @@
 "use client";
 
-import { Button, Input, Textarea, Feedback } from "../../components/ui";
+import { Button, Input, Select, Textarea, Feedback } from "../../components/ui";
 
 import { useState, type FormEvent } from "react";
 import { ApiRequestError } from "../../lib/api";
-import { createEventsBatch, seoulDateKey, type EventInput } from "./events";
+import { canManageEvent, type Part } from "../auth/session";
+import { useSession } from "../auth/SessionProvider";
+import { partLabel, parts } from "../member/roles";
+import { createEventsBatch, scheduleKindLabel, seoulDateKey, type EventInput, type ScheduleKind } from "./events";
 import styles from "./EventEditor.module.css";
 
 function monthDays(month: string) {
@@ -19,10 +22,25 @@ function mondayOffset(month: string) {
 
 type Props = { onCreated: (month: string) => void };
 
+const kinds: ScheduleKind[] = ["FULL_REHEARSAL", "PART_REHEARSAL", "EVENT"];
+
+// 종류를 고르면 채우는 제목입니다. 행사는 이름이 제각각이라 비워 둡니다.
+function defaultTitle(kind: ScheduleKind, part: Part | null) {
+  if (kind === "FULL_REHEARSAL") return "전체연습";
+  if (kind === "PART_REHEARSAL" && part) return `${partLabel[part]} 파트연습`;
+  return "";
+}
+
 export function EventBatchCreator({ onCreated }: Props) {
+  const session = useSession();
+  // 이 사람이 열 수 있는 종류와 파트만 고르게 합니다. 서버도 같은 규칙으로 다시 검사합니다.
+  const partChoices = parts.filter((item) => canManageEvent(session, "PART_REHEARSAL", item));
+  const kindChoices = kinds.filter((item) => item === "PART_REHEARSAL" ? partChoices.length > 0 : canManageEvent(session, item, null));
   const [month, setMonth] = useState(() => seoulDateKey(new Date()).slice(0, 7));
   const [dates, setDates] = useState<string[]>([]);
-  const [title, setTitle] = useState("전체연습");
+  const [kind, setKind] = useState<ScheduleKind>(kindChoices[0] ?? "EVENT");
+  const [part, setPart] = useState<Part | null>(partChoices[0] ?? null);
+  const [title, setTitle] = useState(() => defaultTitle(kindChoices[0] ?? "EVENT", partChoices[0] ?? null));
   const [description, setDescription] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
@@ -30,6 +48,12 @@ export function EventBatchCreator({ onCreated }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState("");
+
+  // 제목을 직접 고치지 않았을 때만 종류·파트에 맞춰 제목을 바꿉니다.
+  function choose(nextKind: ScheduleKind, nextPart: Part | null) {
+    if (title === defaultTitle(kind, part)) setTitle(defaultTitle(nextKind, nextPart));
+    setKind(nextKind); setPart(nextPart); setSaved("");
+  }
 
   function toggle(date: string) {
     setDates((current) => current.includes(date) ? current.filter((item) => item !== date)
@@ -51,7 +75,7 @@ export function EventBatchCreator({ onCreated }: Props) {
         title: title.trim(), description: description.trim(),
         startAt: new Date(`${date}T${startTime}:00+09:00`).toISOString(),
         endAt: new Date(`${date}T${endTime}:00+09:00`).toISOString(),
-        obEligible, publicVisible: false,
+        kind, part: kind === "PART_REHEARSAL" ? part : null, obEligible, publicVisible: false,
       }));
       await createEventsBatch(items);
       setSaved(`${items.length}개 일정을 등록했습니다.`);
@@ -85,6 +109,12 @@ export function EventBatchCreator({ onCreated }: Props) {
       </div>
       <p className={styles.selectedDates}>선택한 날짜: {dates.length ? dates.map((date) => `${Number(date.slice(-2))}일`).join(", ") : "없음"}</p>
       <div className={styles.batchFields}>
+        <label>종류<Select value={kind} onChange={(event) => choose(event.target.value as ScheduleKind, part)}>
+          {kindChoices.map((item) => <option key={item} value={item}>{scheduleKindLabel[item]}</option>)}
+        </Select></label>
+        {kind === "PART_REHEARSAL" && <label>파트<Select value={part ?? ""} onChange={(event) => choose(kind, event.target.value as Part)}>
+          {partChoices.map((item) => <option key={item} value={item}>{partLabel[item]}</option>)}
+        </Select></label>}
         <label>제목<Input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={200} required /></label>
         <label>내용 (선택)<Textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={10000} rows={3} /></label>
         <label>공통 시작 시각 (한국 시간)<Input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} required /></label>
