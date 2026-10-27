@@ -7,11 +7,14 @@ import Link from "next/link";
 import Image from "next/image";
 import QRCode from "qrcode";
 import { ApiRequestError } from "../../lib/api";
-import { getEvent, type ChoirEvent, seoulDateTime } from "../event/events";
+import { getEvent, type ChoirEvent, seoulDateTime, seoulTime } from "../event/events";
 import {
-  attendanceLabel, closeCheckIn, correctAttendance, getAdminAttendance, getCheckInSession,
+  attendanceLabel, attendanceTone, closeCheckIn, correctAttendance, getAdminAttendance, getCheckInSession,
   openCheckIn, rotateCheckIn, type AdminAttendance, type IssuedSession, type SessionStatus,
 } from "./attendance";
+
+type Correction = "CHECKED_IN" | "LATE" | "MISSED";
+const correctionLabel: Record<Correction, string> = { CHECKED_IN: "출석", LATE: "지각", MISSED: "미출석" };
 import { rosterName } from "../member/roles";
 import styles from "../member/AdminPages.module.css";
 
@@ -121,7 +124,18 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
     finally { setBusy(false); }
   }
 
-  async function correct(member: AdminAttendance, status: "CHECKED_IN" | "MISSED") {
+  // 아직 열 수 있는 시각 전이면 버튼을 끄고, 그 시각이 되면 다시 그려 버튼을 켭니다.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!session || session.open) return;
+    const wait = new Date(session.opensAt).getTime() - Date.now();
+    if (wait <= 0) return;
+    const timer = window.setTimeout(() => setNow(Date.now()), wait);
+    return () => window.clearTimeout(timer);
+  }, [session]);
+  const beforeOpen = session !== null && !session.open && new Date(session.opensAt).getTime() > now;
+
+  async function correct(member: AdminAttendance, status: Correction) {
     const reason = reasons[member.memberId]?.trim();
     if (!reason) return;
     await action(async () => {
@@ -133,20 +147,22 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
   return <div className={styles.page}>
     <Link className={styles.back} href="/admin/events">← 일정 관리로 돌아가기</Link>
     <PageHeader title={`${event?.title ?? "일정"} 출석 관리`} />
-    <p>출석 창은 열 때부터 10분 동안 유효합니다. 회전하면 이전 QR과 코드는 즉시 사용할 수 없습니다.</p>
-    <p><strong>파트연습에는 출석 창을 열지 마세요.</strong> 지금은 파트를 구분하지 않아, 출석 창을 닫거나 유효 시간이 지나면 출석하지 않은 대상 단원 모두가 미출석으로 남습니다.</p>
+    <p>출석 창은 연습 시작 30분 전부터 열 수 있고 연습이 끝나면 닫힙니다. 시작 15분 뒤부터 찍은 출석은 지각으로 기록됩니다. 재발급하면 이전 QR과 코드는 바로 쓸 수 없습니다.</p>
+    <p><strong>파트연습에는 출석 창을 열지 마세요.</strong> 지금은 파트를 구분하지 않아, 출석 창을 닫거나 연습이 끝나면 출석하지 않은 대상 단원 모두가 미출석으로 남습니다.</p>
     {message && <Feedback tone="error">{message}</Feedback>}
     <div className={styles.grid}>{session && <section className={styles.panel} aria-label="출석 창">
       <div className={styles.panelHeader}><h2>출석 창</h2></div>
-      <p>현재 창: {session.open ? `${seoulDateTime(session.expiresAt!)}까지 유효`
-        : session.sessionId ? "유효 시간이 지났습니다. 늦게 온 단원이 있으면 출석 창을 다시 열어 주세요." : "열려 있지 않음"}</p>
-      <div className={styles.actions}>{!session.open && <Button variant="primary" type="button" disabled={busy} onClick={() => action(() => openCheckIn(eventId))}>출석 창 열기</Button>}
+      <p>현재 창: {session.open ? `연습 끝 ${seoulDateTime(session.expiresAt!)}까지`
+        : session.sessionId ? "출석 창이 닫혀 있습니다. 늦게 온 단원이 있으면 다시 열어 주세요."
+        : beforeOpen ? `출석 창은 ${seoulDateTime(session.opensAt)}부터 열 수 있습니다.` : "열려 있지 않음"}</p>
+      <div className={styles.actions}>{!session.open && <Button variant="primary" type="button" disabled={busy || beforeOpen} onClick={() => action(() => openCheckIn(eventId))}>
+        {session.sessionId ? "다시 열기" : "출석 받기"}</Button>}
       {session.open && <><Button variant="secondary" type="button" disabled={busy} onClick={() => action(() => rotateCheckIn(eventId, session.sessionId!))}>QR과 코드 재발급</Button>
         <Button variant="danger" type="button" disabled={busy} onClick={() => action(async () => { await closeCheckIn(eventId); return null; })}>출석 창 닫기</Button></>}</div>
-      {issued && session.open && <div>
-        <p>입력 코드: <strong className={styles.code}>{issued.code}</strong></p>
-        {qrImage && <Image className={styles.qr} src={qrImage} width={280} height={280} unoptimized alt="현장 출석 QR 코드" />}
-        <p>페이지를 새로고침하면 QR과 코드가 사라집니다. 명단은 15초마다 갱신되며, 바로 확인하려면 &apos;목록 다시 불러오기&apos;를 눌러 주세요.</p>
+      {session.open && <div>
+        <p>입력 코드: <strong className={styles.code}>{session.code}</strong></p>
+        {issued && qrImage && <Image className={styles.qr} src={qrImage} width={280} height={280} unoptimized alt="현장 출석 QR 코드" />}
+        <p>새로고침하면 QR은 사라지지만 코드는 그대로 보입니다. 명단은 15초마다 갱신되며, 바로 확인하려면 &apos;목록 다시 불러오기&apos;를 눌러 주세요.</p>
       </div>}
     </section>}
     <section className={styles.panel} aria-label="단원 출석 기록">
@@ -155,18 +171,19 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
       {members === null && !message && <SkeletonRows count={3} label="출석 기록을 불러오는 중입니다." />}
       {members?.length === 0 && <p>출석 대상 단원이 없습니다.</p>}
       {members?.map((member) => <div className={styles.row} key={member.memberId}>
-        <strong>{rosterName(member)}</strong> <StatusBadge tone={member.status === "CHECKED_IN" ? "positive" : member.status === "MISSED" ? "negative" : "neutral"}>
+        <strong>{rosterName(member)}</strong> <StatusBadge tone={attendanceTone(member.status)}>
           {member.status === "NOT_OPEN" && windowOpen ? "출석 전" : attendanceLabel[member.status]}</StatusBadge>
+        {member.checkedInAt && <span className={styles.time}>{seoulTime(member.checkedInAt)}</span>}
+        {member.correctedAt && <span className={styles.time}>정정됨</span>}
         {/* 정정은 드물게 쓰므로 접어 둡니다. 이유를 적기 전에는 버튼을 꺼 둬, 화면 위쪽에 오류를 띄우지 않습니다. */}
         <details className={styles.more}>
           <summary aria-label={`${member.name} 정정`}>정정</summary>
           <div className={styles.fieldGroup}><label htmlFor={`reason-${member.memberId}`}>{member.name} 정정 이유</label> <Input id={`reason-${member.memberId}`}
             value={reasons[member.memberId] ?? ""} maxLength={500}
             onChange={(event) => setReasons((value) => ({ ...value, [member.memberId]: event.target.value }))} /></div>
-          <div className={styles.actions}><Button variant="secondary" type="button" disabled={busy || !reasons[member.memberId]?.trim() || member.status === "CHECKED_IN"}
-            onClick={() => correct(member, "CHECKED_IN")}>{member.name} 출석으로 정정</Button>
-          <Button variant="secondary" type="button" disabled={busy || !reasons[member.memberId]?.trim() || member.status === "MISSED"}
-            onClick={() => correct(member, "MISSED")}>{member.name} 미출석으로 정정</Button></div>
+          <div className={styles.actions}>{(Object.keys(correctionLabel) as Correction[]).map((status) => <Button key={status} variant="secondary" type="button"
+            disabled={busy || !reasons[member.memberId]?.trim() || member.status === status}
+            onClick={() => correct(member, status)}>{member.name} {correctionLabel[status]}으로 정정</Button>)}</div>
         </details>
       </div>)}
     </section></div>

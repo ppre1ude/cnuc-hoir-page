@@ -35,10 +35,10 @@ test("출석 창 열기 성공 후 목록 갱신 실패는 조회만 재시도�
     qrUrl: "/events/3/check-in#token=secret", code: "ABCD2345" });
 
   renderWithSession(<AdminAttendancePanel eventId={3} />, sessionFixture({ admin: true }));
-  fireEvent.click(await screen.findByRole("button", { name: "출석 창 열기" }));
+  fireEvent.click(await screen.findByRole("button", { name: "출석 받기" }));
   await screen.findByText(/변경은 완료됐지만/);
   expect(attendance.openCheckIn).toHaveBeenCalledTimes(1);
-  expect(screen.queryByRole("button", { name: "출석 창 열기" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "출석 받기" })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "목록 다시 불러오기" }));
   await waitFor(() => expect(screen.queryByText(/변경은 완료됐지만/)).toBeNull());
   expect(attendance.openCheckIn).toHaveBeenCalledTimes(1);
@@ -70,23 +70,23 @@ async function renderWithOpenWindow() {
     return issued;
   });
   const view = renderWithSession(<AdminAttendancePanel eventId={3} />, sessionFixture({ admin: true }));
-  fireEvent.click(await screen.findByRole("button", { name: "출석 창 열기" }));
+  fireEvent.click(await screen.findByRole("button", { name: "출석 받기" }));
   await screen.findByText("ABCD2345");
   return { server, view };
 }
 
-test("유효 시간이 지나면 QR과 코드를 거두고 출석 창 열기를 다시 보입니다", async () => {
+test("연습이 끝나면 QR과 코드를 거두고 다시 열기를 보입니다", async () => {
   const { server } = await renderWithOpenWindow();
   expect(await screen.findByRole("img", { name: "현장 출석 QR 코드" })).toBeInTheDocument();
 
   server.session = { sessionId: 7, expiresAt: issued.expiresAt, open: false, code: null, opensAt: "2026-09-27T08:30:00Z" };
   await act(() => vi.advanceTimersByTimeAsync(10 * 60 * 1000));
 
-  expect(await screen.findByRole("button", { name: "출석 창 열기" })).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: "다시 열기" })).toBeInTheDocument();
   expect(screen.queryByText("ABCD2345")).toBeNull();
   expect(screen.queryByRole("img", { name: "현장 출석 QR 코드" })).toBeNull();
-  expect(screen.queryByText(/까지 유효/)).toBeNull();
-  expect(screen.getByText(/유효 시간이 지났습니다/)).toBeInTheDocument();
+  expect(screen.queryByText(/연습 끝 .*까지/)).toBeNull();
+  expect(screen.getByText(/닫혀 있습니다/)).toBeInTheDocument();
 });
 
 test("재발급이 실패하면 서버의 출석 창 상태를 다시 받아 보입니다", async () => {
@@ -97,7 +97,7 @@ test("재발급이 실패하면 서버의 출석 창 상태를 다시 받아 보
 
   fireEvent.click(screen.getByRole("button", { name: "QR과 코드 재발급" }));
 
-  expect(await screen.findByRole("button", { name: "출석 창 열기" })).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: "다시 열기" })).toBeInTheDocument();
   expect(screen.getByRole("alert")).toHaveTextContent("출석 창이 닫혔거나 만료되었습니다.");
   expect(screen.queryByText("ABCD2345")).toBeNull();
   expect(vi.mocked(attendance.getCheckInSession).mock.calls.length).toBeGreaterThan(sessionCalls);
@@ -109,7 +109,7 @@ test("출석 창을 열기 전에 파트연습에는 열지 말라는 경고와 
   vi.mocked(attendance.getAdminAttendance).mockResolvedValue([]);
   renderWithSession(<AdminAttendancePanel eventId={3} />, sessionFixture({ admin: true }));
 
-  await screen.findByRole("button", { name: "출석 창 열기" });
+  await screen.findByRole("button", { name: "출석 받기" });
   expect(screen.getByText("파트연습에는 출석 창을 열지 마세요.")).toBeInTheDocument();
   expect(screen.getByText(/출석하지 않은 대상 단원 모두가 미출석으로 남습니다/)).toBeInTheDocument();
 });
@@ -180,12 +180,12 @@ test("출석 창을 닫거나 화면을 떠나면 명단 자동 갱신을 멈춥
     server.session = { sessionId: null, expiresAt: null, open: false, code: null, opensAt: "2026-09-27T08:30:00Z" };
   });
   fireEvent.click(screen.getByRole("button", { name: "출석 창 닫기" }));
-  await screen.findByRole("button", { name: "출석 창 열기" });
+  await screen.findByRole("button", { name: "출석 받기" });
   const afterClose = vi.mocked(attendance.getAdminAttendance).mock.calls.length;
   await act(() => vi.advanceTimersByTimeAsync(60000));
   expect(vi.mocked(attendance.getAdminAttendance).mock.calls.length).toBe(afterClose);
 
-  fireEvent.click(screen.getByRole("button", { name: "출석 창 열기" }));
+  fireEvent.click(screen.getByRole("button", { name: "출석 받기" }));
   await screen.findByText("ABCD2345");
   view.unmount();
   const afterUnmount = vi.mocked(attendance.getAdminAttendance).mock.calls.length;
@@ -202,7 +202,7 @@ test("목록 다시 불러오기는 오류가 없어도 보이고 QR과 코드�
 
   expect(await screen.findByText(/출석 완료/)).toBeInTheDocument();
   expect(screen.getByText("ABCD2345")).toBeInTheDocument();
-  expect(screen.getByText(/새로고침하면 QR과 코드가 사라집니다/)).toBeInTheDocument();
+  expect(screen.getByText(/코드는 그대로 보입니다/)).toBeInTheDocument();
 });
 
 test("늦게 도착한 이전 명단 응답이 더 최근 명단을 덮지 않습니다", async () => {
@@ -243,7 +243,7 @@ test("명단 요청이 멈춰 있어도 유효 시간이 지나면 바로 QR과 
 
   await act(() => vi.advanceTimersByTimeAsync(10 * 60 * 1000));
 
-  expect(screen.getByRole("button", { name: "출석 창 열기" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "다시 열기" })).toBeInTheDocument();
   expect(screen.queryByText("ABCD2345")).toBeNull();
 });
 
@@ -271,4 +271,50 @@ test("늦게 실패한 이전 다시 불러오기는 더 최근 실패의 안내
   await act(async () => { rejectStale(new Error("늦은 실패")); });
 
   expect(screen.getByRole("alert")).toHaveTextContent("출석 목록을 새로고침하지 못했습니다.");
+});
+
+test("열 수 있는 시각 전에는 출석 받기 버튼을 끄고 시각을 알려 줍니다", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-10-28T07:00:00Z"));
+  vi.mocked(events.getEvent).mockResolvedValue({ ...rehearsal, startAt: "2026-10-28T10:00:00Z", endAt: "2026-10-28T12:00:00Z" });
+  vi.mocked(attendance.getCheckInSession).mockResolvedValue({ sessionId: null, expiresAt: "2026-10-28T12:00:00Z", open: false,
+    code: null, opensAt: "2026-10-28T09:30:00Z" });
+  vi.mocked(attendance.getAdminAttendance).mockResolvedValue([]);
+  renderWithSession(<AdminAttendancePanel eventId={3} />, sessionFixture({ admin: true }));
+
+  const button = await screen.findByRole("button", { name: "출석 받기" });
+  expect(button).toBeDisabled();
+  expect(screen.getByText(/부터 열 수 있습니다/)).toBeInTheDocument();
+});
+
+test("열린 창의 코드는 새로고침 뒤에도 서버에서 받아 보여 줍니다", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-09-27T10:00:00Z"));
+  vi.mocked(events.getEvent).mockResolvedValue(rehearsal);
+  vi.mocked(attendance.getCheckInSession).mockResolvedValue({ sessionId: 7, expiresAt: "2026-09-27T12:00:00Z", open: true,
+    code: "0427", opensAt: "2026-09-27T08:30:00Z" });
+  vi.mocked(attendance.getAdminAttendance).mockResolvedValue([]);
+  renderWithSession(<AdminAttendancePanel eventId={3} />, sessionFixture({ admin: true }));
+
+  expect(await screen.findByText("0427")).toBeInTheDocument();
+  expect(screen.getByText(/연습 끝 .*까지/)).toBeInTheDocument();
+});
+
+test("단원 행에 출석 시각과 정정 표시를 붙이고 지각으로 정정할 수 있습니다", async () => {
+  vi.mocked(events.getEvent).mockResolvedValue(rehearsal);
+  vi.mocked(attendance.getCheckInSession).mockResolvedValue({ sessionId: null, expiresAt: null, open: false, code: null, opensAt: "2026-09-27T08:30:00Z" });
+  vi.mocked(attendance.getAdminAttendance).mockResolvedValue([
+    { memberId: 1, name: "박예영", part: "ALTO", cohort: 2, status: "LATE", checkedInAt: "2026-10-28T09:21:00Z", correctedAt: null },
+    { memberId: 2, name: "최재원", part: null, cohort: null, status: "MISSED", checkedInAt: null, correctedAt: "2026-10-28T11:00:00Z" },
+  ]);
+  vi.mocked(attendance.correctAttendance).mockResolvedValue();
+  renderWithSession(<AdminAttendancePanel eventId={3} />, sessionFixture({ admin: true }));
+
+  expect(await screen.findByText("지각")).toBeInTheDocument();
+  // Node의 ICU는 "PM 6:21", 브라우저는 "오후 6:21"로 그리므로 시각 부분만 봅니다.
+  expect(screen.getByText(/6:21/)).toBeInTheDocument();
+  expect(screen.getByText("정정됨")).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("최재원 정정 이유"), { target: { value: "늦게 옴" } });
+  fireEvent.click(screen.getByRole("button", { name: "최재원 지각으로 정정" }));
+  await waitFor(() => expect(attendance.correctAttendance).toHaveBeenCalledWith(3, 2, "LATE", "늦게 옴"));
 });
