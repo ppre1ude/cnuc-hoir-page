@@ -3,10 +3,14 @@ import Link from "next/link";
 import { LoginForm } from "./LoginForm";
 import styles from "./LoginPoster.module.css";
 
-/** 안쪽 면 머리의 오선. 제목이 가사처럼 오선 아래에 놓입니다. 대기 그림(WaitingScore)과 같은 곡선입니다. */
+/** 안쪽 면 머리의 오선. 제목이 가사처럼 오선 아래에 놓이고, 음표 하나가 오선을 따라 천천히 흘러갑니다. 대기 그림(WaitingScore)과 같은 곡선과 음표입니다. */
 function Staff() {
   return <svg className={styles.staff} viewBox="0 0 420 64" aria-hidden="true" focusable="false">
     {[8, 20, 32, 44, 56].map((y) => <path key={y} d={`M0 ${y} C105 ${y - 6} 210 ${y + 6} 315 ${y} S413 ${y - 4} 420 ${y}`} />)}
+    <g className={styles.note}>
+      <ellipse rx="7" ry="5" transform="rotate(-20)" />
+      <path d="M6 -1 V-28" />
+    </g>
   </svg>;
 }
 

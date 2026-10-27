@@ -47,7 +47,21 @@
 .inside { flex: 1 0 auto; display: flex; padding: var(--space-12) var(--page-gutter) var(--space-16); }
 .copy { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4); width: 100%; max-width: 420px; }
 .staff { display: block; width: 100%; height: auto; margin-bottom: var(--space-2); color: var(--color-field-border); overflow: visible; }
-.staff path { fill: none; stroke: currentColor; stroke-width: 1.25; }
+.staff > path { fill: none; stroke: currentColor; stroke-width: 1.25; }
+/* 음표 하나가 왼쪽에서 나타나 오선의 굴곡을 따라 네 음을 거쳐 오른쪽으로 사라집니다. 한 번 건너는 데 10초라 눈에 띄되 방해하지 않습니다. */
+.note { color: var(--color-brand); fill: currentColor; stroke: currentColor; stroke-width: 2; animation: drift 10s ease-in-out infinite; }
+@keyframes drift {
+  0% { transform: translate(28px, 37px); opacity: 0; }
+  8% { opacity: 1; }
+  25% { transform: translate(119px, 25px); }
+  50% { transform: translate(210px, 45px); }
+  75% { transform: translate(301px, 33px); }
+  92% { opacity: 1; }
+  100% { transform: translate(392px, 22px); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .note { animation: none; transform: translate(210px, 45px); } }
+/* 서버를 깨우는 동안 따로 뜨던 작은 대기 오선은 머리의 오선이 대신합니다. 대기 안내 글은 그대로 보입니다. */
+.copy > svg:not(.staff) { display: none; }
 .title { margin: 0 0 var(--space-2); font-size: clamp(36px, 9vw, 48px); font-weight: var(--weight-heading); letter-spacing: -.05em; line-height: 1.1; }
 .copy p:not([class]) { margin: 0; max-width: 30em; color: var(--color-muted); font-size: var(--text-label); line-height: 1.6; }
 /* 구글 버튼은 상자 폭(최대 320px)으로 그려지고, 버튼이 오기 전에도 자리를 잡아 둡니다. 버튼은 iframe이라 초점 테두리를 상자에 그립니다. */
