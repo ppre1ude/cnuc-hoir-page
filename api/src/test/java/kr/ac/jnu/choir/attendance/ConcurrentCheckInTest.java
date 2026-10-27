@@ -46,8 +46,8 @@ class ConcurrentCheckInTest {
     @Autowired CheckInService service;
 
     private long event() {
-        jdbc.update("INSERT INTO event (title,description,start_at,end_at,ob_eligible,public_visible,created_at,updated_at) "
-                + "VALUES ('연습','설명','2026-09-27 09:00:00','2026-09-27 12:00:00',FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))");
+        jdbc.update("INSERT INTO event (title,description,start_at,end_at,kind,ob_eligible,public_visible,created_at,updated_at) "
+                + "VALUES ('연습','설명','2026-09-27 09:00:00','2026-09-27 12:00:00','EVENT',FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))");
         return jdbc.queryForObject("SELECT MAX(id) FROM event", Long.class);
     }
 

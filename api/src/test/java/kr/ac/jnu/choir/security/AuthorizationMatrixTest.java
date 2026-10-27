@@ -9,6 +9,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import kr.ac.jnu.choir.event.EventKind;
 import kr.ac.jnu.choir.event.EventService;
 import kr.ac.jnu.choir.member.Member;
 import kr.ac.jnu.choir.member.MemberRepository;
@@ -81,7 +82,7 @@ class AuthorizationMatrixTest {
         Member author = members.save(new Member(UUID.randomUUID() + "@example.org", "작성자", "{noop}password", Clock.systemUTC()));
         long noticeId = notices.create("권한 표 공지", "본문", true, author).getId();
         long eventId = events.create("권한 표 행사", "내용", Instant.parse("2026-09-20T09:00:00Z"),
-                Instant.parse("2026-09-20T11:00:00Z"), true, false).getId();
+                Instant.parse("2026-09-20T11:00:00Z"), EventKind.EVENT, null, true, false).getId();
         record Role(String name, MockHttpSession session, int memberStatus, int adminStatus) {}
         List<Role> roles = List.of(
                 new Role("방문자", new MockHttpSession(), 401, 401),
@@ -146,11 +147,11 @@ class AuthorizationMatrixTest {
         Member target = members.save(new Member(UUID.randomUUID() + "@example.org", "대상자", "{noop}password", Clock.systemUTC()));
         jdbc.update("UPDATE member SET status = 'APPROVED', member_type = 'ACTIVE', email_verified_at = CURRENT_TIMESTAMP(6) WHERE id = ?", target.getId());
         long eventId = events.create("정정 대상 행사", "내용", Instant.parse("2026-09-20T09:00:00Z"),
-                Instant.parse("2026-09-20T11:00:00Z"), false, false).getId();
+                Instant.parse("2026-09-20T11:00:00Z"), EventKind.EVENT, null, false, false).getId();
         Member rejected = members.save(new Member(UUID.randomUUID() + "@example.org", "반려된 신청자", "{noop}password", Clock.systemUTC()));
         jdbc.update("UPDATE member SET status = 'REJECTED', email_verified_at = CURRENT_TIMESTAMP(6) WHERE id = ?", rejected.getId());
         String event = "{\"title\":\"새 행사\",\"description\":\"내용\",\"startAt\":\"2026-09-21T09:00:00Z\","
-                + "\"endAt\":\"2026-09-21T11:00:00Z\",\"obEligible\":false,\"publicVisible\":false}";
+                + "\"endAt\":\"2026-09-21T11:00:00Z\",\"kind\":\"EVENT\",\"obEligible\":false,\"publicVisible\":false}";
         for (MockHttpSession role : List.of(ordinary, admin)) {
             int expectedApproval = role == admin ? 204 : 403;
             int expectedCreate = role == admin ? 201 : 403;

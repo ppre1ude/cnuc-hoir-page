@@ -10,11 +10,16 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
 import kr.ac.jnu.choir.common.ApiException;
+import kr.ac.jnu.choir.event.EventAccess;
+import kr.ac.jnu.choir.event.EventKind;
 import kr.ac.jnu.choir.member.Member;
+import kr.ac.jnu.choir.member.MemberType;
+import kr.ac.jnu.choir.member.Part;
 import org.springframework.http.HttpStatus;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -50,10 +55,11 @@ public class CheckInService {
         Long id = jdbc.queryForObject("INSERT INTO check_in_session (event_id,opened_at,expires_at,qr_token_hash,code_hash) "
                 + "VALUES (?,?,?,?,?) RETURNING id", Long.class,
                 eventId, time(now), time(expiresAt), hash(qrToken), hash(code));
+        List<Object> args = new ArrayList<>(List.of(id, time(now), event.obEligible()));
         jdbc.update("INSERT INTO attendance_eligibility_snapshot (check_in_session_id,member_id,snapshotted_at) "
                 + "SELECT ?,m.id,? FROM member m WHERE m.status = 'APPROVED' "
-                + "AND (m.member_type = 'ACTIVE' OR (? AND m.member_type = 'OB'))",
-                id, time(now), event.obEligible());
+                + "AND (m.member_type = 'ACTIVE' OR (? AND m.member_type = 'OB'))"
+                + partCondition(event, "m.part", args), args.toArray());
         return new IssuedSession(id, expiresAt, "/events/" + eventId + "/check-in#token=" + qrToken, code);
     }
 
@@ -118,8 +124,8 @@ public class CheckInService {
     public List<AttendanceState> myList(Member member) {
         MemberRow target = memberRow(member.getId());
         // ob_eligible로 거르지 않고 계산된 상태로 거릅니다. 활동 단원 시절에 남은 출석·미출석 기록을 OB가 된 뒤에도 보여야 합니다.
-        return jdbc.query("SELECT id,title,ob_eligible,start_at FROM event WHERE start_at <= ? ORDER BY start_at DESC,id DESC", (rs, row) ->
-                state(new EventRow(rs.getLong(1), rs.getString(2), rs.getBoolean(3), eventTime(rs)), target),
+        return jdbc.query("SELECT id,title,ob_eligible,start_at,kind,part FROM event WHERE start_at <= ? ORDER BY start_at DESC,id DESC",
+                (rs, row) -> state(eventRow(rs), target),
                 // event 시각은 UTC 기준 TIMESTAMP라 JVM 시간대를 타는 Timestamp 대신 UTC LocalDateTime으로 비교합니다.
                 LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC))
                 .stream().filter(state -> !"NOT_ELIGIBLE".equals(state.status())).toList();
@@ -128,18 +134,23 @@ public class CheckInService {
     @Transactional(readOnly = true)
     public List<AdminAttendance> adminList(long eventId) {
         EventRow event = findEvent(eventId);
+        List<Object> args = new ArrayList<>(List.of(event.obEligible()));
+        String eligibleNow = "(status = 'APPROVED' AND (member_type = 'ACTIVE' OR (? AND member_type = 'OB'))"
+                + partCondition(event, "part", args) + ") ";
+        args.addAll(List.of(eventId, eventId));
         return jdbc.query("SELECT id,name,status,member_type,part,cohort FROM member WHERE "
-                + "(status = 'APPROVED' AND (member_type = 'ACTIVE' OR (? AND member_type = 'OB'))) "
+                + eligibleNow
                 + "OR EXISTS (SELECT 1 FROM attendance a WHERE a.event_id = ? AND a.member_id = member.id) "
                 + "OR EXISTS (SELECT 1 FROM attendance_eligibility_snapshot snap "
                 + "JOIN check_in_session sess ON sess.id = snap.check_in_session_id "
                 + "WHERE sess.event_id = ? AND snap.member_id = member.id) "
                 + "ORDER BY name,id",
                 (rs, row) -> {
-                    MemberRow target = new MemberRow(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getString(4));
+                    MemberRow target = new MemberRow(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getString(4),
+                            rs.getString(5));
                     return new AdminAttendance(target.id(), target.name(), rs.getString(5),
                             rs.getObject(6, Integer.class), state(event, target).status());
-                }, event.obEligible(), eventId, eventId);
+                }, args.toArray());
     }
 
     @Transactional(readOnly = true)
@@ -207,8 +218,8 @@ public class CheckInService {
     private EventRow lockEvent(long eventId) { return eventRow(eventId, true); }
     private EventRow findEvent(long eventId) { return eventRow(eventId, false); }
     private EventRow eventRow(long eventId, boolean lock) {
-        List<EventRow> rows = jdbc.query("SELECT id,title,ob_eligible,start_at FROM event WHERE id = ?" + (lock ? " FOR UPDATE" : ""),
-                (rs, row) -> new EventRow(rs.getLong(1), rs.getString(2), rs.getBoolean(3), eventTime(rs)), eventId);
+        List<EventRow> rows = jdbc.query("SELECT id,title,ob_eligible,start_at,kind,part FROM event WHERE id = ?"
+                + (lock ? " FOR UPDATE" : ""), (rs, row) -> eventRow(rs), eventId);
         if (rows.isEmpty()) throw new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "행사를 찾을 수 없습니다.");
         return rows.getFirst();
     }
@@ -216,9 +227,9 @@ public class CheckInService {
     private MemberRow lockMember(long id) { return readMember(id, true); }
     private MemberRow memberRow(long id) { return readMember(id, false); }
     private MemberRow readMember(long id, boolean lock) {
-        List<MemberRow> rows = jdbc.query("SELECT id,name,status,member_type FROM member WHERE id = ?"
+        List<MemberRow> rows = jdbc.query("SELECT id,name,status,member_type,part FROM member WHERE id = ?"
                 + (lock ? " FOR UPDATE" : ""), (rs, row) -> new MemberRow(rs.getLong(1), rs.getString(2),
-                rs.getString(3), rs.getString(4)), id);
+                rs.getString(3), rs.getString(4), rs.getString(5)), id);
         if (rows.isEmpty()) throw new ApiException(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "단원을 찾을 수 없습니다.");
         return rows.getFirst();
     }
@@ -241,9 +252,19 @@ public class CheckInService {
         return new SessionRow(rs.getLong(1), rs.getTimestamp(2).toInstant(),
                 closed == null ? null : closed.toInstant(), rs.getString(4), rs.getString(5));
     }
+    // 승인된 단원 중 일정의 참석 대상입니다. 파트연습이면 그 파트 단원만입니다.
     private static boolean eligible(EventRow event, MemberRow member) {
-        return "APPROVED".equals(member.status()) && ("ACTIVE".equals(member.type())
-                || event.obEligible() && "OB".equals(member.type()));
+        return "APPROVED".equals(member.status()) && EventAccess.target(
+                member.type() == null ? null : MemberType.valueOf(member.type()),
+                member.part() == null ? null : Part.valueOf(member.part()),
+                event.kind(), event.part(), event.obEligible());
+    }
+
+    // 파트연습이면 출석 대상 SQL에 그 파트 조건을 붙이고 인자를 더합니다. eligible과 같은 규칙입니다.
+    private static String partCondition(EventRow event, String column, List<Object> args) {
+        if (event.kind() != EventKind.PART_REHEARSAL) return "";
+        args.add(event.part().name());
+        return " AND " + column + " = ?";
     }
     private String newQrToken() {
         byte[] bytes = new byte[32];
@@ -270,14 +291,19 @@ public class CheckInService {
     private static Instant eventTime(java.sql.ResultSet rs) throws java.sql.SQLException {
         return rs.getObject("start_at", LocalDateTime.class).toInstant(ZoneOffset.UTC);
     }
+    private static EventRow eventRow(java.sql.ResultSet rs) throws java.sql.SQLException {
+        String part = rs.getString("part");
+        return new EventRow(rs.getLong("id"), rs.getString("title"), rs.getBoolean("ob_eligible"), eventTime(rs),
+                EventKind.valueOf(rs.getString("kind")), part == null ? null : Part.valueOf(part));
+    }
     private static ApiException conflict(String code, String message) {
         return new ApiException(HttpStatus.CONFLICT, code, message);
     }
     private static ApiException forbidden() {
         return new ApiException(HttpStatus.FORBIDDEN, "NOT_ELIGIBLE", "이 행사의 출석 대상이 아닙니다.");
     }
-    private record EventRow(long id, String title, boolean obEligible, Instant startAt) {}
-    private record MemberRow(long id, String name, String status, String type) {}
+    private record EventRow(long id, String title, boolean obEligible, Instant startAt, EventKind kind, Part part) {}
+    private record MemberRow(long id, String name, String status, String type, String part) {}
     private record SessionRow(long id, Instant expiresAt, Instant closedAt, String qrHash, String codeHash) {}
     public record IssuedSession(Long sessionId, Instant expiresAt, String qrUrl, String code) {}
     public record SessionStatus(Long sessionId, Instant expiresAt, boolean open) {}

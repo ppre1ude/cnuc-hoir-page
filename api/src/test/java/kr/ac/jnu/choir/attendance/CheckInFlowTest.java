@@ -73,8 +73,8 @@ class CheckInFlowTest {
                 .getContentAsString().split("\"token\":\"", 2)[1].split("\"", 2)[0];
     }
     private long event(boolean obEligible) {
-        jdbc.update("INSERT INTO event (title,description,start_at,end_at,ob_eligible,public_visible,created_at,updated_at) "
-                + "VALUES ('연습','설명','2026-09-27 09:00:00','2026-09-27 12:00:00',?,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))", obEligible);
+        jdbc.update("INSERT INTO event (title,description,start_at,end_at,kind,ob_eligible,public_visible,created_at,updated_at) "
+                + "VALUES ('연습','설명','2026-09-27 09:00:00','2026-09-27 12:00:00','EVENT',?,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))", obEligible);
         return jdbc.queryForObject("SELECT MAX(id) FROM event", Long.class);
     }
     private String open(long eventId, MockHttpSession admin) throws Exception {
@@ -411,10 +411,10 @@ class CheckInFlowTest {
     @Test void attendanceListShowsStartedEventsNewestFirst() throws Exception {
         Member active = member("ACTIVE", false);
         long recent = event(false);
-        jdbc.update("INSERT INTO event (title,description,start_at,end_at,ob_eligible,public_visible,created_at,updated_at) "
-                + "VALUES ('지난주 연습','설명','2026-09-20 09:00:00','2026-09-20 12:00:00',FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6)), "
-                + "('저녁 연습','설명','2026-09-27 13:00:00','2026-09-27 15:00:00',FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6)), "
-                + "('다음 주 연습','설명','2026-10-04 09:00:00','2026-10-04 12:00:00',FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))");
+        jdbc.update("INSERT INTO event (title,description,start_at,end_at,kind,ob_eligible,public_visible,created_at,updated_at) "
+                + "VALUES ('지난주 연습','설명','2026-09-20 09:00:00','2026-09-20 12:00:00','EVENT',FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6)), "
+                + "('저녁 연습','설명','2026-09-27 13:00:00','2026-09-27 15:00:00','EVENT',FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6)), "
+                + "('다음 주 연습','설명','2026-10-04 09:00:00','2026-10-04 12:00:00','EVENT',FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))");
 
         String list = myList(active);
         assertThat(list).contains("지난주 연습", "\"startAt\":\"2026-09-20T09:00:00Z\"").doesNotContain("저녁 연습", "다음 주 연습");
