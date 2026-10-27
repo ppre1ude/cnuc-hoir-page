@@ -13,6 +13,7 @@ import java.time.ZoneOffset;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Set;
 import kr.ac.jnu.choir.common.ApiException;
 import kr.ac.jnu.choir.member.Member;
 import org.springframework.http.HttpStatus;
@@ -23,7 +24,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CheckInService {
-    private static final String ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    // 출석 창은 행사 시작 30분 전부터 열 수 있고 끝나면 닫힙니다. 시작 15분 뒤부터 찍은 출석은 지각입니다. 규정이 바뀌면 여기만 고칩니다.
+    static final Duration OPEN_BEFORE = Duration.ofMinutes(30);
+    static final Duration LATE_AFTER = Duration.ofMinutes(15);
+    // 출석 시각이 남는 상태. 정정으로 넣을 때도 정정 시각을 출석 시각으로 적습니다.
+    private static final Set<String> PRESENT = Set.of("CHECKED_IN", "LATE");
     private final JdbcTemplate jdbc;
     private final Clock clock;
     private final SecureRandom random = new SecureRandom();
@@ -37,19 +42,18 @@ public class CheckInService {
     public IssuedSession open(long eventId) {
         EventRow event = lockEvent(eventId);
         Instant now = clock.instant();
-        List<SessionRow> active = activeSession(eventId);
-        if (!active.isEmpty()) {
-            if (now.isBefore(active.getFirst().expiresAt())) {
-                throw conflict("SESSION_ALREADY_OPEN", "이미 열린 출석 창이 있습니다.");
-            }
-            jdbc.update("UPDATE check_in_session SET closed_at = ? WHERE id = ?", time(now), active.getFirst().id());
+        if (now.isBefore(event.startAt().minus(OPEN_BEFORE))) {
+            throw conflict("SESSION_NOT_YET", "출석 창은 연습 시작 30분 전부터 열 수 있습니다.");
         }
+        if (!now.isBefore(event.endAt())) throw conflict("SESSION_CLOSED", "연습이 끝나 출석 창을 열 수 없습니다.");
+        if (!activeSession(eventId).isEmpty()) throw conflict("SESSION_ALREADY_OPEN", "이미 열린 출석 창이 있습니다.");
         String qrToken = newQrToken();
         String code = newCode();
-        Instant expiresAt = now.plus(Duration.ofMinutes(10));
-        Long id = jdbc.queryForObject("INSERT INTO check_in_session (event_id,opened_at,expires_at,qr_token_hash,code_hash) "
-                + "VALUES (?,?,?,?,?) RETURNING id", Long.class,
-                eventId, time(now), time(expiresAt), hash(qrToken), hash(code));
+        // 만료 시각은 기록용입니다. 판정은 행사의 현재 end_at으로 하므로 행사 종료를 늦추면 창도 같이 늘어납니다.
+        Instant expiresAt = event.endAt();
+        Long id = jdbc.queryForObject("INSERT INTO check_in_session (event_id,opened_at,expires_at,qr_token_hash,code_hash,code) "
+                + "VALUES (?,?,?,?,?,?) RETURNING id", Long.class,
+                eventId, time(now), time(expiresAt), hash(qrToken), hash(code), code);
         jdbc.update("INSERT INTO attendance_eligibility_snapshot (check_in_session_id,member_id,snapshotted_at) "
                 + "SELECT ?,m.id,? FROM member m WHERE m.status = 'APPROVED' "
                 + "AND (m.member_type = 'ACTIVE' OR (? AND m.member_type = 'OB'))",
@@ -59,16 +63,16 @@ public class CheckInService {
 
     @Transactional
     public IssuedSession rotate(long eventId, long sessionId) {
-        lockEvent(eventId);
+        EventRow event = lockEvent(eventId);
         SessionRow session = currentSession(eventId, sessionId);
-        if (session.closedAt() != null || !clock.instant().isBefore(session.expiresAt())) {
-            throw conflict("SESSION_CLOSED", "출석 창이 닫혔거나 만료되었습니다.");
+        if (session.closedAt() != null || !withinWindow(event, clock.instant())) {
+            throw conflict("SESSION_CLOSED", "출석 창이 닫혔거나 연습이 끝났습니다.");
         }
         String qrToken = newQrToken();
         String code = newCode();
-        jdbc.update("UPDATE check_in_session SET qr_token_hash = ?, code_hash = ? WHERE id = ?",
-                hash(qrToken), hash(code), sessionId);
-        return new IssuedSession(sessionId, session.expiresAt(), "/events/" + eventId + "/check-in#token=" + qrToken, code);
+        jdbc.update("UPDATE check_in_session SET qr_token_hash = ?, code_hash = ?, code = ? WHERE id = ?",
+                hash(qrToken), hash(code), code, sessionId);
+        return new IssuedSession(sessionId, event.endAt(), "/events/" + eventId + "/check-in#token=" + qrToken, code);
     }
 
     @Transactional
@@ -87,17 +91,22 @@ public class CheckInService {
         if (attendance(eventId, member.getId()) != null) {
             throw conflict("ALREADY_CHECKED_IN", "이미 처리된 출석입니다.");
         }
+        Instant now = clock.instant();
+        if (now.isBefore(event.startAt().minus(OPEN_BEFORE))) {
+            throw conflict("CHECK_IN_NOT_YET", "출석은 연습 시작 30분 전부터 할 수 있습니다.");
+        }
         List<SessionRow> active = activeSession(eventId);
-        if (active.isEmpty() || !clock.instant().isBefore(active.getFirst().expiresAt())) {
-            throw conflict("SESSION_CLOSED", "출석 창이 닫혔거나 만료되었습니다.");
+        if (active.isEmpty() || !now.isBefore(event.endAt())) {
+            throw conflict("SESSION_CLOSED", "출석 창이 닫혔거나 연습이 끝났습니다.");
         }
         SessionRow session = active.getFirst();
-        boolean valid = constantTimeEquals(session.qrHash(), hash(credential))
-                | constantTimeEquals(session.codeHash(), hash(credential));
+        // 배포 전에 연 창은 평문 코드가 없어(NULL) 어떤 숫자도 맞지 않고, QR 토큰만 통합니다.
+        boolean valid = constantTimeEquals(session.qrHash(), hash(credential)) || credential.equals(session.code());
         if (!valid) throw conflict("INVALID_CREDENTIAL", "출석 코드가 유효하지 않습니다.");
+        String status = now.isBefore(event.startAt().plus(LATE_AFTER)) ? "CHECKED_IN" : "LATE";
         try {
-            jdbc.update("INSERT INTO attendance (event_id,member_id,status,checked_in_at) VALUES (?,?,'CHECKED_IN',?)",
-                    eventId, member.getId(), time(clock.instant()));
+            jdbc.update("INSERT INTO attendance (event_id,member_id,status,checked_in_at) VALUES (?,?,?,?)",
+                    eventId, member.getId(), status, time(now));
             jdbc.update("INSERT INTO attendance_eligibility_snapshot (check_in_session_id,member_id,snapshotted_at) "
                     + "SELECT ?,?,? WHERE NOT EXISTS (SELECT 1 FROM attendance_eligibility_snapshot "
                     + "WHERE check_in_session_id = ? AND member_id = ?)",
@@ -118,8 +127,10 @@ public class CheckInService {
     public List<AttendanceState> myList(Member member) {
         MemberRow target = memberRow(member.getId());
         // ob_eligible로 거르지 않고 계산된 상태로 거릅니다. 활동 단원 시절에 남은 출석·미출석 기록을 OB가 된 뒤에도 보여야 합니다.
-        return jdbc.query("SELECT id,title,ob_eligible,start_at FROM event WHERE start_at <= ? ORDER BY start_at DESC,id DESC", (rs, row) ->
-                state(new EventRow(rs.getLong(1), rs.getString(2), rs.getBoolean(3), eventTime(rs)), target),
+        // 시작 전이라도 출석 창을 연 행사는 넣습니다. 연습 10분 전에 출석해도 바로 목록에서 확인할 수 있어야 합니다.
+        return jdbc.query("SELECT id,title,ob_eligible,start_at,end_at FROM event e WHERE start_at <= ? "
+                + "OR EXISTS (SELECT 1 FROM check_in_session s WHERE s.event_id = e.id) ORDER BY start_at DESC,id DESC", (rs, row) ->
+                state(new EventRow(rs.getLong(1), rs.getString(2), rs.getBoolean(3), eventTime(rs, "start_at"), eventTime(rs, "end_at")), target),
                 // event 시각은 UTC 기준 TIMESTAMP라 JVM 시간대를 타는 Timestamp 대신 UTC LocalDateTime으로 비교합니다.
                 LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC))
                 .stream().filter(state -> !"NOT_ELIGIBLE".equals(state.status())).toList();
@@ -137,18 +148,22 @@ public class CheckInService {
                 + "ORDER BY name,id",
                 (rs, row) -> {
                     MemberRow target = new MemberRow(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getString(4));
+                    AttendanceRow stored = attendanceRow(eventId, target.id());
                     return new AdminAttendance(target.id(), target.name(), rs.getString(5),
-                            rs.getObject(6, Integer.class), state(event, target).status());
+                            rs.getObject(6, Integer.class), state(event, target).status(),
+                            stored == null ? null : stored.checkedInAt(), stored == null ? null : stored.correctedAt());
                 }, event.obEligible(), eventId, eventId);
     }
 
     @Transactional(readOnly = true)
     public SessionStatus sessionStatus(long eventId) {
-        findEvent(eventId);
-        List<SessionRow> active = activeSession(eventId);
-        if (active.isEmpty()) return new SessionStatus(null, null, false);
-        SessionRow session = active.getFirst();
-        return new SessionStatus(session.id(), session.expiresAt(), clock.instant().isBefore(session.expiresAt()));
+        EventRow event = findEvent(eventId);
+        Instant opensAt = event.startAt().minus(OPEN_BEFORE);
+        List<SessionRow> latest = latestSession(eventId);
+        if (latest.isEmpty()) return new SessionStatus(null, event.endAt(), false, null, opensAt);
+        SessionRow session = latest.getFirst();
+        boolean open = session.closedAt() == null && withinWindow(event, clock.instant());
+        return new SessionStatus(session.id(), event.endAt(), open, open ? session.code() : null, opensAt);
     }
 
     @Transactional
@@ -156,7 +171,7 @@ public class CheckInService {
         EventRow event = lockEvent(eventId);
         MemberRow target = lockMember(memberId);
         if (attendance(eventId, memberId) == null && !eligible(event, target)
-                && !historicalMissed(eventId, memberId)) throw forbidden();
+                && !historicalMissed(event, memberId)) throw forbidden();
         AttendanceState previous = state(event, target);
         if (newStatus.equals(previous.status())) {
             throw conflict("ATTENDANCE_UNCHANGED", "출석 상태가 이미 같습니다.");
@@ -164,10 +179,10 @@ public class CheckInService {
         Instant now = clock.instant();
         if (attendance(eventId, memberId) == null) {
             jdbc.update("INSERT INTO attendance (event_id,member_id,status,checked_in_at,corrected_at) VALUES (?,?,?,?,?)",
-                    eventId, memberId, newStatus, newStatus.equals("CHECKED_IN") ? time(now) : null, time(now));
+                    eventId, memberId, newStatus, PRESENT.contains(newStatus) ? time(now) : null, time(now));
         } else {
             jdbc.update("UPDATE attendance SET status = ?, checked_in_at = ?, corrected_at = ? WHERE event_id = ? AND member_id = ?",
-                    newStatus, newStatus.equals("CHECKED_IN") ? time(now) : null, time(now), eventId, memberId);
+                    newStatus, PRESENT.contains(newStatus) ? time(now) : null, time(now), eventId, memberId);
         }
         jdbc.update("INSERT INTO admin_action_log (actor_member_id,target_member_id,action,previous_status,new_status,reason,acted_at,event_id) "
                 + "VALUES (?,?,'ATTENDANCE_CORRECT',?,?,?,?,?)", actor.getId(), memberId, previous.status(),
@@ -178,37 +193,47 @@ public class CheckInService {
         String stored = attendance(event.id(), target.id());
         if (stored != null) return new AttendanceState(event.id(), event.title(), event.startAt(), stored, false);
         boolean eligibleNow = eligible(event, target);
-        List<SessionRow> active = activeSession(event.id());
-        boolean open = !active.isEmpty() && clock.instant().isBefore(active.getFirst().expiresAt());
+        boolean open = sessionOpen(event, activeSession(event.id()), clock.instant());
         if (open && eligibleNow) return new AttendanceState(event.id(), event.title(), event.startAt(), "NOT_OPEN", true);
-        if (historicalMissed(event.id(), target.id())) {
+        if (historicalMissed(event, target.id())) {
             return new AttendanceState(event.id(), event.title(), event.startAt(), "MISSED", false);
         }
         return new AttendanceState(event.id(), event.title(), event.startAt(), eligibleNow ? "NOT_OPEN" : "NOT_ELIGIBLE", false);
     }
 
-    private boolean historicalMissed(long eventId, long memberId) {
-        List<SessionRow> sessions = jdbc.query("SELECT sess.id,sess.expires_at,sess.closed_at,sess.qr_token_hash,sess.code_hash "
+    private boolean historicalMissed(EventRow event, long memberId) {
+        List<SessionRow> sessions = jdbc.query("SELECT sess.id,sess.expires_at,sess.closed_at,sess.qr_token_hash,sess.code "
                 + "FROM attendance_eligibility_snapshot snap "
                 + "JOIN check_in_session sess ON sess.id = snap.check_in_session_id "
                 + "WHERE sess.event_id = ? AND snap.member_id = ? ORDER BY sess.id DESC LIMIT 1",
-                (rs, row) -> sessionRow(rs), eventId, memberId);
+                (rs, row) -> sessionRow(rs), event.id(), memberId);
         if (sessions.isEmpty()) return false;
-        SessionRow latest = sessions.getFirst();
-        return latest.closedAt() != null || !clock.instant().isBefore(latest.expiresAt());
+        return sessions.getFirst().closedAt() != null || !clock.instant().isBefore(event.endAt());
+    }
+
+    private static boolean withinWindow(EventRow event, Instant now) {
+        return !now.isBefore(event.startAt().minus(OPEN_BEFORE)) && now.isBefore(event.endAt());
+    }
+    private static boolean sessionOpen(EventRow event, List<SessionRow> active, Instant now) {
+        return !active.isEmpty() && withinWindow(event, now);
     }
 
     private String attendance(long eventId, long memberId) {
-        List<String> rows = jdbc.query("SELECT status FROM attendance WHERE event_id = ? AND member_id = ?",
-                (rs, row) -> rs.getString(1), eventId, memberId);
+        AttendanceRow row = attendanceRow(eventId, memberId);
+        return row == null ? null : row.status();
+    }
+    private AttendanceRow attendanceRow(long eventId, long memberId) {
+        List<AttendanceRow> rows = jdbc.query("SELECT status,checked_in_at,corrected_at FROM attendance WHERE event_id = ? AND member_id = ?",
+                (rs, row) -> new AttendanceRow(rs.getString(1), instant(rs.getTimestamp(2)), instant(rs.getTimestamp(3))), eventId, memberId);
         return rows.isEmpty() ? null : rows.getFirst();
     }
+    private static Instant instant(Timestamp value) { return value == null ? null : value.toInstant(); }
 
     private EventRow lockEvent(long eventId) { return eventRow(eventId, true); }
     private EventRow findEvent(long eventId) { return eventRow(eventId, false); }
     private EventRow eventRow(long eventId, boolean lock) {
-        List<EventRow> rows = jdbc.query("SELECT id,title,ob_eligible,start_at FROM event WHERE id = ?" + (lock ? " FOR UPDATE" : ""),
-                (rs, row) -> new EventRow(rs.getLong(1), rs.getString(2), rs.getBoolean(3), eventTime(rs)), eventId);
+        List<EventRow> rows = jdbc.query("SELECT id,title,ob_eligible,start_at,end_at FROM event WHERE id = ?" + (lock ? " FOR UPDATE" : ""),
+                (rs, row) -> new EventRow(rs.getLong(1), rs.getString(2), rs.getBoolean(3), eventTime(rs, "start_at"), eventTime(rs, "end_at")), eventId);
         if (rows.isEmpty()) throw new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "행사를 찾을 수 없습니다.");
         return rows.getFirst();
     }
@@ -224,13 +249,18 @@ public class CheckInService {
     }
 
     private List<SessionRow> activeSession(long eventId) {
-        return jdbc.query("SELECT id,expires_at,closed_at,qr_token_hash,code_hash FROM check_in_session "
+        return jdbc.query("SELECT id,expires_at,closed_at,qr_token_hash,code FROM check_in_session "
                 + "WHERE event_id = ? AND closed_at IS NULL ORDER BY id DESC LIMIT 1",
                 (rs, row) -> sessionRow(rs), eventId);
     }
 
+    private List<SessionRow> latestSession(long eventId) {
+        return jdbc.query("SELECT id,expires_at,closed_at,qr_token_hash,code FROM check_in_session "
+                + "WHERE event_id = ? ORDER BY id DESC LIMIT 1", (rs, row) -> sessionRow(rs), eventId);
+    }
+
     private SessionRow currentSession(long eventId, long id) {
-        List<SessionRow> rows = jdbc.query("SELECT id,expires_at,closed_at,qr_token_hash,code_hash FROM check_in_session "
+        List<SessionRow> rows = jdbc.query("SELECT id,expires_at,closed_at,qr_token_hash,code FROM check_in_session "
                 + "WHERE event_id = ? AND id = ?", (rs, row) -> sessionRow(rs), eventId, id);
         if (rows.isEmpty()) throw new ApiException(HttpStatus.NOT_FOUND, "SESSION_NOT_FOUND", "출석 창을 찾을 수 없습니다.");
         return rows.getFirst();
@@ -251,9 +281,8 @@ public class CheckInService {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
     private String newCode() {
-        StringBuilder value = new StringBuilder(8);
-        for (int i = 0; i < 8; i++) value.append(ALPHABET.charAt(random.nextInt(ALPHABET.length())));
-        return value.toString();
+        // 소리 내어 불러 주기 쉬운 4자리 숫자. 앞자리 0도 그대로 둡니다. 시도 제한(계정당 1분 10회)이 찍어 맞추기를 막습니다.
+        return String.format("%04d", random.nextInt(10000));
     }
     private static String hash(String value) {
         try {
@@ -267,8 +296,8 @@ public class CheckInService {
         return MessageDigest.isEqual(HexFormat.of().parseHex(first), HexFormat.of().parseHex(second));
     }
     private static Timestamp time(Instant instant) { return Timestamp.from(instant); }
-    private static Instant eventTime(java.sql.ResultSet rs) throws java.sql.SQLException {
-        return rs.getObject("start_at", LocalDateTime.class).toInstant(ZoneOffset.UTC);
+    private static Instant eventTime(java.sql.ResultSet rs, String column) throws java.sql.SQLException {
+        return rs.getObject(column, LocalDateTime.class).toInstant(ZoneOffset.UTC);
     }
     private static ApiException conflict(String code, String message) {
         return new ApiException(HttpStatus.CONFLICT, code, message);
@@ -276,11 +305,14 @@ public class CheckInService {
     private static ApiException forbidden() {
         return new ApiException(HttpStatus.FORBIDDEN, "NOT_ELIGIBLE", "이 행사의 출석 대상이 아닙니다.");
     }
-    private record EventRow(long id, String title, boolean obEligible, Instant startAt) {}
+    private record EventRow(long id, String title, boolean obEligible, Instant startAt, Instant endAt) {}
     private record MemberRow(long id, String name, String status, String type) {}
-    private record SessionRow(long id, Instant expiresAt, Instant closedAt, String qrHash, String codeHash) {}
+    private record SessionRow(long id, Instant expiresAt, Instant closedAt, String qrHash, String code) {}
     public record IssuedSession(Long sessionId, Instant expiresAt, String qrUrl, String code) {}
-    public record SessionStatus(Long sessionId, Instant expiresAt, boolean open) {}
+    // sessionId는 닫힌 창도 포함한 가장 최근 창, expiresAt은 행사 종료 시각, code는 열려 있을 때만, opensAt은 열 수 있는 시각입니다.
+    public record SessionStatus(Long sessionId, Instant expiresAt, boolean open, String code, Instant opensAt) {}
     public record AttendanceState(Long eventId, String eventTitle, Instant startAt, String status, boolean checkInOpen) {}
-    public record AdminAttendance(Long memberId, String name, String part, Integer cohort, String status) {}
+    private record AttendanceRow(String status, Instant checkedInAt, Instant correctedAt) {}
+    public record AdminAttendance(Long memberId, String name, String part, Integer cohort, String status,
+            Instant checkedInAt, Instant correctedAt) {}
 }

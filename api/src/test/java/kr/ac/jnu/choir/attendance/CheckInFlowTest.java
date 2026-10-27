@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
+import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -72,9 +73,16 @@ class CheckInFlowTest {
         return mvc.perform(get("/api/v1/auth/csrf").session(session)).andReturn().getResponse()
                 .getContentAsString().split("\"token\":\"", 2)[1].split("\"", 2)[0];
     }
+    // 시계는 10:00에 고정이라 09:50 시작 행사는 "시작 10분 뒤"입니다. 정시 출석 구간 안이고 열 수도 있습니다.
     private long event(boolean obEligible) {
         jdbc.update("INSERT INTO event (title,description,start_at,end_at,ob_eligible,public_visible,created_at,updated_at) "
-                + "VALUES ('연습','설명','2026-09-27 09:00:00','2026-09-27 12:00:00',?,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))", obEligible);
+                + "VALUES ('연습','설명','2026-09-27 09:50:00','2026-09-27 12:00:00',?,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))", obEligible);
+        return jdbc.queryForObject("SELECT MAX(id) FROM event", Long.class);
+    }
+    private long eventAt(String start, String end) {
+        jdbc.update("INSERT INTO event (title,description,start_at,end_at,ob_eligible,public_visible,created_at,updated_at) "
+                + "VALUES ('연습','설명',?,?,FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))",
+                Timestamp.valueOf(start), Timestamp.valueOf(end));
         return jdbc.queryForObject("SELECT MAX(id) FROM event", Long.class);
     }
     private String open(long eventId, MockHttpSession admin) throws Exception {
@@ -82,6 +90,10 @@ class CheckInFlowTest {
                 .session(admin).header("X-CSRF-TOKEN", csrf(admin))).andReturn().getResponse();
         assertThat(response.getStatus()).isEqualTo(201);
         return response.getContentAsString();
+    }
+    private int openStatus(long eventId, MockHttpSession admin) throws Exception {
+        return mvc.perform(post("/api/v1/admin/events/" + eventId + "/check-in-session")
+                .session(admin).header("X-CSRF-TOKEN", csrf(admin))).andReturn().getResponse().getStatus();
     }
     private void close(long eventId, MockHttpSession admin) throws Exception {
         assertThat(mvc.perform(post("/api/v1/admin/events/" + eventId + "/check-in-session/close")
@@ -118,10 +130,9 @@ class CheckInFlowTest {
         String availability = mvc.perform(get("/api/v1/events/" + id + "/attendance/me").session(session(active)))
                 .andReturn().getResponse().getContentAsString();
         assertThat(availability).contains("\"checkInOpen\":true").doesNotContain(code);
-        assertThat(code).hasSize(8);
+        assertThat(code).matches("\\d{4}");
         assertThat(field(issued, "qrUrl")).startsWith("/events/" + id + "/check-in#token=");
-        assertThat(jdbc.queryForObject("SELECT code_hash FROM check_in_session WHERE event_id = ?", String.class, id))
-                .doesNotContain(code).hasSize(64);
+        assertThat(jdbc.queryForObject("SELECT code FROM check_in_session WHERE event_id = ?", String.class, id)).isEqualTo(code);
         assertThat(check(id, session(active), code)).isEqualTo(204);
         assertThat(check(id, session(active), code)).isEqualTo(409);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM attendance WHERE event_id = ? AND member_id = ?", Long.class,
@@ -161,21 +172,59 @@ class CheckInFlowTest {
                 + "AND new_status = 'MISSED' AND reason = '현장 기록 정정'", Long.class, allowed, ob.getId())).isEqualTo(1);
     }
 
-    @Test void expiredSessionCanBeReopenedButOldCredentialsStayInvalid() throws Exception {
+    @Test void checkInStatusFollowsEventClock() throws Exception {
+        Member admin = member("ACTIVE", true);
+        Member onTime = member("ACTIVE", false);
+        Member late = member("ACTIVE", false);
+        long exactlyLate = eventAt("2026-09-27 09:45:00", "2026-09-27 12:00:00"); // 10:00 = 시작 + 15:00
+        String code = field(open(exactlyLate, session(admin)), "code");
+        assertThat(check(exactlyLate, session(late), code)).isEqualTo(204);
+        assertThat(own(exactlyLate, late)).contains("\"status\":\"LATE\"");
+        long justStarted = eventAt("2026-09-27 09:46:00", "2026-09-27 12:00:00"); // 시작 + 14:00
+        String code2 = field(open(justStarted, session(admin)), "code");
+        assertThat(check(justStarted, session(onTime), code2)).isEqualTo(204);
+        assertThat(own(justStarted, onTime)).contains("\"status\":\"CHECKED_IN\"");
+    }
+
+    @Test void openingAndCheckInAreRefusedOutsideTheWindow() throws Exception {
+        Member admin = member("ACTIVE", true);
+        Member active = member("ACTIVE", false);
+        long tooEarly = eventAt("2026-09-27 10:30:01", "2026-09-27 12:00:00"); // 열 수 있는 시각 10:00:01
+        assertThat(openStatus(tooEarly, session(admin))).isEqualTo(409);
+        long openable = eventAt("2026-09-27 10:30:00", "2026-09-27 12:00:00");  // 열 수 있는 시각 10:00:00
+        String code = field(open(openable, session(admin)), "code");
+        assertThat(check(openable, session(active), code)).isEqualTo(204);
+        long ended = eventAt("2026-09-27 08:00:00", "2026-09-27 10:00:00");
+        assertThat(openStatus(ended, session(admin))).isEqualTo(409);
+    }
+
+    @Test void checkInBeforeWindowIsRefusedWithItsOwnCode() throws Exception {
+        // 창은 열렸지만 아직 인정 시각 전인 경우는 만들 수 없으므로(열기 자체가 30분 전부터),
+        // 열린 뒤 행사 시작을 뒤로 미룬 상황으로 흉내 낸다.
         Member admin = member("ACTIVE", true);
         Member active = member("ACTIVE", false);
         long id = event(false);
-        String firstCode = field(open(id, session(admin)), "code");
-        jdbc.update("UPDATE check_in_session SET expires_at = '2026-09-27 09:59:59' WHERE event_id = ?", id);
-        assertThat(check(id, session(active), firstCode)).isEqualTo(409);
+        String code = field(open(id, session(admin)), "code");
+        jdbc.update("UPDATE event SET start_at = '2026-09-27 10:40:00', end_at = '2026-09-27 12:00:00' WHERE id = ?", id);
+        MockHttpSession activeSession = session(active);
+        var response = mvc.perform(post("/api/v1/events/" + id + "/check-ins").session(activeSession)
+                .header("X-CSRF-TOKEN", csrf(activeSession)).contentType("application/json")
+                .content("{\"credential\":\"" + code + "\"}")).andReturn().getResponse();
+        assertThat(response.getStatus()).isEqualTo(409);
+        assertThat(response.getContentAsString()).contains("CHECK_IN_NOT_YET");
+    }
+
+    @Test void sessionFollowsTheEventEndEvenAfterEdits() throws Exception {
+        Member admin = member("ACTIVE", true);
+        Member active = member("ACTIVE", false);
+        long id = event(false);
+        String code = field(open(id, session(admin)), "code");
+        jdbc.update("UPDATE event SET end_at = '2026-09-27 09:59:59' WHERE id = ?", id);
+        assertThat(check(id, session(active), code)).isEqualTo(409);
         assertThat(own(id, active)).contains("\"status\":\"MISSED\"", "\"checkInOpen\":false");
-        String secondCode = field(open(id, session(admin)), "code");
-        assertThat(secondCode).isNotEqualTo(firstCode);
+        jdbc.update("UPDATE event SET end_at = '2026-09-27 12:00:00' WHERE id = ?", id);
         assertThat(own(id, active)).contains("\"status\":\"NOT_OPEN\"", "\"checkInOpen\":true");
-        assertThat(check(id, session(active), firstCode)).isEqualTo(409);
-        assertThat(check(id, session(active), secondCode)).isEqualTo(204);
-        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM check_in_session WHERE event_id = ? AND closed_at IS NULL",
-                Long.class, id)).isEqualTo(1);
+        assertThat(check(id, session(active), code)).isEqualTo(204);
     }
 
     @Test void accountAndIpAttemptsAreLimitedPerMinute() throws Exception {
@@ -419,5 +468,59 @@ class CheckInFlowTest {
         String list = myList(active);
         assertThat(list).contains("지난주 연습", "\"startAt\":\"2026-09-20T09:00:00Z\"").doesNotContain("저녁 연습", "다음 주 연습");
         assertThat(list.indexOf("\"eventId\":" + recent + ",")).isNotNegative().isLessThan(list.indexOf("지난주 연습"));
+    }
+
+    @Test void attendanceListShowsUpcomingEventOnceCheckInOpens() throws Exception {
+        Member admin = member("ACTIVE", true);
+        Member active = member("ACTIVE", false);
+        jdbc.update("INSERT INTO event (title,description,start_at,end_at,ob_eligible,public_visible,created_at,updated_at) "
+                + "VALUES ('곧 시작할 연습','설명','2026-09-27 10:10:00','2026-09-27 12:00:00',FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))");
+        long upcoming = jdbc.queryForObject("SELECT MAX(id) FROM event", Long.class);
+        assertThat(myList(active)).doesNotContain("곧 시작할 연습");
+
+        assertThat(check(upcoming, session(active), field(open(upcoming, session(admin)), "code"))).isEqualTo(204);
+        assertThat(myList(active)).contains("곧 시작할 연습", "\"status\":\"CHECKED_IN\"");
+    }
+
+    @Test void sessionStatusCarriesCodeAndOpeningTime() throws Exception {
+        Member admin = member("ACTIVE", true);
+        long id = eventAt("2026-09-27 10:20:00", "2026-09-27 12:00:00");
+        String before = mvc.perform(get("/api/v1/admin/events/" + id + "/check-in-session").session(session(admin)))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(before).contains("\"open\":false", "\"code\":null", "\"opensAt\":\"2026-09-27T09:50:00Z\"",
+                "\"expiresAt\":\"2026-09-27T12:00:00Z\"");
+        String code = field(open(id, session(admin)), "code");
+        String during = mvc.perform(get("/api/v1/admin/events/" + id + "/check-in-session").session(session(admin)))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(during).contains("\"open\":true", "\"code\":\"" + code + "\"");
+    }
+
+    @Test void legacySessionWithoutPlainCodeRefusesEveryCode() throws Exception {
+        Member admin = member("ACTIVE", true);
+        Member active = member("ACTIVE", false);
+        long id = event(false);
+        String qrToken = field(open(id, session(admin)), "qrUrl").split("#token=", 2)[1];
+        jdbc.update("UPDATE check_in_session SET code = NULL WHERE event_id = ?", id);
+        assertThat(check(id, session(active), "0000")).isEqualTo(409);
+        assertThat(check(id, session(active), qrToken)).isEqualTo(204);
+    }
+
+    @Test void adminCanCorrectToLateAndSeesTimes() throws Exception {
+        Member admin = member("ACTIVE", true);
+        Member active = member("ACTIVE", false);
+        Member absent = member("ACTIVE", false);
+        long id = event(false);
+        String code = field(open(id, session(admin)), "code");
+        assertThat(check(id, session(active), code)).isEqualTo(204);
+        MockHttpSession adminSession = session(admin);
+        assertThat(mvc.perform(put("/api/v1/admin/events/" + id + "/attendance/" + absent.getId())
+                .session(adminSession).header("X-CSRF-TOKEN", csrf(adminSession)).contentType("application/json")
+                .content("{\"status\":\"LATE\",\"reason\":\"늦게 와서 직접 확인\"}")).andReturn().getResponse().getStatus()).isEqualTo(204);
+        String list = mvc.perform(get("/api/v1/admin/events/" + id + "/attendance").session(adminSession))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(list).contains("\"memberId\":" + active.getId() + ",", "\"status\":\"CHECKED_IN\",\"checkedInAt\":\"2026-09-27T10:00:00Z\",\"correctedAt\":null")
+                .contains("\"memberId\":" + absent.getId() + ",", "\"status\":\"LATE\",\"checkedInAt\":\"2026-09-27T10:00:00Z\",\"correctedAt\":\"2026-09-27T10:00:00Z\"");
+        assertThat(own(id, absent)).contains("\"status\":\"LATE\"");
+        assertThat(myList(absent)).contains("\"eventId\":" + id + ",", "\"status\":\"LATE\"");
     }
 }

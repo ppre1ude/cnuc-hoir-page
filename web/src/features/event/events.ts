@@ -90,3 +90,8 @@ export function updateEvent(id: number, input: EventInput): Promise<ChoirEvent> 
     method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
   });
 }
+
+// 운영진 명단에서 출석 시각만 "오후 6:03"처럼 보입니다.
+export function seoulTime(value: string) {
+  return new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", timeStyle: "short" }).format(new Date(value));
+}
