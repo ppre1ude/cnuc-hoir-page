@@ -31,7 +31,8 @@ export function EventCalendarSkeleton() {
           {Array.from({ length: 35 }, (_, index) => <Skeleton key={index} className={styles.skeletonDay} />)}
         </div>
       </div>
-      <Section className={styles.detail} rows={6} />
+      <Section className={styles.list} rows={6} />
+      <Section className={styles.detail} rows={3} />
       <Section className={styles.notices} rows={3} />
       <Section className={styles.attendance} rows={3} />
     </div>

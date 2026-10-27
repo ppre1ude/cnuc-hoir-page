@@ -88,9 +88,11 @@ describe("일정 중심 단원 화면", () => {
       { id: 12, title: "전체 연습", description: "", startAt: "2026-11-02T10:00:00Z", endAt: "2026-11-02T12:00:00Z", obEligible: false, publicVisible: false },
     ]);
     renderWithSession(<EventCalendar />, sessionFixture({ memberType: "ACTIVE" }));
-    const list = screen.getByRole("region", { name: "선택한 일정" });
-    expect(await within(list).findByRole("group", { name: "전체 연습 참석 응답" })).toBeInTheDocument();
-    expect(within(list).getByRole("heading", { name: "전체 연습" })).toBeInTheDocument();
+    const list = screen.getByRole("region", { name: "이달의 일정" });
+    expect(await within(list).findByRole("button", { name: /11\.02 \(월\) 전체 연습 미응답/ })).toBeInTheDocument();
+    const detail = screen.getByRole("region", { name: "선택한 일정" });
+    expect(within(detail).getByRole("heading", { name: "전체 연습" })).toBeInTheDocument();
+    expect(within(detail).getByRole("group", { name: "참석 응답" })).toBeInTheDocument();
     expect(getEvents).toHaveBeenCalledWith("2026-09-30T15:00:00.000Z", "2026-11-12T03:00:00.000Z");
     expect(getMyEventRsvps).toHaveBeenCalledWith("2026-09-30T15:00:00.000Z", "2026-11-12T03:00:00.000Z");
     fireEvent.click(screen.getByRole("button", { name: "다음 달" }));
@@ -127,13 +129,15 @@ describe("일정 중심 단원 화면", () => {
     await waitFor(() => expect(getEvents).toHaveBeenCalledTimes(1));
   });
 
-  it("달력, 선택 행사, 최근 공지, 출석 요약 순서로 배치한다", async () => {
+  it("달력, 이달의 일정, 선택 행사, 최근 공지, 출석 요약 순서로 배치한다", async () => {
     renderWithSession(<EventCalendar />, ob);
     const calendar = await screen.findByRole("region", { name: "일정 달력" });
+    const list = screen.getByRole("region", { name: "이달의 일정" });
     const detail = screen.getByRole("region", { name: "선택한 일정" });
     const notices = screen.getByRole("region", { name: "최근 공지" });
     const attendance = screen.getByRole("region", { name: "내 출석 요약" });
-    expect(calendar.compareDocumentPosition(detail) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(calendar.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(list.compareDocumentPosition(detail) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(detail.compareDocumentPosition(notices) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(notices.compareDocumentPosition(attendance) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(await screen.findByText("공연 안내")).toBeInTheDocument();
@@ -149,22 +153,43 @@ describe("일정 중심 단원 화면", () => {
     expect(await screen.findByRole("link", { name: "현장 출석하기" })).toHaveAttribute("href", "/events/2/check-in");
   });
 
-  it("월간 행사 목록에서 상세를 열지 않고 참석 응답을 바꾼다", async () => {
+  it("목록에서 행사를 고르고 상세에서 응답하면 목록 칩이 바뀐다", async () => {
     renderWithSession(<EventCalendar />, sessionFixture({ memberType: "ACTIVE" }));
-    fireEvent.click(await screen.findByRole("button", { name: "9월 30일 가을 공연 참석" }));
+    const list = screen.getByRole("region", { name: "이달의 일정" });
+    const detail = screen.getByRole("region", { name: "선택한 일정" });
+    fireEvent.click(await within(list).findByRole("button", { name: /가을 공연 미응답/ }));
+    expect(await within(detail).findByRole("heading", { name: "가을 공연" })).toBeInTheDocument();
+    fireEvent.click(within(detail).getByRole("button", { name: "참석" }));
     await waitFor(() => expect(setEventRsvp).toHaveBeenCalledWith(2, "ATTENDING"));
-    expect(await screen.findByRole("button", { name: "9월 30일 가을 공연 참석" })).toHaveAttribute("aria-pressed", "true");
+    expect(await within(list).findByRole("button", { name: /가을 공연 참석$/ })).toHaveAttribute("aria-pressed", "true");
     // 눌린 표시는 서버 응답 전에 먼저 바뀌므로, 저장이 끝난 뒤에 다음 응답을 누릅니다.
-    await waitFor(() => expect(screen.getByRole("group", { name: "가을 공연 참석 응답" })).toHaveAttribute("aria-busy", "false"));
-    fireEvent.click(screen.getByRole("button", { name: "9월 30일 가을 공연 불참" }));
+    await waitFor(() => expect(within(detail).getByRole("group", { name: "참석 응답" })).toHaveAttribute("aria-busy", "false"));
+    fireEvent.click(within(detail).getByRole("button", { name: "불참" }));
     await waitFor(() => expect(setEventRsvp).toHaveBeenCalledWith(2, "ABSENT"));
+    expect(await within(list).findByRole("button", { name: /가을 공연 불참$/ })).toBeInTheDocument();
   });
 
-  it("참석 응답은 목록에서만 받고 선택한 행사 상세에서는 다시 묻지 않는다", async () => {
-    renderWithSession(<EventCalendar />, sessionFixture({ memberType: "ACTIVE" }));
-    expect(await screen.findByRole("group", { name: "정기 연습 참석 응답" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "정기 연습" })).toBeInTheDocument();
-    expect(screen.queryByRole("group", { name: "참석 응답" })).not.toBeInTheDocument();
+  it("목록 행은 응답 버튼 없이 종류 아이콘과 응답 상태만 보여 준다", async () => {
+    getMyEventRsvps.mockResolvedValue([{ eventId: 1, choice: "ABSENT" }, { eventId: 2, choice: null }]);
+    const view = renderWithSession(<EventCalendar />, ob);
+    const list = screen.getByRole("region", { name: "이달의 일정" });
+    // OB는 OB 대상이 아닌 정기 연습에 응답할 수 없으므로 대상 아님으로, 가을 공연은 미응답으로 보입니다.
+    expect(await within(list).findByRole("button", { name: /09\.29 \(화\) 정기 연습 대상 아님/ })).toBeInTheDocument();
+    expect(within(list).getByRole("button", { name: /09\.30 \(수\) 가을 공연 미응답/ })).toBeInTheDocument();
+    expect(within(list).queryByRole("button", { name: /^참석$|^불참$/ })).toBeNull();
+    expect(view.container.querySelectorAll("[data-kind='regular']").length).toBeGreaterThan(0);
+    expect(view.container.querySelectorAll("[data-kind='concert']").length).toBeGreaterThan(0);
+  });
+
+  it("폰 너비에서는 목록 행을 누르면 상세로 내려간다", async () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: true })));
+    renderWithSession(<EventCalendar />, ob);
+    const list = screen.getByRole("region", { name: "이달의 일정" });
+    fireEvent.click(await within(list).findByRole("button", { name: /가을 공연/ }));
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+    vi.unstubAllGlobals();
   });
 
   it("달을 바꾸면 행사만 다시 받고 세션은 다시 받지 않는다", async () => {

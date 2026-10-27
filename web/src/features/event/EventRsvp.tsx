@@ -12,14 +12,11 @@ type Props = {
   memberType: "ACTIVE" | "OB" | null;
   choice: EventRsvpChoice | null;
   onSaved: (choice: EventRsvpChoice) => void;
-  compact?: boolean;
 };
 
 const labels = { ATTENDING: "참석", ABSENT: "불참" } as const;
-// 매주 같은 이름의 연습이 이어지므로 목록 버튼의 이름에 날짜를 붙여 구분합니다.
-const seoulDay = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric" });
 
-export function EventRsvp({ event, memberType, choice, onSaved, compact = false }: Props) {
+export function EventRsvp({ event, memberType, choice, onSaved }: Props) {
   const [busy, startSaving] = useTransition();
   // 누른 즉시 이 값으로 배지를 바꾸고, 저장이 끝나면 부모가 준 choice로 돌아갑니다. 실패해도 이전 값으로 돌아갑니다.
   const [shown, showChoice] = useOptimistic(choice);
@@ -58,16 +55,7 @@ export function EventRsvp({ event, memberType, choice, onSaved, compact = false 
   }
 
   // 저장 중에 disabled를 걸면 누른 버튼에서 초점이 빠지므로 aria-disabled로 알리고 respond에서 막습니다.
-  if (!eligible) return compact ? <span className={styles.quickStatus}>대상 아님</span> : null;
-  if (compact) return <div className={styles.quickRsvp} role="group" aria-label={`${event.title} 참석 응답`} aria-busy={busy}>
-    {/* 지난 일정의 "참석"이 출석으로 읽히지 않게 응답임을 밝힙니다. */}
-    {closed ? <span className={styles.quickStatus}>{shown ? `${labels[shown]} 응답` : "미응답"}</span>
-      : (["ATTENDING", "ABSENT"] as const).map((item) => <Button variant="secondary" type="button" key={item}
-        aria-label={`${seoulDay.format(new Date(event.startAt))} ${event.title} ${labels[item]}`} aria-pressed={shown === item}
-        aria-disabled={busy || undefined} onClick={() => respond(item)}>{labels[item]}</Button>)}
-    {error && <Feedback tone="error">{error}</Feedback>}
-    <span className={styles.srOnly} role="status">{savedMessage}</span>
-  </div>;
+  if (!eligible) return null;
   return <div className={styles.rsvp} role="group" aria-label="참석 응답" aria-busy={busy}>
     <strong>참석 응답</strong>
     <StatusBadge tone={shown ? "positive" : "neutral"}>{shown ? labels[shown] : "미응답"}</StatusBadge>

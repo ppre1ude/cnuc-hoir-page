@@ -1,31 +1,52 @@
-.dashboard { composes: page from "../../components/ui/ui.module.css"; }
+.dashboard {
+  composes: page from "../../components/ui/ui.module.css";
+  /* 행사 종류 색. 제목이 종류를 말해 주므로 색은 훑어볼 때 서로 달라 보이게 하는 보조 표시입니다. */
+  --kind-regular: var(--color-primary); --kind-regular-soft: var(--color-highlight);
+  --kind-extra: #0b6e7a; --kind-extra-soft: #d8eff1;
+  --kind-rehearsal: #a24f00; --kind-rehearsal-soft: #ffe6d0;
+  --kind-concert: #6b3a8e; --kind-concert-soft: #ece2f5;
+  --kind-trip: var(--color-attention); --kind-trip-soft: var(--color-attention-background);
+  --kind-part: #2d5fa6; --kind-part-soft: #dfe9f8;
+  --kind-other: var(--color-muted); --kind-other-soft: var(--color-neutral-background);
+}
 .eventPage { composes: readingPage from "../../components/ui/ui.module.css"; }
 .eventPageCard { composes: surface from "../../components/ui/ui.module.css"; }
 .hero { padding-bottom: var(--space-6); border-bottom: 1px solid var(--color-line); }
-.grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(330px, 1fr); align-items: start; gap: var(--space-8); }
-.card { min-width: 0; }
-.rightColumn { display: contents; }
-.calendar { grid-column: 1; grid-row: 1; }
-.detail { grid-column: 2; grid-row: 1 / span 2; padding-left: var(--space-8); border-left: 1px solid var(--color-line); }
-.notices { grid-column: 1; grid-row: 2; padding-top: var(--space-8); border-top: 1px solid var(--color-line); }
-.attendance { grid-column: 1 / -1; padding-top: var(--space-8); border-top: 1px solid var(--color-line); }
+/* 달력이 주인공입니다. 왼쪽 두 줄을 차지하고, 오른쪽에 이달의 일정과 상세가 쌓이고, 아래 줄에 공지와 내 출석이 나란히 놓입니다. */
+.grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(330px, 1fr); grid-template-areas: "calendar list" "calendar detail" "notices attendance"; gap: var(--space-6); }
+.card { composes: surface from "../../components/ui/ui.module.css"; }
+.calendar { grid-area: calendar; display: flex; flex-direction: column; }
+.list { grid-area: list; }
+.detail { grid-area: detail; scroll-margin-top: 140px; }
+.notices { grid-area: notices; }
+.attendance { grid-area: attendance; }
+/* 공지와 내 출석은 한 단계 뒤로 보내려고 옅은 바탕을 깝니다. */
+.notices, .attendance { background: var(--color-subtle); }
 .card h2 { margin: 0; font-size: var(--text-section); font-weight: var(--weight-heading); letter-spacing: var(--tracking-heading); overflow-wrap: anywhere; }
 .calendarHeader, .sectionHeader { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
 .sectionHeader { margin-bottom: var(--space-5); }
-.sectionHeader a { display: inline-flex; align-items: center; min-height: var(--control-medium); gap: var(--space-2); color: var(--color-primary); font-size: var(--text-label); font-weight: var(--weight-label); text-decoration: none; white-space: nowrap; }
-.sectionHeader a:hover, .eventActions a:hover { text-decoration: underline; }
+.sectionHeader a { display: inline-flex; align-items: center; min-height: var(--control-medium); gap: var(--space-2); color: var(--color-muted); font-size: var(--text-label); font-weight: var(--weight-label); text-decoration: none; white-space: nowrap; }
+.sectionHeader a:hover, .eventActions a:hover { color: var(--color-primary); text-decoration: underline; }
 .monthControls { display: flex; gap: var(--space-2); }
 .monthControls button { width: var(--control-medium); padding-inline: 0; }
-.calendarTable { width: 100%; margin-top: var(--space-5); table-layout: fixed; border-collapse: separate; border-spacing: 0 var(--space-1); }
+/* 오른쪽 열이 더 길면 표가 남는 높이를 받아 날짜 칸이 함께 커집니다. */
+.calendarTable { flex: 1; width: 100%; margin-top: var(--space-5); table-layout: fixed; border-collapse: separate; border-spacing: 0 var(--space-1); }
 .calendarTable th { padding: var(--space-3) 0; border-bottom: 1px solid var(--color-line); color: var(--color-muted); font-size: var(--text-label); font-weight: var(--weight-medium); }
 .calendarTable abbr { text-decoration: none; }
-.calendarTable td { padding: 2px; vertical-align: top; }
-.day { display: flex; flex-direction: column; align-items: flex-start; width: 100%; min-height: var(--space-20); padding: var(--space-2); border: 1px solid transparent; border-radius: var(--radius-control); background: transparent; color: var(--color-ink); font: inherit; text-align: left; }
+.calendarTable td { height: var(--space-20); padding: 2px; vertical-align: top; }
+.day { display: flex; flex-direction: column; align-items: flex-start; width: 100%; height: 100%; min-height: var(--space-20); padding: var(--space-2); border: 1px solid transparent; border-radius: var(--radius-control); background: transparent; color: var(--color-ink); font: inherit; text-align: left; }
 .day:hover { background: var(--color-subtle); }
 .selectedDay { border-color: var(--color-primary); background: var(--color-selected); }
 .dayNumber { font-size: var(--text-body); font-weight: var(--weight-medium); }
 .day[aria-current="date"] .dayNumber { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 5px; color: var(--color-primary); font-weight: var(--weight-heading); }
-.dayEvent { display: block; width: 100%; margin-top: var(--space-2); padding: var(--space-1); overflow: hidden; border-radius: var(--radius-small); background: var(--color-highlight); color: var(--color-primary); font-size: var(--text-small); text-overflow: ellipsis; white-space: nowrap; }
+.kind[data-kind="regular"] { --kind: var(--kind-regular); --kind-soft: var(--kind-regular-soft); }
+.kind[data-kind="extra"] { --kind: var(--kind-extra); --kind-soft: var(--kind-extra-soft); }
+.kind[data-kind="rehearsal"] { --kind: var(--kind-rehearsal); --kind-soft: var(--kind-rehearsal-soft); }
+.kind[data-kind="concert"] { --kind: var(--kind-concert); --kind-soft: var(--kind-concert-soft); }
+.kind[data-kind="trip"] { --kind: var(--kind-trip); --kind-soft: var(--kind-trip-soft); }
+.kind[data-kind="part"] { --kind: var(--kind-part); --kind-soft: var(--kind-part-soft); }
+.kind[data-kind="other"] { --kind: var(--kind-other); --kind-soft: var(--kind-other-soft); }
+.dayEvent { display: block; width: 100%; margin-top: var(--space-2); padding: var(--space-1) 6px; overflow: hidden; border-radius: var(--radius-small); background: var(--kind-soft); color: var(--kind); font-size: var(--text-small); font-weight: var(--weight-medium); text-overflow: ellipsis; white-space: nowrap; }
 .moreEvents { margin-top: var(--space-1); color: var(--color-primary); font-size: var(--text-small); }
 .day i { display: none; }
 .dayList { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); min-height: var(--control-large); margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--color-line); }
@@ -33,24 +54,27 @@
 .dayList p { margin: 0; color: var(--color-muted); font-size: var(--text-label); }
 .eventButton { min-height: var(--control-medium); padding: var(--space-2) var(--space-3); border: 1px solid var(--color-line); border-radius: var(--radius-control); color: var(--color-primary); font-size: var(--text-label); }
 .eventButton[aria-pressed="true"] { border-color: var(--color-primary); background: var(--color-selected); }
-.eventList { max-height: 520px; margin: 0; padding: 0; overflow-y: auto; list-style: none; }
-.eventRow { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); padding: var(--space-3) var(--space-2); border-top: 1px solid var(--color-line); }
-.activeEvent { background: var(--color-subtle); box-shadow: inset 3px 0 var(--color-primary); }
-.eventSelect { display: flex; align-items: center; flex: 1 1 160px; min-width: 0; min-height: var(--control-medium); gap: var(--space-3); padding: 0; text-align: left; }
-.eventDate { flex: none; color: var(--color-primary); font-size: var(--text-label); font-weight: var(--weight-label); }
+/* 목록은 넘치면 안에서 넘깁니다. 달력 옆에서 한 화면에 보이도록 높이를 잡습니다. */
+/* position: relative는 선택 행의 offsetTop을 목록 기준으로 재려고 둡니다. */
+.eventList { position: relative; max-height: 400px; margin: 0 calc(var(--space-3) * -1); padding: 0; overflow-y: auto; list-style: none; }
+.eventRow { border-top: 1px solid var(--color-line); }
+.eventRow:first-child { border-top: 0; }
+.activeEvent { background: var(--color-selected); box-shadow: inset 3px 0 var(--color-primary); }
+.pastEvent { opacity: .62; }
+.eventSelect { display: flex; align-items: center; width: 100%; min-height: var(--control-large); gap: var(--space-3); padding: var(--space-2) var(--space-3); text-align: left; }
+.eventSelect:hover { background: var(--color-subtle); }
+.kindIcon { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: var(--kind-soft); color: var(--kind); }
+.eventText { display: flex; flex: 1; flex-wrap: wrap; align-items: baseline; min-width: 0; gap: var(--space-1) var(--space-3); }
+.eventDate { flex: none; color: var(--color-muted); font-size: var(--text-label); font-weight: var(--weight-label); font-variant-numeric: tabular-nums; }
 .eventTitle { min-width: 0; font-size: var(--text-body); font-weight: var(--weight-label); overflow-wrap: anywhere; }
-.quickRsvp { display: flex; align-items: center; flex-wrap: wrap; max-width: 100%; gap: var(--space-1); }
-.quickRsvp button { min-width: var(--control-medium); padding: var(--space-2); }
-.quickRsvp:has([role="alert"]) { flex-basis: 100%; }
-.quickRsvp p[role="alert"] { flex-basis: 100%; margin: 0; }
+.eventSelect > :last-child:not(.eventText) { flex: none; margin-left: auto; }
 .quickStatus { color: var(--color-muted); font-size: var(--text-label); }
 /* 저장 중인 응답 버튼은 초점을 지키려고 disabled 대신 aria-disabled를 쓰므로 같은 흐린 모양을 직접 줍니다. */
-.quickRsvp button[aria-disabled="true"], .rsvpButtons button[aria-disabled="true"] { opacity: .5; cursor: default; }
+.rsvpButtons button[aria-disabled="true"] { opacity: .5; cursor: default; }
 .rsvp { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-6); padding-top: var(--space-6); border-top: 1px solid var(--color-line); font-size: var(--text-body); }
 .rsvpButtons { display: flex; width: 100%; gap: var(--space-2); }
 .rsvpButtons button { flex: 1; min-height: var(--control-large); font-size: var(--text-body); }
 .rsvp p[role="alert"] { width: 100%; margin: 0; }
-.selectedEvent { margin-top: var(--space-6); padding: var(--space-6); border: 1px solid var(--color-line); border-radius: var(--radius-control); }
 .eventDetail h2 { margin: 0; overflow-wrap: anywhere; }
 .eventTime { display: flex; flex-wrap: wrap; gap: var(--space-1); margin: var(--space-3) 0 0; color: var(--color-muted); font-size: var(--text-label); }
 .description { margin: var(--space-5) 0 0; font-size: var(--text-body); line-height: 1.8; overflow-wrap: anywhere; white-space: pre-wrap; }
@@ -58,7 +82,7 @@
 .eventActions a { display: inline-flex; align-items: center; min-height: var(--control-medium); color: var(--color-primary); font-size: var(--text-label); font-weight: var(--weight-label); text-decoration: none; }
 .eventDetail > a { margin-top: var(--space-4); }
 .noticeItem, .attendanceRow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); min-height: var(--control-large); padding: var(--space-4) var(--space-1); border-top: 1px solid var(--color-line); font-size: var(--text-body); text-decoration: none; }
-.noticeItem:hover, .attendanceRow:hover { background: var(--color-subtle); }
+.noticeItem:hover, .attendanceRow:hover { background: var(--color-selected); }
 .noticeItem > span:first-child, .attendanceRow > span:first-child { min-width: 0; overflow-wrap: anywhere; }
 .noticeItem > span:last-child { color: var(--color-primary); flex: none; }
 .attendanceRow > span:last-child { flex: none; }
@@ -79,13 +103,12 @@
 .skeletonDayList > div { min-height: var(--control-medium); padding-block: 0; border-bottom: 0; }
 @media (max-width: 850px) {
   .skeletonDay { height: var(--control-large); }
-  .grid { display: flex; flex-direction: column; gap: var(--space-8); }
+  /* 폰에서는 달력, 이달의 일정, 상세, 공지, 내 출석 순으로 한 줄로 쌓입니다. */
+  .grid { display: flex; flex-direction: column; gap: var(--space-5); }
   .card { width: 100%; }
-  .detail { padding: var(--space-8) 0 0; border-left: 0; border-top: 1px solid var(--color-line); }
   .eventList { max-height: none; }
-  .attendance { padding-top: var(--space-8); }
-  .day { min-height: var(--control-large); align-items: center; padding: var(--space-2) 0; }
+  .calendarTable td { height: auto; }
+  .day { min-height: var(--control-large); height: auto; align-items: center; padding: var(--space-2) 0; }
   .dayEvent, .moreEvents { display: none; }
   .day i { display: block; width: 5px; height: 5px; margin-top: var(--space-1); border-radius: 50%; background: var(--color-primary); }
-  .selectedEvent { padding: var(--space-5); }
 }
