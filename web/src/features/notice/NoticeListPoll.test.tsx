@@ -47,10 +47,10 @@ describe("공지 목록 투표 미리보기", () => {
     expect(trigger).toHaveAccessibleDescription("미참여");
     fireEvent.click(screen.getByRole("button", { name: "투표하기" }));
     await waitFor(() => expect(trigger).toHaveAccessibleDescription("참석"));
+    // 목록은 서버 응답 직후 바뀌지만 저장 작업은 조금 뒤에 끝나므로, 끝난 뒤에 눌러야 다음 선택이 무시되지 않습니다.
+    await waitFor(() => expect(screen.getByRole("button", { name: "선택 변경" })).toBeInTheDocument());
     fireEvent.click(screen.getByRole("radio", { name: /^불참/ }));
     expect(trigger).toHaveAccessibleDescription("참석");
-    // 내 선택은 서버 응답 전에 먼저 보이므로, 저장이 끝나 버튼 이름이 바뀔 때까지 기다립니다.
-    await waitFor(() => expect(screen.getByRole("button", { name: "선택 변경" })).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: "선택 변경" }));
     await waitFor(() => expect(trigger).toHaveAccessibleDescription("불참"));
     fireEvent.click(screen.getByRole("button", { name: "닫기" }));
@@ -68,7 +68,8 @@ describe("공지 목록 투표 미리보기", () => {
     fireEvent.click(screen.getByRole("button", { name: "투표하기" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("투표를 저장하지 못했습니다.");
     expect(trigger).toHaveAccessibleDescription("미참여");
-    expect(screen.getByRole("button", { name: "투표하기" })).toBeEnabled();
+    // 오류 문구는 저장 작업이 끝나기 전에 먼저 그려지므로, 버튼 이름이 돌아올 때까지 기다립니다.
+    await waitFor(() => expect(screen.getByRole("button", { name: "투표하기" })).toBeEnabled());
   });
 
   it("상세 조회에서 마감을 확인하면 목록에서도 마감 상태와 선택을 유지한다", async () => {

@@ -1,7 +1,7 @@
 import { afterEach, expect, onTestFinished, test, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemberRoles } from "./MemberRoles";
+import { MemberFacts, MemberRoles } from "./MemberRoles";
 import { assignMemberRole, removeMemberRole, updateMemberProfile, type MemberItem } from "./adminMembers";
 import type { MemberSession } from "../auth/session";
 
@@ -17,8 +17,10 @@ const item: MemberItem = { id: 7, name: "단원", email: "member@example.test", 
 test("직책을 한글로 보여 주고 해제합니다", async () => {
   vi.mocked(removeMemberRole).mockResolvedValue(undefined);
   const onChanged = vi.fn();
-  render(<MemberRoles item={item} session={president} onChanged={onChanged} />);
+  render(<><MemberFacts item={item} /><MemberRoles item={item} session={president} onChanged={onChanged} /></>);
   expect(screen.getByText("알토수석")).toBeInTheDocument();
+  expect(screen.getByText("2기")).toBeInTheDocument();
+  expect(screen.getByText("정보 수정").closest("details")).not.toHaveAttribute("open");
   await userEvent.click(screen.getByRole("button", { name: "단원 알토수석 해제" }));
   expect(removeMemberRole).toHaveBeenCalledWith(7, 11);
   await waitFor(() => expect(onChanged).toHaveBeenCalled());
@@ -27,6 +29,7 @@ test("직책을 한글로 보여 주고 해제합니다", async () => {
 test("부원은 부서와 계를 함께 골라 추가합니다", async () => {
   vi.mocked(assignMemberRole).mockResolvedValue({ id: 12, role: "DEPARTMENT_MEMBER", department: "MANAGEMENT", unit: "SCORES", part: null });
   render(<MemberRoles item={item} session={president} onChanged={vi.fn()} />);
+  expect(screen.getByRole("button", { name: "단원 직책 추가" })).toBeDisabled();
   await userEvent.selectOptions(screen.getByLabelText("추가할 직책"), "DEPARTMENT_MEMBER");
   await userEvent.selectOptions(screen.getByLabelText("부서"), "MANAGEMENT");
   await userEvent.selectOptions(screen.getByLabelText("계"), "SCORES");
@@ -89,4 +92,15 @@ test("직책이 없으면 확인 없이 OB로 바꾸고, 승인 전 계정에는
   expect(screen.queryByLabelText("단원 구분")).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "단원 정보 저장" }));
   expect(updateMemberProfile).toHaveBeenLastCalledWith(7, { part: "ALTO", cohort: 2 });
+});
+
+test("직책을 줄 수 없는 이유를 그 자리에 적고, 열어 달라고 하면 정보 수정을 펼칩니다", () => {
+  const { unmount } = render(<MemberRoles item={{ ...item, status: "APPROVAL_PENDING", memberType: null, roles: [] }} session={president} open onChanged={vi.fn()} />);
+  expect(screen.getByText("정보 수정").closest("details")).toHaveAttribute("open");
+  expect(screen.queryByLabelText("추가할 직책")).not.toBeInTheDocument();
+  expect(screen.getByText("가입을 승인하면 직책을 줄 수 있습니다.")).toBeInTheDocument();
+  unmount();
+  render(<MemberRoles item={{ ...item, memberType: "OB", roles: [] }} session={president} onChanged={vi.fn()} />);
+  expect(screen.queryByLabelText("추가할 직책")).not.toBeInTheDocument();
+  expect(screen.getByText(/OB는 직책을 가질 수 없습니다/)).toBeInTheDocument();
 });
