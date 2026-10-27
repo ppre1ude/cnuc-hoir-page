@@ -42,7 +42,7 @@ export function DesignSystemPreview() {
       <div className={styles.actions}>
         <Button aria-pressed={attending} onClick={() => setAttending(true)}>참석</Button>
         <Button aria-pressed={!attending} onClick={() => setAttending(false)}>불참</Button>
-        <StatusBadge tone="positive">승인</StatusBadge><StatusBadge>미응답</StatusBadge><StatusBadge tone="negative">접근 해제</StatusBadge>
+        <StatusBadge tone="positive">승인</StatusBadge><StatusBadge>미응답</StatusBadge><StatusBadge tone="attention">승인 대기</StatusBadge><StatusBadge tone="negative">접근 해제</StatusBadge>
       </div>
     </section>
     <section className={styles.section}>
