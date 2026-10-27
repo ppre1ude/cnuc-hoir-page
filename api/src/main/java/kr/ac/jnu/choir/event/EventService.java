@@ -8,6 +8,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.HashSet;
 import kr.ac.jnu.choir.common.ApiException;
+import kr.ac.jnu.choir.member.Part;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,15 +33,19 @@ public class EventService {
 
     @Transactional(readOnly = true)
     public Event get(long id) {
-        return events.findById(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND,
-                "EVENT_NOT_FOUND", "행사를 찾을 수 없습니다."));
+        return events.findById(id).orElseThrow(EventService::notFound);
+    }
+
+    public static ApiException notFound() {
+        return new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "행사를 찾을 수 없습니다.");
     }
 
     @Transactional
-    public Event create(String title, String description, Instant startAt, Instant endAt,
+    public Event create(String title, String description, Instant startAt, Instant endAt, EventKind kind, Part part,
             boolean obEligible, boolean publicVisible) {
         validInterval(startAt, endAt);
-        return events.save(new Event(title, description, startAt, endAt, obEligible, publicVisible, clock));
+        validKind(kind, part);
+        return events.save(new Event(title, description, startAt, endAt, kind, part, obEligible, publicVisible, clock));
     }
 
     @Transactional
@@ -53,6 +58,7 @@ public class EventService {
         var requested = new HashSet<String>();
         for (var item : input) {
             validInterval(item.startAt(), item.endAt());
+            validKind(item.kind(), item.part());
             if (!requested.add(duplicateKey(item.title(), item.startAt()))) {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "DUPLICATE_EVENT_TIME", "같은 제목의 일정이 같은 시작 시각에 두 번 들어 있습니다.");
             }
@@ -67,7 +73,7 @@ public class EventService {
                             + "에 시작하는 같은 제목의 일정이 이미 있습니다. 그 날짜를 빼고 다시 등록해 주세요.");
                 });
         return events.saveAll(input.stream().map(item -> new Event(item.title(), item.description(),
-                item.startAt(), item.endAt(), item.obEligible(), item.publicVisible(), clock)).toList());
+                item.startAt(), item.endAt(), item.kind(), item.part(), item.obEligible(), item.publicVisible(), clock)).toList());
     }
 
     private static String duplicateKey(String title, Instant startAt) {
@@ -75,12 +81,21 @@ public class EventService {
     }
 
     @Transactional
-    public Event update(long id, String title, String description, Instant startAt, Instant endAt,
-            boolean obEligible, boolean publicVisible) {
+    public Event update(long id, String title, String description, Instant startAt, Instant endAt, EventKind kind,
+            Part part, boolean obEligible, boolean publicVisible) {
         validInterval(startAt, endAt);
+        validKind(kind, part);
         Event event = get(id);
-        event.update(title, description, startAt, endAt, obEligible, publicVisible, clock);
+        event.update(title, description, startAt, endAt, kind, part, obEligible, publicVisible, clock);
         return event;
+    }
+
+    // 파트연습은 파트가 하나 있어야 하고, 전체연습과 행사에는 파트가 없어야 합니다. DB 제약과 같은 규칙입니다.
+    private void validKind(EventKind kind, Part part) {
+        if (kind == null || (kind == EventKind.PART_REHEARSAL) != (part != null)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EVENT_PART",
+                    "파트연습은 파트를 하나 골라야 하고, 전체연습과 행사에는 파트를 고르지 않습니다.");
+        }
     }
 
     private void validInterval(Instant from, Instant to) {

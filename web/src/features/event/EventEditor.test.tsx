@@ -13,7 +13,7 @@ vi.mock("./events", async (importOriginal) => ({
 
 const septemberEvent = {
   id: 1, title: "정기 연습", description: "연습실", startAt: "2026-09-20T10:00:00Z",
-  endAt: "2026-09-20T12:00:00Z", obEligible: false, publicVisible: false,
+  endAt: "2026-09-20T12:00:00Z", kind: "EVENT", part: null, obEligible: false, publicVisible: false,
 };
 const octoberEvent = {
   ...septemberEvent, title: "가을 공연", startAt: "2026-10-20T10:00:00Z", endAt: "2026-10-20T12:00:00Z",

@@ -4,26 +4,29 @@ import { Button, Feedback, StatusBadge } from "../../components/ui";
 
 import { useEffect, useOptimistic, useState, useTransition } from "react";
 import { ApiRequestError } from "../../lib/api";
-import { setEventRsvp, type ChoirEvent, type EventRsvpChoice } from "./events";
+import type { Part } from "../auth/session";
+import { isEventTarget, setEventRsvp, type ChoirEvent, type EventRsvpChoice } from "./events";
 import styles from "./EventCalendar.module.css";
 
 type Props = {
   event: ChoirEvent;
   memberType: "ACTIVE" | "OB" | null;
+  part?: Part | null;
   choice: EventRsvpChoice | null;
   onSaved: (choice: EventRsvpChoice) => void;
 };
 
 const labels = { ATTENDING: "참석", ABSENT: "불참" } as const;
 
-export function EventRsvp({ event, memberType, choice, onSaved }: Props) {
+export function EventRsvp({ event, memberType, part = null, choice, onSaved }: Props) {
   const [busy, startSaving] = useTransition();
   // 누른 즉시 이 값으로 배지를 바꾸고, 저장이 끝나면 부모가 준 choice로 돌아갑니다. 실패해도 이전 값으로 돌아갑니다.
   const [shown, showChoice] = useOptimistic(choice);
   const [error, setError] = useState("");
   const [savedMessage, setSavedMessage] = useState("");
   const [closed, setClosed] = useState(() => new Date(event.startAt).getTime() <= Date.now());
-  const eligible = memberType === "ACTIVE" || (memberType === "OB" && event.obEligible);
+  // 다른 파트의 파트연습은 운영진에게 보이기만 하고 응답은 받지 않습니다.
+  const eligible = isEventTarget(event, { memberType, part });
 
   useEffect(() => {
     const startAt = new Date(event.startAt).getTime();

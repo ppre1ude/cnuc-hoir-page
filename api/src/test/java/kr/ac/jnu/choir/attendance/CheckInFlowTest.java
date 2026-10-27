@@ -75,13 +75,13 @@ class CheckInFlowTest {
     }
     // 시계는 10:00에 고정이라 09:50 시작 행사는 "시작 10분 뒤"입니다. 정시 출석 구간 안이고 열 수도 있습니다.
     private long event(boolean obEligible) {
-        jdbc.update("INSERT INTO event (title,description,start_at,end_at,ob_eligible,public_visible,created_at,updated_at) "
-                + "VALUES ('연습','설명','2026-09-27 09:50:00','2026-09-27 12:00:00',?,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))", obEligible);
+        jdbc.update("INSERT INTO event (title,description,start_at,end_at,kind,ob_eligible,public_visible,created_at,updated_at) "
+                + "VALUES ('연습','설명','2026-09-27 09:50:00','2026-09-27 12:00:00','EVENT',?,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))", obEligible);
         return jdbc.queryForObject("SELECT MAX(id) FROM event", Long.class);
     }
     private long eventAt(String start, String end) {
-        jdbc.update("INSERT INTO event (title,description,start_at,end_at,ob_eligible,public_visible,created_at,updated_at) "
-                + "VALUES ('연습','설명',?,?,FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))",
+        jdbc.update("INSERT INTO event (title,description,start_at,end_at,kind,ob_eligible,public_visible,created_at,updated_at) "
+                + "VALUES ('연습','설명',?,?,'EVENT',FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))",
                 Timestamp.valueOf(start), Timestamp.valueOf(end));
         return jdbc.queryForObject("SELECT MAX(id) FROM event", Long.class);
     }
@@ -460,10 +460,10 @@ class CheckInFlowTest {
     @Test void attendanceListShowsStartedEventsNewestFirst() throws Exception {
         Member active = member("ACTIVE", false);
         long recent = event(false);
-        jdbc.update("INSERT INTO event (title,description,start_at,end_at,ob_eligible,public_visible,created_at,updated_at) "
-                + "VALUES ('지난주 연습','설명','2026-09-20 09:00:00','2026-09-20 12:00:00',FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6)), "
-                + "('저녁 연습','설명','2026-09-27 13:00:00','2026-09-27 15:00:00',FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6)), "
-                + "('다음 주 연습','설명','2026-10-04 09:00:00','2026-10-04 12:00:00',FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))");
+        jdbc.update("INSERT INTO event (title,description,start_at,end_at,kind,ob_eligible,public_visible,created_at,updated_at) "
+                + "VALUES ('지난주 연습','설명','2026-09-20 09:00:00','2026-09-20 12:00:00','EVENT',FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6)), "
+                + "('저녁 연습','설명','2026-09-27 13:00:00','2026-09-27 15:00:00','EVENT',FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6)), "
+                + "('다음 주 연습','설명','2026-10-04 09:00:00','2026-10-04 12:00:00','EVENT',FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))");
 
         String list = myList(active);
         assertThat(list).contains("지난주 연습", "\"startAt\":\"2026-09-20T09:00:00Z\"").doesNotContain("저녁 연습", "다음 주 연습");
@@ -473,8 +473,8 @@ class CheckInFlowTest {
     @Test void attendanceListShowsUpcomingEventOnceCheckInOpens() throws Exception {
         Member admin = member("ACTIVE", true);
         Member active = member("ACTIVE", false);
-        jdbc.update("INSERT INTO event (title,description,start_at,end_at,ob_eligible,public_visible,created_at,updated_at) "
-                + "VALUES ('곧 시작할 연습','설명','2026-09-27 10:10:00','2026-09-27 12:00:00',FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))");
+        jdbc.update("INSERT INTO event (title,description,start_at,end_at,kind,ob_eligible,public_visible,created_at,updated_at) "
+                + "VALUES ('곧 시작할 연습','설명','2026-09-27 10:10:00','2026-09-27 12:00:00','EVENT',FALSE,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))");
         long upcoming = jdbc.queryForObject("SELECT MAX(id) FROM event", Long.class);
         assertThat(myList(active)).doesNotContain("곧 시작할 연습");
 

@@ -10,6 +10,8 @@ import java.util.List;
 import kr.ac.jnu.choir.auth.ClientIpResolver;
 import kr.ac.jnu.choir.auth.SessionMemberService;
 import kr.ac.jnu.choir.common.ApiException;
+import kr.ac.jnu.choir.event.EventAccessService;
+import kr.ac.jnu.choir.event.EventService;
 import kr.ac.jnu.choir.member.Member;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,38 +30,51 @@ public class AttendanceController {
     private final ClientIpResolver ips;
     private final CheckInAttemptLimiter attempts;
     private final CheckInService checkIns;
+    private final EventService events;
+    private final EventAccessService accesses;
 
     public AttendanceController(SessionMemberService sessions, ClientIpResolver ips,
-            CheckInAttemptLimiter attempts, CheckInService checkIns) {
+            CheckInAttemptLimiter attempts, CheckInService checkIns, EventService events, EventAccessService accesses) {
         this.sessions = sessions;
         this.ips = ips;
         this.attempts = attempts;
         this.checkIns = checkIns;
+        this.events = events;
+        this.accesses = accesses;
+    }
+
+    // 운영진만 들어오고, 파트연습이면 그 파트 수석과 단장단만 출석 창·명단·정정을 다룹니다.
+    private Member requireRoster(HttpServletRequest request, long eventId) {
+        Member actor = sessions.require(request, Permission.MANAGE_EVENTS);
+        if (!accesses.of(actor).canManageRoster(events.get(eventId))) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "PERMISSION_REQUIRED", "이 기능을 쓸 권한이 없습니다.");
+        }
+        return actor;
     }
 
     @PostMapping("/admin/events/{id}/check-in-session")
     public ResponseEntity<CheckInService.IssuedSession> open(HttpServletRequest request, @PathVariable long id) {
-        sessions.require(request, Permission.MANAGE_EVENTS);
+        requireRoster(request, id);
         return ResponseEntity.status(HttpStatus.CREATED).body(checkIns.open(id));
     }
 
     @PostMapping("/admin/events/{id}/check-in-session/{sessionId}/rotate")
     public CheckInService.IssuedSession rotate(HttpServletRequest request, @PathVariable long id,
             @PathVariable long sessionId) {
-        sessions.require(request, Permission.MANAGE_EVENTS);
+        requireRoster(request, id);
         return checkIns.rotate(id, sessionId);
     }
 
     @PostMapping("/admin/events/{id}/check-in-session/close")
     public ResponseEntity<Void> close(HttpServletRequest request, @PathVariable long id) {
-        sessions.require(request, Permission.MANAGE_EVENTS);
+        requireRoster(request, id);
         checkIns.close(id);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/admin/events/{id}/check-in-session")
     public CheckInService.SessionStatus session(HttpServletRequest request, @PathVariable long id) {
-        sessions.require(request, Permission.MANAGE_EVENTS);
+        requireRoster(request, id);
         return checkIns.sessionStatus(id);
     }
 
@@ -86,14 +101,14 @@ public class AttendanceController {
 
     @GetMapping("/admin/events/{id}/attendance")
     public List<CheckInService.AdminAttendance> adminList(HttpServletRequest request, @PathVariable long id) {
-        sessions.require(request, Permission.MANAGE_EVENTS);
+        requireRoster(request, id);
         return checkIns.adminList(id);
     }
 
     @PutMapping("/admin/events/{id}/attendance/{memberId}")
     public ResponseEntity<Void> correct(HttpServletRequest request, @PathVariable long id,
             @PathVariable long memberId, @Valid @RequestBody CorrectionInput input) {
-        Member actor = sessions.require(request, Permission.MANAGE_EVENTS);
+        Member actor = requireRoster(request, id);
         checkIns.correct(id, memberId, actor, input.status(), input.reason());
         return ResponseEntity.noContent().build();
     }

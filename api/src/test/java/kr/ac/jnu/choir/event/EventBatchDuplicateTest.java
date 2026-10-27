@@ -74,7 +74,7 @@ class EventBatchDuplicateTest {
             if (!events.isEmpty()) events.append(',');
             String end = item[1].replace("T10:", "T12:");
             events.append("{\"title\":\"").append(item[0]).append("\",\"description\":\"\",\"startAt\":\"").append(item[1])
-                    .append("\",\"endAt\":\"").append(end).append("\",\"obEligible\":false,\"publicVisible\":false}");
+                    .append("\",\"endAt\":\"").append(end).append("\",\"kind\":\"EVENT\",\"obEligible\":false,\"publicVisible\":false}");
         }
         return mvc.perform(post("/api/v1/admin/events/batch").session(session).header("X-CSRF-TOKEN", csrf)
                 .contentType("application/json").content("{\"events\":[" + events + "]}")).andReturn().getResponse();

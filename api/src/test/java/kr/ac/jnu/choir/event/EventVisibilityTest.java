@@ -69,7 +69,7 @@ class EventVisibilityTest {
 
     private String input(String title, String from, String to, boolean ob, boolean visible) {
         return "{\"title\":\"" + title + "\",\"description\":\"행사 설명\",\"startAt\":\"" + from
-                + "\",\"endAt\":\"" + to + "\",\"obEligible\":" + ob + ",\"publicVisible\":" + visible + "}";
+                + "\",\"endAt\":\"" + to + "\",\"kind\":\"EVENT\",\"obEligible\":" + ob + ",\"publicVisible\":" + visible + "}";
     }
 
     private long create(Member admin, String body) throws Exception {

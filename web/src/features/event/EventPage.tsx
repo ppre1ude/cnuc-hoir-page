@@ -5,7 +5,7 @@ import { Button, Feedback, PageHeader, SkeletonRows, StatusBadge } from "../../c
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { can } from "../auth/session";
+import { canManageRoster } from "../auth/session";
 import { useSession } from "../auth/SessionProvider";
 import { getEvent, getMyEventRsvp, type ChoirEvent, type EventRsvpChoice } from "./events";
 import { EventDetail } from "./EventDetail";
@@ -59,15 +59,15 @@ export function EventPage() {
     <PageHeader title={event?.title ?? "일정"} />
     {error && <Feedback tone="error">{error} <Button variant="secondary" onClick={() => { setError(""); setRetry((value) => value + 1); }}>다시 시도</Button></Feedback>}
     {!Number.isSafeInteger(Number(id)) || Number(id) < 1 ? <p>일정 주소를 확인해 주세요.</p> :
-      event ? <div className={styles.eventPageCard}><EventDetail event={event} memberType={session.memberType}
+      event ? <div className={styles.eventPageCard}><EventDetail event={event} memberType={session.memberType} part={session.part}
         checkInOpen={attendance?.checkInOpen ?? false} showTitle={false} />
-        {rsvpLoaded && <EventRsvp key={`${event.id}-${event.startAt}`} event={event} memberType={session.memberType} choice={rsvpChoice} onSaved={setRsvpChoice} />}
+        {rsvpLoaded && <EventRsvp key={`${event.id}-${event.startAt}`} event={event} memberType={session.memberType} part={session.part} choice={rsvpChoice} onSaved={setRsvpChoice} />}
         {rsvpError && <Feedback tone="error">{rsvpError} <Button variant="secondary" type="button" onClick={() => {
           setRsvpError(""); setRsvpRetry((value) => value + 1);
         }}>다시 시도</Button></Feedback>}
         <div className={styles.eventAttendance}><strong>내 출석</strong>{attendance ? <StatusBadge tone={attendanceTone(attendance.status)}>{memberAttendanceLabel(attendance)}</StatusBadge> : !attendanceError && <span role="status">확인 중</span>}</div>
         {attendanceError && <Feedback tone="error">{attendanceError}</Feedback>}
-        {can(session, "MANAGE_EVENTS") && <p><Link href={`/admin/events/${event.id}/attendance`}>운영진 출석 관리</Link></p>}</div>
+        {canManageRoster(session, event) && <p><Link href={`/admin/events/${event.id}/attendance`}>운영진 출석 관리</Link></p>}</div>
         : !error && <SkeletonRows count={4} label="일정을 불러오는 중입니다." />}
   </main>;
 }

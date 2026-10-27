@@ -44,7 +44,7 @@ export default async function setup(): Promise<void> {
     const eventResponse = await context.request.post("/api/v1/admin/events", {
       headers: { "X-CSRF-TOKEN": token },
       data: { title: eventTitle, description: "격리 테스트 행사", startAt, endAt,
-        obEligible: false, publicVisible: false },
+        kind: "EVENT", part: null, obEligible: false, publicVisible: false },
     });
     expect(eventResponse.status()).toBe(201);
     const event = await eventResponse.json() as { id: number };

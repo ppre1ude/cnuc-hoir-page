@@ -8,7 +8,8 @@ public enum Permission {
     MANAGE_ALLOWLIST,            // 자동 승인 명단
     APPROVE_APPLICATIONS,        // 가입 승인·반려, 1회용 링크 발급
     MANAGE_FULL_REHEARSALS,      // 전체연습 개최·수정
-    MANAGE_PART_REHEARSALS,      // 모든 파트의 파트연습 개최·수정과 집계
+    MANAGE_PART_REHEARSALS,      // 모든 파트의 파트연습 개최·수정
+    MANAGE_PART_ATTENDANCE,      // 모든 파트의 파트연습 응답 집계와 출석 관리
     MANAGE_EVENTS,               // 행사·공지 등록·수정, 출석 창과 정정
     WRITE_MINUTES,               // 회의록 쓰기·고치기
     DELETE_MINUTES,              // 회의록 삭제
