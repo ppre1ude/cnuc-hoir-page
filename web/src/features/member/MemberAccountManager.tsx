@@ -144,6 +144,13 @@ export function MemberAccountManager() {
   </section>;
 }
 
+// 승인 직후 안내는 이 자리에서 실제로 할 수 있는 일만 말합니다. 직책 권한이 없으면 승인 사실만, OB면 파트·기수 확인까지만 안내합니다.
+function approvedNote(item: MemberItem, session: MemberSession): string {
+  if (!can(session, "MANAGE_ROLES")) return "승인했습니다.";
+  if (item.memberType !== "ACTIVE") return "승인했습니다. 파트와 기수를 확인해 주세요.";
+  return "승인했습니다. 파트와 기수를 확인하고 직책을 더해 주세요.";
+}
+
 function MemberRow({ item, busy, session, opened, onChanged, onRenew, onRevoke, onReopen, onApprove, onReject }: {
   item: MemberItem; busy: boolean; session: MemberSession; opened: boolean; onChanged: () => void;
   onRenew: () => void; onRevoke: (reason: string) => void; onReopen: () => void;
@@ -162,7 +169,7 @@ function MemberRow({ item, busy, session, opened, onChanged, onRenew, onRevoke, 
     <MemberFacts item={item} />
     {can(session, "APPROVE_APPLICATIONS") && item.status === "APPROVAL_PENDING"
       && <PendingApproval item={item} busy={busy} onApprove={onApprove} onReject={onReject} />}
-    {opened && <Feedback tone="success">승인했습니다. 파트와 기수를 확인하고 직책을 더해 주세요.</Feedback>}
+    {opened && <Feedback tone="success">{approvedNote(item, session)}</Feedback>}
     {/* 승인되면 구분이 바뀌므로 폼의 입력값을 새로 잡습니다. */}
     <MemberRoles key={`${item.status}-${item.memberType}`} item={item} session={session} open={opened} onChanged={onChanged} />
     {can(session, "APPROVE_APPLICATIONS") && (item.status === "REVOKED" || !item.googleLinked && (item.status === "INVITED" || item.status === "APPROVED")) && <div className={styles.actions}>

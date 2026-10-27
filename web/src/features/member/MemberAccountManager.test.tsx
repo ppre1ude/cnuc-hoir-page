@@ -135,6 +135,32 @@ test("승인 대기 계정은 행에서 바로 승인하고, 같은 자리에서
   expect(within(row).queryByRole("button", { name: "신청자 승인" })).not.toBeInTheDocument();
 });
 
+test("OB로 승인하면 직책 추가 대신 파트·기수 확인만 안내합니다", async () => {
+  vi.mocked(getMembers).mockResolvedValueOnce({ items: [pending(5, "신청자")], page: 0, size: 20, total: 1 })
+    .mockResolvedValueOnce({ items: [{ ...member(5, "신청자"), memberType: "OB", part: "ALTO", cohort: 2 }], page: 0, size: 20, total: 1 });
+  vi.mocked(approveApplication).mockResolvedValue();
+  renderWithSession(<MemberAccountManager />, operator);
+  const row = (await screen.findByRole("heading", { name: "신청자" })).closest("article")!;
+  await userEvent.selectOptions(within(row).getByLabelText("신청자 단원 구분"), "OB");
+  await userEvent.click(within(row).getByRole("button", { name: "신청자 승인" }));
+  expect(approveApplication).toHaveBeenCalledWith(5, "OB");
+  expect(await within(row).findByText("OB는 직책을 가질 수 없습니다. 활동 단원으로 바꾸면 직책을 줄 수 있습니다.")).toBeInTheDocument();
+  expect(within(row).getByRole("status")).toHaveTextContent("승인했습니다. 파트와 기수를 확인해 주세요.");
+  expect(within(row).getByRole("status")).not.toHaveTextContent("직책");
+});
+
+test("직책 관리 권한이 없는 운영진에게는 승인 사실만 안내합니다", async () => {
+  vi.mocked(getMembers).mockResolvedValueOnce({ items: [pending(5, "신청자")], page: 0, size: 20, total: 1 })
+    .mockResolvedValueOnce({ items: [{ ...member(5, "신청자"), part: "ALTO", cohort: 2 }], page: 0, size: 20, total: 1 });
+  vi.mocked(approveApplication).mockResolvedValue();
+  renderWithSession(<MemberAccountManager />, sessionFixture({ name: "부장", permissions: ["VIEW_MEMBERS", "APPROVE_APPLICATIONS"] }));
+  const row = (await screen.findByRole("heading", { name: "신청자" })).closest("article")!;
+  await userEvent.click(within(row).getByRole("button", { name: "신청자 승인" }));
+  expect(await within(row).findByText("사용 중")).toBeInTheDocument();
+  expect(within(row).getByRole("status")).toHaveTextContent(/^승인했습니다.$/);
+  expect(within(row).queryByText("정보 수정")).not.toBeInTheDocument();
+});
+
 test("승인 대기 계정을 이유를 적어 반려하면 행 상태가 가입 반려로 바뀝니다", async () => {
   vi.mocked(getMembers).mockResolvedValueOnce({ items: [pending(5, "신청자")], page: 0, size: 20, total: 1 })
     .mockResolvedValueOnce({ items: [{ ...pending(5, "신청자"), status: "REJECTED" }], page: 0, size: 20, total: 1 });
