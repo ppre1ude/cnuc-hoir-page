@@ -1,6 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
 import { LoginForm } from "./LoginForm";
-import { SandMark } from "./SandMark";
 import styles from "./LoginPoster.module.css";
 
 /** 안쪽 면 머리의 오선. 제목이 가사처럼 오선 아래에 놓입니다. 대기 그림(WaitingScore)과 같은 곡선입니다. */
@@ -10,12 +10,13 @@ function Staff() {
   </svg>;
 }
 
-/** 단원 로그인 화면. 펼친 리플렛처럼 초록 겉면(모래 심벌과 합창단 이름)과 연한 안쪽 면(제목, 구글 로그인 버튼)으로 나뉩니다. className으로 페이퍼로지 글꼴 변수를 받습니다. */
+/** 단원 로그인 화면. 펼친 리플렛처럼 초록 겉면(심벌과 합창단 이름)과 연한 안쪽 면(제목, 구글 로그인 버튼)으로 나뉩니다. className으로 페이퍼로지 글꼴 변수를 받습니다. */
 export function LoginPoster({ className }: { className?: string }) {
   return <div className={className ? `${styles.paper} ${className}` : styles.paper}>
     <main className={styles.leaflet}>
       <div className={styles.cover}>
-        <SandMark className={styles.mark} />
+        {/* 심벌 원본 이미지를 흰색으로 바꿔 올립니다. 이름은 바로 아래 글자로 있어 대체 글은 비웁니다. */}
+        <Image className={styles.mark} src="/images/choir-mark.png" alt="" width={540} height={359} priority />
         <p className={styles.brand}>전남대학교 합창단</p>
       </div>
       <div className={styles.inside}>

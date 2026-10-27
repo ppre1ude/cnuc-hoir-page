@@ -8,7 +8,6 @@ import { stagePhoto } from "./activityPhotos";
 import { choirChannels } from "./choirProfile";
 import { historyByYear, publicNews } from "./newsItems";
 import { startSandStage } from "./sand/stage";
-import { BRAND_MARK as MARK } from "../../lib/brandMark";
 import styles from "./SandLanding.module.css";
 
 // 공개 메인: 한 번 넘기면 한 장면씩, 모래 입자가 심벌·파형·음표·오선·사진·길로 모였다 흩어집니다.
@@ -33,6 +32,8 @@ const VALUES: { eyebrow: string; title: ReactNode; body: string }[] = [
   { eyebrow: "합창", title: <strong>우리가 됩니다.</strong>, body: "같은 악보를 들고 같은 무대에 서는 순간, 여러 목소리가 하나의 노래가 됩니다." },
 ];
 
+/** 입자로 그릴 심벌. 원본 비율을 그대로 쓰고, 그릴 때는 줄인 이미지를 받습니다. */
+const MARK = { src: "/images/choir-mark.png", width: 2775, height: 1845 }; // 투명 여백 없이 그림 경계로 자른 원본 크기
 
 const pad = (n: number) => String(n).padStart(2, "0");
 

@@ -1,5 +1,5 @@
 /* 단원 로그인 리플렛. 초록 겉면(.cover)과 연한 안쪽 면(.inside)을 펼쳐 놓은 한 장입니다.
-   겉면은 심벌과 합창단 이름을 한 묶음으로 세로 가운데에 두고, 안쪽 면은 오선 아래 제목, 구글 버튼, 안내, 홈 링크입니다.
+   겉면은 심벌 이미지와 합창단 이름을 한 묶음으로 세로 가운데에 두고, 안쪽 면은 오선 아래 제목, 구글 버튼, 안내, 홈 링크입니다.
    .paper가 종이색과 잉크색을 잡아 두고, 겉면 안에서는 색 토큰을 뒤집어(글자·초점은 잉크, 바탕은 종이) 공용 요소가 초록 위에서 보이게 합니다.
    안쪽 면은 기본 토큰 그대로라 구글 버튼, 오류 상자, 다시 시도 버튼이 평소 모습으로 보입니다. */
 .paper {
@@ -38,12 +38,8 @@
 }
 .cover ::selection { background: var(--ink); color: var(--paper); }
 
-/* 심벌 상자: 입자 캔버스가 상자를 꽉 채우고, 대체 이미지는 캔버스를 못 쓰거나 자바스크립트가 없을 때만 흰색으로 보입니다. */
-.mark { position: relative; width: min(100%, 280px); aspect-ratio: 2775 / 1845; }
-.canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; pointer-events: none; }
-.fallback { display: none; width: 100%; height: auto; filter: brightness(0) invert(1); }
-.mark[data-sand-mark="fallback"] .fallback { display: block; }
-@media (scripting: none) { .fallback { display: block; } }
+/* 심벌 원본 이미지. 초록 위에서는 흰색으로 바꿉니다. */
+.mark { display: block; width: min(100%, 280px); height: auto; filter: brightness(0) invert(1); }
 
 .brand { margin: 0; font-size: clamp(28px, 7.5vw, 36px); font-weight: var(--weight-heading); letter-spacing: -.04em; line-height: 1.15; }
 
