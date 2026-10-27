@@ -2,12 +2,13 @@
 
 import { ActionLink, Button, Feedback, PageHeader, SkeletonRows, StatusBadge } from "../../components/ui";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSession } from "../auth/SessionProvider";
 import { getNotices, type Notice } from "../notice/notices";
 import { type ChoirEvent, type EventRsvpChoice, getEvents, getMyEventRsvps, monthBounds, seoulDateKey } from "./events";
 import { EventDetail } from "./EventDetail";
+import { EventKindIcon, eventKind } from "./EventKind";
 import { EventRsvp } from "./EventRsvp";
 import { attendanceDate, getEventAttendance, getMyAttendance, memberAttendanceLabel, type AttendanceState } from "../attendance/attendance";
 import { memberLinks } from "../member/memberLinks";
@@ -39,6 +40,19 @@ function eventRange(month: string) {
   return to > bounds.to ? { from: bounds.from, to } : bounds;
 }
 
+type Chip = { tone: "positive" | "neutral" | "negative" | "attention"; label: string };
+
+// 목록 행은 응답을 받지 않고 상태만 보여 줍니다. 지난 일정의 "참석"이 출석으로 읽히지 않게 응답임을 밝힙니다.
+function rsvpChip(event: ChoirEvent, memberType: "ACTIVE" | "OB" | null, choice: EventRsvpChoice | null | undefined): Chip | null {
+  const eligible = memberType === "ACTIVE" || (memberType === "OB" && event.obEligible);
+  if (!eligible) return { tone: "neutral", label: "대상 아님" };
+  if (choice === undefined) return null;
+  const closed = new Date(event.startAt).getTime() <= Date.now();
+  if (choice === "ATTENDING") return closed ? { tone: "neutral", label: "참석 응답" } : { tone: "positive", label: "참석" };
+  if (choice === "ABSENT") return closed ? { tone: "neutral", label: "불참 응답" } : { tone: "negative", label: "불참" };
+  return { tone: closed ? "neutral" : "attention", label: "미응답" };
+}
+
 export function EventCalendar() {
   const session = useSession();
   const [month, setMonth] = useState(() => seoulDateKey(new Date()).slice(0, 7));
@@ -61,6 +75,8 @@ export function EventCalendar() {
   const [loadedMonth, setLoadedMonth] = useState("");
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
+  const detailRef = useRef<HTMLElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
 
   useEffect(() => {
     let alive = true;
@@ -118,6 +134,13 @@ export function EventCalendar() {
     setError("");
   }
 
+  // 폰에서는 상세가 목록 아래에 있어 행을 눌러도 바뀐 게 안 보이므로 상세로 내려갑니다.
+  function pickEvent(event: ChoirEvent) {
+    setSelectedDate(seoulDateKey(event.startAt));
+    setSelectedEventId(event.id);
+    if (window.matchMedia?.("(max-width: 850px)").matches) detailRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  }
+
   const monthEvents = loadedMonth === month && !error ? events : [];
   const dayEvents = monthEvents.filter((event) => {
     const first = seoulDateKey(event.startAt);
@@ -138,6 +161,13 @@ export function EventCalendar() {
     void refresh();
     const timer = window.setInterval(refresh, 15000);
     return () => { alive = false; window.clearInterval(timer); };
+  }, [selectedId]);
+  // 처음 열면 오늘 일정이 골라지는데 목록 아래쪽이면 넘김 상자 밖에 숨으므로 가운데로 넘깁니다. 폰에서는 목록이 넘기지 않아 그대로 둡니다.
+  // scrollIntoView는 화면 전체까지 움직이므로 목록 상자만 직접 넘깁니다.
+  useEffect(() => {
+    const list = listRef.current;
+    const row = list?.querySelector<HTMLElement>("[aria-pressed='true']");
+    if (list && row && list.scrollHeight > list.clientHeight) list.scrollTop = row.offsetTop - (list.clientHeight - row.offsetHeight) / 2;
   }, [selectedId]);
   const offset = mondayOffset(month);
   const weeks = Array.from({ length: Math.ceil((offset + daysInMonth(month)) / 7) }, (_, week) =>
@@ -177,7 +207,7 @@ export function EventCalendar() {
               aria-current={key === today ? "date" : undefined}
               aria-label={`${month.replace("-", "년 ")}월 ${day}일${count ? `, 일정 ${count}개` : ""}`}>
               <span className={styles.dayNumber}>{day}</span>
-              {count > 0 && <span className={styles.dayEvent}>{eventsOnDay[0].title}</span>}
+              {count > 0 && <span className={`${styles.kind} ${styles.dayEvent}`} data-kind={eventKind(eventsOnDay[0].title)}>{eventsOnDay[0].title}</span>}
               {count > 1 && <span className={styles.moreEvents}>+{count - 1}</span>}
               {count > 0 && <i aria-hidden="true" />}
             </Button></td>;
@@ -191,31 +221,41 @@ export function EventCalendar() {
             aria-pressed={selected?.id === event.id} onClick={() => setSelectedEventId(event.id)}>{event.title}</Button>)}
         </div>
       </section>
-      <div className={styles.rightColumn}>
-      <section aria-label="선택한 일정" className={`${styles.card} ${styles.detail}`}>
+      <section aria-label="이달의 일정" className={`${styles.card} ${styles.list}`}>
         <div className={styles.sectionHeader}><h2>이달의 일정</h2></div>
         {rsvpError && <Feedback tone="error">{rsvpError} <Button variant="secondary" type="button" onClick={() => {
           setRsvpError(""); setRsvpRetry((value) => value + 1);
         }}>다시 시도</Button></Feedback>}
+        {!eventsLoaded && !error && <SkeletonRows count={4} label="이달의 일정을 불러오는 중입니다." />}
         {eventsLoaded && sortedEvents.length === 0 && <p className={styles.empty}>등록된 일정이 없습니다.</p>}
-        {sortedEvents.length > 0 && <ul className={styles.eventList}>
+        {sortedEvents.length > 0 && <ul className={styles.eventList} ref={listRef}>
           {sortedEvents.map((event) => {
-            const date = seoulDateKey(event.startAt);
-            return <li key={event.id} className={`${styles.eventRow} ${selected?.id === event.id ? styles.activeEvent : ""}`}>
-              <Button variant="unstyled" type="button" className={styles.eventSelect} aria-pressed={selected?.id === event.id}
-                onClick={() => { setSelectedDate(date); setSelectedEventId(event.id); }}>
-                <time dateTime={event.startAt} className={styles.eventDate}>{date.slice(5).replace("-", ".")}</time>
-                <span className={styles.eventTitle}>{event.title}</span>
+            const chip = rsvpChip(event, session.memberType, rsvpLoadedMonth === month ? rsvpByEvent[event.id] ?? null : undefined);
+            // 어제까지 끝난 일정만 흐리게 둡니다. 오늘 일정은 가장 먼저 찾아야 하므로 그대로 둡니다.
+            const past = seoulDateKey(new Date(new Date(event.endAt).getTime() - 1)) < today;
+            return <li key={event.id} className={`${styles.eventRow} ${selected?.id === event.id ? styles.activeEvent : ""} ${past ? styles.pastEvent : ""}`}>
+              <Button variant="unstyled" type="button" className={styles.eventSelect} aria-pressed={selected?.id === event.id} onClick={() => pickEvent(event)}>
+                <EventKindIcon title={event.title} />
+                {/* 버튼 이름이 "날짜 제목 상태"로 띄어 읽히도록 사이에 공백을 둡니다. 플렉스 안이라 보이지는 않습니다. */}
+                <span className={styles.eventText}>
+                  <time dateTime={event.startAt} className={styles.eventDate}>{attendanceDate(event.startAt)}</time>{" "}
+                  <span className={styles.eventTitle}>{event.title}</span>
+                </span>{" "}
+                {chip && <StatusBadge tone={chip.tone}>{chip.label}</StatusBadge>}
               </Button>
-              {rsvpLoadedMonth === month && <EventRsvp key={`${event.id}-${event.startAt}`} compact event={event}
-                memberType={session.memberType} choice={rsvpByEvent[event.id] ?? null}
-                onSaved={(choice) => setRsvpByEvent((current) => ({ ...current, [event.id]: choice }))} />}
             </li>;
           })}
         </ul>}
-        {selected && <div className={styles.selectedEvent}><EventDetail event={selected} memberType={session.memberType}
-          checkInOpen={selectedAttendance?.eventId === selected.id && selectedAttendance.checkInOpen} link />
-        </div>}
+      </section>
+      <section aria-label="선택한 일정" className={`${styles.card} ${styles.detail}`} ref={detailRef}>
+        {selected ? <>
+          <EventDetail event={selected} memberType={session.memberType}
+            checkInOpen={selectedAttendance?.eventId === selected.id && selectedAttendance.checkInOpen} link />
+          {rsvpLoadedMonth === month && <EventRsvp key={`${selected.id}-${selected.startAt}`} event={selected} memberType={session.memberType}
+            choice={rsvpByEvent[selected.id] ?? null}
+            onSaved={(choice) => setRsvpByEvent((current) => ({ ...current, [selected.id]: choice }))} />}
+        </> : eventsLoaded ? <p className={styles.empty}>일정을 고르면 여기에 자세한 내용이 보입니다.</p>
+          : !error && <SkeletonRows count={3} label="선택한 일정을 불러오는 중입니다." />}
       </section>
       <section aria-label="최근 공지" className={`${styles.card} ${styles.notices}`}>
         <div className={styles.sectionHeader}><h2>공지</h2><Link href="/notices">전체 보기 <span aria-hidden="true">→</span></Link></div>
@@ -224,7 +264,6 @@ export function EventCalendar() {
         {!noticeError && noticesLoaded && notices.length === 0 && <p>게시된 공지가 없습니다.</p>}
         {!noticeError && notices.map((notice) => <Link key={notice.id} href={`/notices?notice=${notice.id}`} className={styles.noticeItem}><span>{notice.title}</span><span aria-hidden="true">→</span></Link>)}
       </section>
-      </div>
       <section aria-label="내 출석 요약" className={`${styles.card} ${styles.attendance}`}>
         <div className={styles.sectionHeader}><h2>내 출석</h2><Link href="/attendance">전체 보기 <span aria-hidden="true">→</span></Link></div>
         {attendanceError && <Feedback tone="error">{attendanceError} <Button variant="secondary" onClick={() => { setAttendanceError(""); setAttendanceLoaded(false); setAttendanceRetry((value) => value + 1); }}>다시 시도</Button></Feedback>}
