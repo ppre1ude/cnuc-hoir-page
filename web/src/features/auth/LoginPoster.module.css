@@ -1,0 +1,93 @@
+/* 단원 로그인 리플렛. 초록 겉면(.cover)과 연한 안쪽 면(.inside)을 펼쳐 놓은 한 장입니다.
+   겉면은 심벌 이미지와 합창단 이름을 한 묶음으로 세로 가운데에 두고, 안쪽 면은 오선 아래 제목, 구글 버튼, 안내, 홈 링크입니다.
+   .paper가 종이색과 잉크색을 잡아 두고, 겉면 안에서는 색 토큰을 뒤집어(글자·초점은 잉크, 바탕은 종이) 공용 요소가 초록 위에서 보이게 합니다.
+   안쪽 면은 기본 토큰 그대로라 구글 버튼, 오류 상자, 다시 시도 버튼이 평소 모습으로 보입니다. */
+.paper {
+  --paper: var(--color-primary);
+  --ink: var(--color-surface);
+  --ink-soft: var(--color-highlight);
+  /* 페이퍼로지는 정적 굵기라 공개 메인처럼 굵기 토큰을 그에 맞춥니다. */
+  --weight-medium: var(--weight-public-medium);
+  --weight-label: var(--weight-public-label);
+  --weight-heading: var(--weight-public-heading);
+  display: flex;
+  min-height: 100svh;
+  background: var(--color-subtle);
+  color: var(--color-ink);
+  font-family: var(--font-paperlogy), "Pretendard Variable", "Malgun Gothic", sans-serif;
+  word-break: keep-all;
+}
+.leaflet { display: flex; flex-direction: column; width: 100%; }
+
+/* 겉면: 심벌과 이름을 한 묶음으로 */
+.cover {
+  --color-primary: var(--ink);
+  --color-primary-hover: var(--ink-soft);
+  --color-brand: var(--ink);
+  --color-surface: var(--paper);
+  --color-ink: var(--ink);
+  --color-muted: var(--ink-soft);
+  --color-line: color-mix(in srgb, var(--ink) 45%, transparent);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-6);
+  padding: var(--space-10) var(--page-gutter);
+  background: var(--paper);
+  color: var(--ink);
+}
+.cover ::selection { background: var(--ink); color: var(--paper); }
+
+/* 심벌 원본 이미지. 초록 위에서는 흰색으로 바꿉니다. */
+.mark { display: block; width: min(100%, 280px); height: auto; filter: brightness(0) invert(1); }
+
+.brand { margin: 0; font-size: clamp(28px, 7.5vw, 36px); font-weight: var(--weight-heading); letter-spacing: -.04em; line-height: 1.15; }
+
+/* 안쪽 면: 오선, 제목, 구글 버튼, 안내, 홈 링크. 겉면과 버튼 사이에 숨을 두도록 위를 넉넉히 비웁니다. */
+.inside { flex: 1 0 auto; display: flex; padding: var(--space-12) var(--page-gutter) var(--space-16); }
+.copy { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4); width: 100%; max-width: 420px; }
+.staff { display: block; width: 100%; height: auto; margin-bottom: var(--space-2); color: var(--color-field-border); overflow: visible; }
+.staff > path { fill: none; stroke: currentColor; stroke-width: 1.25; }
+/* 음표 하나가 왼쪽에서 나타나 오선의 굴곡을 따라 네 음을 거쳐 오른쪽으로 사라집니다. 한 번 건너는 데 10초라 눈에 띄되 방해하지 않습니다. */
+.note { color: var(--color-brand); fill: currentColor; stroke: currentColor; stroke-width: 2; animation: drift 10s ease-in-out infinite; }
+@keyframes drift {
+  0% { transform: translate(28px, 37px); opacity: 0; }
+  8% { opacity: 1; }
+  25% { transform: translate(119px, 25px); }
+  50% { transform: translate(210px, 45px); }
+  75% { transform: translate(301px, 33px); }
+  92% { opacity: 1; }
+  100% { transform: translate(392px, 22px); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .note { animation: none; transform: translate(210px, 45px); } }
+/* 서버를 깨우는 동안 따로 뜨던 작은 대기 오선은 머리의 오선이 대신합니다. 대기 안내 글은 그대로 보입니다. */
+.copy > svg:not(.staff) { display: none; }
+.title { margin: 0 0 var(--space-2); font-size: clamp(36px, 9vw, 48px); font-weight: var(--weight-heading); letter-spacing: -.05em; line-height: 1.1; }
+.copy p:not([class]) { margin: 0; max-width: 30em; color: var(--color-muted); font-size: var(--text-label); line-height: 1.6; }
+/* 구글 버튼은 상자 폭(최대 320px)으로 그려지고, 버튼이 오기 전에도 자리를 잡아 둡니다. 버튼은 iframe이라 초점 테두리를 상자에 그립니다. */
+.copy [aria-label="구글 로그인"] { width: min(100%, 320px); min-height: var(--control-medium); }
+.copy [aria-label="구글 로그인"]:focus-within { outline: 2px solid var(--color-primary); outline-offset: 4px; border-radius: var(--radius-small); }
+.home {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-medium);
+  margin-top: var(--space-4);
+  color: var(--color-primary);
+  font-size: .9375rem;
+  font-weight: var(--weight-label);
+  text-decoration: underline;
+  text-decoration-color: var(--color-field-border);
+  text-underline-offset: 5px;
+  transition: text-decoration-color var(--motion-fast);
+}
+.home:hover { text-decoration-color: currentColor; }
+
+/* PC: 겉면과 안쪽 면을 좌우로 펼칩니다. 두 면 모두 내용을 세로 가운데에 둡니다. */
+@media (min-width: 761px) {
+  .leaflet { flex-direction: row; }
+  .cover { flex: 0 0 50%; gap: var(--space-8); padding: var(--space-12) min(8vw, 96px); }
+  .mark { width: min(100%, 440px); }
+  .brand { font-size: 44px; }
+  .inside { align-items: center; justify-content: center; padding: var(--space-12) min(8vw, 96px); }
+  .title { font-size: 48px; }
+}
