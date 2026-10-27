@@ -127,14 +127,16 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
     finally { setBusy(false); }
   }
 
-  // 아직 열 수 있는 시각 전이면 버튼을 끄고, 그 시각이 되면 다시 그려 버튼을 켭니다.
+  // 창이 닫혀 있으면 다음 경계(열 수 있는 시각, 연습 종료)에 다시 그려 버튼을 켜거나 숨깁니다.
+  // 이미 지난 경계면 바로 그립니다. 세션 응답이 늦게 와서 now가 낡은 경우도 여기서 맞춰집니다.
   useEffect(() => {
     if (!session || session.open) return;
-    const wait = new Date(session.opensAt).getTime() - Date.now();
-    if (wait <= 0) return;
-    const timer = window.setTimeout(() => setNow(Date.now()), wait);
+    const next = [session.opensAt, session.expiresAt]
+      .map((value) => value ? new Date(value).getTime() : NaN).find((time) => time > now);
+    if (next === undefined) return;
+    const timer = window.setTimeout(() => setNow(Date.now()), Math.max(0, next - Date.now()));
     return () => window.clearTimeout(timer);
-  }, [session]);
+  }, [session, now]);
   const beforeOpen = session !== null && !session.open && new Date(session.opensAt).getTime() > now;
   // 연습이 끝나면 서버가 열기를 거절하므로 버튼 대신 정정을 안내합니다.
   const ended = session !== null && session.expiresAt !== null && new Date(session.expiresAt).getTime() <= now;
