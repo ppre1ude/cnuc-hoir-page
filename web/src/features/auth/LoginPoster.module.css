@@ -1,4 +1,5 @@
 /* 단원 로그인 리플렛. 초록 겉면(.cover)과 연한 안쪽 면(.inside)을 펼쳐 놓은 한 장입니다.
+   겉면은 심벌과 합창단 이름을 한 묶음으로 세로 가운데에 두고, 안쪽 면은 오선 아래 제목, 구글 버튼, 안내, 홈 링크입니다.
    .paper가 종이색과 잉크색을 잡아 두고, 겉면 안에서는 색 토큰을 뒤집어(글자·초점은 잉크, 바탕은 종이) 공용 요소가 초록 위에서 보이게 합니다.
    안쪽 면은 기본 토큰 그대로라 구글 버튼, 오류 상자, 다시 시도 버튼이 평소 모습으로 보입니다. */
 .paper {
@@ -18,7 +19,7 @@
 }
 .leaflet { display: flex; flex-direction: column; width: 100%; }
 
-/* 겉면: 심벌 위, 제목 아래 */
+/* 겉면: 심벌과 이름을 한 묶음으로 */
 .cover {
   --color-primary: var(--ink);
   --color-primary-hover: var(--ink-soft);
@@ -29,8 +30,9 @@
   --color-line: color-mix(in srgb, var(--ink) 45%, transparent);
   display: flex;
   flex-direction: column;
-  gap: var(--space-8);
-  padding: var(--space-8) var(--page-gutter);
+  justify-content: center;
+  gap: var(--space-6);
+  padding: var(--space-10) var(--page-gutter);
   background: var(--paper);
   color: var(--ink);
 }
@@ -43,13 +45,14 @@
 .mark[data-sand-mark="fallback"] .fallback { display: block; }
 @media (scripting: none) { .fallback { display: block; } }
 
-.heading { display: grid; gap: 6px; }
-.brand { margin: 0; font-size: .9375rem; font-weight: var(--weight-label); }
-.title { margin: 0; font-size: clamp(40px, 10vw, 56px); font-weight: var(--weight-heading); letter-spacing: -.05em; line-height: 1.1; }
+.brand { margin: 0; font-size: clamp(28px, 7.5vw, 36px); font-weight: var(--weight-heading); letter-spacing: -.04em; line-height: 1.15; }
 
-/* 안쪽 면: 구글 버튼, 안내, 홈 링크 */
-.inside { flex: 1 0 auto; display: flex; padding: var(--space-8) var(--page-gutter) var(--space-12); }
+/* 안쪽 면: 오선, 제목, 구글 버튼, 안내, 홈 링크. 겉면과 버튼 사이에 숨을 두도록 위를 넉넉히 비웁니다. */
+.inside { flex: 1 0 auto; display: flex; padding: var(--space-12) var(--page-gutter) var(--space-16); }
 .copy { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4); width: 100%; max-width: 420px; }
+.staff { display: block; width: 100%; height: auto; margin-bottom: var(--space-2); color: var(--color-field-border); overflow: visible; }
+.staff path { fill: none; stroke: currentColor; stroke-width: 1.25; }
+.title { margin: 0 0 var(--space-2); font-size: clamp(36px, 9vw, 48px); font-weight: var(--weight-heading); letter-spacing: -.05em; line-height: 1.1; }
 .copy p:not([class]) { margin: 0; max-width: 30em; color: var(--color-muted); font-size: var(--text-label); line-height: 1.6; }
 /* 구글 버튼은 상자 폭(최대 320px)으로 그려지고, 버튼이 오기 전에도 자리를 잡아 둡니다. 버튼은 iframe이라 초점 테두리를 상자에 그립니다. */
 .copy [aria-label="구글 로그인"] { width: min(100%, 320px); min-height: var(--control-medium); }
@@ -69,12 +72,12 @@
 }
 .home:hover { text-decoration-color: currentColor; }
 
-/* PC: 겉면과 안쪽 면을 좌우로 펼칩니다. 겉면은 심벌을 위에, 제목을 아래에 두고 안쪽 면은 세로 가운데입니다. */
+/* PC: 겉면과 안쪽 면을 좌우로 펼칩니다. 두 면 모두 내용을 세로 가운데에 둡니다. */
 @media (min-width: 761px) {
   .leaflet { flex-direction: row; }
-  .cover { flex: 0 0 50%; justify-content: space-between; padding: var(--space-12) min(8vw, 96px); }
-  .mark { width: min(100%, 460px); }
+  .cover { flex: 0 0 50%; gap: var(--space-8); padding: var(--space-12) min(8vw, 96px); }
+  .mark { width: min(100%, 440px); }
+  .brand { font-size: 44px; }
   .inside { align-items: center; justify-content: center; padding: var(--space-12) min(8vw, 96px); }
-  .brand { font-size: 1.0625rem; }
-  .title { font-size: 56px; }
+  .title { font-size: 48px; }
 }
