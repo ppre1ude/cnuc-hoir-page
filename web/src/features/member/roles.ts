@@ -11,9 +11,14 @@ export const parts = Object.keys(partLabel) as Part[];
 export const roles = Object.keys(roleLabel) as Role[];
 export const departments = Object.keys(departmentLabel) as Department[];
 
+// "소프라노 5기"처럼 파트와 기수만 적습니다. 둘 다 없으면 빈 문자열입니다.
+export function rosterDetail({ part, cohort }: { part: Part | null; cohort: number | null }): string {
+  return [part && partLabel[part], cohort != null && `${cohort}기`].filter(Boolean).join(" ");
+}
+
 // 운영진 명단은 이메일을 보이지 않으므로 "김민지 · 소프라노 5기"처럼 파트와 기수로 동명이인을 가립니다.
 export function rosterName({ name, part, cohort }: { name: string; part: Part | null; cohort: number | null }): string {
-  const detail = [part && partLabel[part], cohort != null && `${cohort}기`].filter(Boolean).join(" ");
+  const detail = rosterDetail({ part, cohort });
   return detail ? `${name} · ${detail}` : name;
 }
 
