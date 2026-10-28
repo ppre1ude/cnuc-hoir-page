@@ -30,6 +30,8 @@ test.each([
   vi.mocked(attendance.getEventAttendance).mockResolvedValue({ eventId: 3, eventTitle: "연습", startAt, status: "NOT_OPEN", checkInOpen });
   renderWithSession(<EventPage />, member);
   expect(await screen.findByText(label)).toBeInTheDocument();
+  // 메뉴의 '일정'과 같은 곳으로 돌아갑니다.
+  expect(screen.getByRole("link", { name: "← 일정" })).toHaveAttribute("href", "/events");
 });
 
 test("행사 상세에서 창이 닫히면 참여 버튼을 보여주지 않습니다", async () => {

@@ -44,7 +44,7 @@ export function PageGate({ skeleton, permission, children }: {
   if (permission && !can(session, permission)) {
     return <div className={styles.message}>
       <p>이 기능을 쓸 권한이 없습니다.</p>
-      <ActionLink href="/dashboard" variant="secondary">일정으로 가기</ActionLink>
+      <ActionLink href="/dashboard" variant="secondary">홈으로 가기</ActionLink>
     </div>;
   }
   return children;

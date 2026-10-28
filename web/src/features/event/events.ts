@@ -2,8 +2,16 @@ import { apiRequest } from "../../lib/api";
 import type { MemberSession, Part } from "../auth/session";
 import { partLabel } from "../member/roles";
 
-export type ScheduleKind = "FULL_REHEARSAL" | "PART_REHEARSAL" | "EVENT";
-export const scheduleKindLabel: Record<ScheduleKind, string> = { FULL_REHEARSAL: "전체연습", PART_REHEARSAL: "파트연습", EVENT: "행사" };
+export type ScheduleKind = "REGULAR_REHEARSAL" | "EXTRA_REHEARSAL" | "PART_REHEARSAL" | "EVENT";
+// 등록 화면의 선택지 순서입니다. EVENT는 연주회, 발표회, MT 같은 일정이라 "중요 행사"라고 부릅니다.
+export const scheduleKinds: ScheduleKind[] = ["REGULAR_REHEARSAL", "EXTRA_REHEARSAL", "PART_REHEARSAL", "EVENT"];
+export const scheduleKindLabel: Record<ScheduleKind, string> = {
+  REGULAR_REHEARSAL: "정기연습", EXTRA_REHEARSAL: "비정기연습", PART_REHEARSAL: "파트연습", EVENT: "중요 행사",
+};
+// 목록의 종류 배지와 개수 배지에 쓰는 짧은 이름입니다.
+export const kindShortLabel: Record<ScheduleKind, string> = {
+  REGULAR_REHEARSAL: "정기", EXTRA_REHEARSAL: "비정기", PART_REHEARSAL: "파트", EVENT: "중요 행사",
+};
 
 export type ChoirEvent = {
   id: number;
@@ -119,4 +127,25 @@ export function updateEvent(id: number, input: EventInput): Promise<ChoirEvent> 
 // 운영진 명단에서 출석 시각만 "오후 6:03"처럼 보입니다.
 export function seoulTime(value: string) {
   return new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", timeStyle: "short" }).format(new Date(value));
+}
+
+// "2026-11"에서 count달 뒤의 달입니다. 음수면 앞의 달입니다.
+export function addMonths(month: string, count: number): string {
+  const [year, number] = month.split("-").map(Number);
+  const next = new Date(Date.UTC(year, number - 1 + count, 1));
+  return `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+export type Chip = { tone: "positive" | "neutral" | "negative" | "attention"; label: string };
+
+// 목록 행은 응답을 받지 않고 상태만 보여 줍니다. 지난 일정의 "참석"이 출석으로 읽히지 않게 응답임을 밝힙니다.
+// choice가 undefined면 응답을 아직 못 받은 것이라 칩을 그리지 않습니다.
+export function rsvpChip(event: ChoirEvent, member: { memberType: "ACTIVE" | "OB" | null; part?: Part | null },
+  choice: EventRsvpChoice | null | undefined): Chip | null {
+  if (!isEventTarget(event, member)) return { tone: "neutral", label: "대상 아님" };
+  if (choice === undefined) return null;
+  const closed = new Date(event.startAt).getTime() <= Date.now();
+  if (choice === "ATTENDING") return closed ? { tone: "neutral", label: "참석 응답" } : { tone: "positive", label: "참석" };
+  if (choice === "ABSENT") return closed ? { tone: "neutral", label: "불참 응답" } : { tone: "negative", label: "불참" };
+  return { tone: closed ? "neutral" : "attention", label: "미응답" };
 }

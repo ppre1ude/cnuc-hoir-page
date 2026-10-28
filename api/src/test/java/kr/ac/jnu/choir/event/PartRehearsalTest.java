@@ -149,7 +149,7 @@ class PartRehearsalTest {
         assertThat(noPart.getContentAsString()).contains("INVALID_EVENT_PART");
         assertThat(write(admin, post("/api/v1/admin/events"), input("파트 있는 행사", "EVENT", "TENOR", false))
                 .getStatus()).isEqualTo(400);
-        assertThat(write(admin, post("/api/v1/admin/events"), input("파트 있는 전체연습", "FULL_REHEARSAL", "TENOR", false))
+        assertThat(write(admin, post("/api/v1/admin/events"), input("파트 있는 전체연습", "REGULAR_REHEARSAL", "TENOR", false))
                 .getStatus()).isEqualTo(400);
         assertThat(write(admin, post("/api/v1/admin/events"), "{\"title\":\"종류 없음\",\"description\":\"\",\"startAt\":\""
                 + UPCOMING_START + "\",\"endAt\":\"" + UPCOMING_END + "\",\"obEligible\":false,\"publicVisible\":false}")
@@ -164,6 +164,13 @@ class PartRehearsalTest {
         assertThatThrownBy(() -> jdbc.update(insert, "PART_REHEARSAL", null)).isInstanceOf(DataIntegrityViolationException.class);
         assertThatThrownBy(() -> jdbc.update(insert, "PART_REHEARSAL", "CHOIR")).isInstanceOf(DataIntegrityViolationException.class);
         assertThatThrownBy(() -> jdbc.update(insert, "CONCERT", null)).isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> jdbc.update(insert, "FULL_REHEARSAL", null)).isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    // 정기와 비정기로 나뉘기 전의 값입니다. 배포 중 옛 화면이 보내면 거절합니다.
+    @Test void oldFullRehearsalKindIsRejected() throws Exception {
+        assertThat(write(siteAdmin(), post("/api/v1/admin/events"), input(unique("전체연습"), "FULL_REHEARSAL", null, false))
+                .getStatus()).isEqualTo(400);
     }
 
     @Test void operatorsCreateAndChangeOnlyKindsAndPartsTheyManage() throws Exception {
@@ -174,11 +181,13 @@ class PartRehearsalTest {
         long tenorRehearsal = create(tenorLead, input(unique("테너 파트연습"), "PART_REHEARSAL", "TENOR", false));
         assertThat(write(tenorLead, post("/api/v1/admin/events"), input(unique("소프라노 파트연습"), "PART_REHEARSAL", "SOPRANO", false))
                 .getStatus()).isEqualTo(403);
-        assertThat(write(tenorLead, post, input(unique("전체연습"), "FULL_REHEARSAL", null, false)).getStatus()).isEqualTo(403);
+        assertThat(write(tenorLead, post, input(unique("전체연습"), "REGULAR_REHEARSAL", null, false)).getStatus()).isEqualTo(403);
         create(tenorLead, input(unique("테너 회식"), "EVENT", null, false));
         long sopranoRehearsal = create(vice, input(unique("소프라노 파트연습"), "PART_REHEARSAL", "SOPRANO", false));
-        create(vice, input(unique("전체연습"), "FULL_REHEARSAL", null, false));
-        assertThat(write(treasurer, post("/api/v1/admin/events"), input(unique("전체연습"), "FULL_REHEARSAL", null, false))
+        create(vice, input(unique("전체연습"), "REGULAR_REHEARSAL", null, false));
+        assertThat(write(tenorLead, post, input(unique("비정기연습"), "EXTRA_REHEARSAL", null, false)).getStatus()).isEqualTo(403);
+        create(vice, input(unique("비정기연습"), "EXTRA_REHEARSAL", null, false));
+        assertThat(write(treasurer, post("/api/v1/admin/events"), input(unique("전체연습"), "REGULAR_REHEARSAL", null, false))
                 .getStatus()).isEqualTo(403);
         assertThat(write(treasurer, post("/api/v1/admin/events"), input(unique("테너 파트연습"), "PART_REHEARSAL", "TENOR", false))
                 .getStatus()).isEqualTo(403);
@@ -186,7 +195,7 @@ class PartRehearsalTest {
 
         String path = "/api/v1/admin/events/" + tenorRehearsal;
         assertThat(write(tenorLead, put(path), input("테너 파트연습 수정", "PART_REHEARSAL", "TENOR", false)).getStatus()).isEqualTo(200);
-        assertThat(write(tenorLead, put(path), input("전체연습으로", "FULL_REHEARSAL", null, false)).getStatus()).isEqualTo(403);
+        assertThat(write(tenorLead, put(path), input("전체연습으로", "REGULAR_REHEARSAL", null, false)).getStatus()).isEqualTo(403);
         assertThat(write(tenorLead, put(path), input("소프라노로", "PART_REHEARSAL", "SOPRANO", false)).getStatus()).isEqualTo(403);
         assertThat(write(tenorLead, put("/api/v1/admin/events/" + sopranoRehearsal),
                 input("남의 파트", "PART_REHEARSAL", "TENOR", false)).getStatus()).isEqualTo(403);

@@ -46,7 +46,7 @@ test("권한이 없으면 안내와 일정 링크를 보여 줍니다", () => {
   renderWithSession(<PageGate skeleton={skeleton} permission="APPROVE_APPLICATIONS"><Body /></PageGate>,
     sessionFixture({ permissions: ["MANAGE_EVENTS", "VIEW_MINUTES"] }));
   expect(screen.getByText("이 기능을 쓸 권한이 없습니다.")).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "일정으로 가기" })).toHaveAttribute("href", "/dashboard");
+  expect(screen.getByRole("link", { name: "홈으로 가기" })).toHaveAttribute("href", "/dashboard");
   expect(screen.queryByText(/본문:/)).not.toBeInTheDocument();
 });
 

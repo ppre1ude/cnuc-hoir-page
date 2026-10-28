@@ -10,10 +10,10 @@ import kr.ac.jnu.choir.member.Part;
 public record EventAccess(boolean siteAdmin, MemberType memberType, Part part, Set<Permission> permissions,
         Set<Part> leadParts) {
 
-    // 등록·수정입니다. 전체연습은 단장·부단장, 파트연습은 단장·부단장과 그 파트 수석, 행사는 운영진 전원입니다.
+    // 등록·수정입니다. 정기연습과 비정기연습은 단장·부단장, 파트연습은 단장·부단장과 그 파트 수석, 행사는 운영진 전원입니다.
     public boolean canManage(EventKind kind, Part eventPart) {
         return switch (kind) {
-            case FULL_REHEARSAL -> permissions.contains(Permission.MANAGE_FULL_REHEARSALS);
+            case REGULAR_REHEARSAL, EXTRA_REHEARSAL -> permissions.contains(Permission.MANAGE_FULL_REHEARSALS);
             case PART_REHEARSAL -> permissions.contains(Permission.MANAGE_PART_REHEARSALS) || leadParts.contains(eventPart);
             case EVENT -> permissions.contains(Permission.MANAGE_EVENTS);
         };

@@ -6,8 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSession } from "../auth/SessionProvider";
 import { getNotices, type Notice } from "../notice/notices";
-import type { Part } from "../auth/session";
-import { type ChoirEvent, type EventRsvpChoice, getEvents, getMyEventRsvps, isEventTarget, monthBounds, seoulDateKey } from "./events";
+import { type ChoirEvent, type EventRsvpChoice, getEvents, getMyEventRsvps, monthBounds, rsvpChip, seoulDateKey } from "./events";
 import { EventDetail } from "./EventDetail";
 import { EventKindIcon, eventKind } from "./EventKind";
 import { EventRsvp } from "./EventRsvp";
@@ -39,19 +38,6 @@ function eventRange(month: string) {
   const hour = 3_600_000;
   const to = new Date(Math.ceil((Date.now() + 14 * 86_400_000) / hour) * hour).toISOString();
   return to > bounds.to ? { from: bounds.from, to } : bounds;
-}
-
-type Chip = { tone: "positive" | "neutral" | "negative" | "attention"; label: string };
-
-// 목록 행은 응답을 받지 않고 상태만 보여 줍니다. 지난 일정의 "참석"이 출석으로 읽히지 않게 응답임을 밝힙니다.
-function rsvpChip(event: ChoirEvent, member: { memberType: "ACTIVE" | "OB" | null; part?: Part | null },
-  choice: EventRsvpChoice | null | undefined): Chip | null {
-  if (!isEventTarget(event, member)) return { tone: "neutral", label: "대상 아님" };
-  if (choice === undefined) return null;
-  const closed = new Date(event.startAt).getTime() <= Date.now();
-  if (choice === "ATTENDING") return closed ? { tone: "neutral", label: "참석 응답" } : { tone: "positive", label: "참석" };
-  if (choice === "ABSENT") return closed ? { tone: "neutral", label: "불참 응답" } : { tone: "negative", label: "불참" };
-  return { tone: closed ? "neutral" : "attention", label: "미응답" };
 }
 
 export function EventCalendar() {
@@ -180,7 +166,7 @@ export function EventCalendar() {
   const eventsLoaded = loadedMonth === month && !error;
 
   return <main id="member-content" tabIndex={-1} className={styles.dashboard}>
-    <PageHeader title="일정" className={styles.hero} actions={memberLinks.map((link) => <ActionLink key={link.href} variant="secondary"
+    <PageHeader title="홈" className={styles.hero} actions={memberLinks.map((link) => <ActionLink key={link.href} variant="secondary"
       href={link.href} target="_blank" rel="noopener noreferrer">{link.label} <span aria-hidden="true">↗</span></ActionLink>)} />
     {error && <div role="alert" className={styles.error}>{error} <Button variant="secondary" type="button" onClick={() => setRetry(retry + 1)}>다시 시도</Button></div>}
     <div className={styles.grid}>
@@ -208,7 +194,7 @@ export function EventCalendar() {
               aria-current={key === today ? "date" : undefined}
               aria-label={`${month.replace("-", "년 ")}월 ${day}일${count ? `, 일정 ${count}개` : ""}`}>
               <span className={styles.dayNumber}>{day}</span>
-              {count > 0 && <span className={`${styles.kind} ${styles.dayEvent}`} data-kind={eventKind(eventsOnDay[0].title)}>{eventsOnDay[0].title}</span>}
+              {count > 0 && <span className={`${styles.kind} ${styles.dayEvent}`} data-kind={eventKind(eventsOnDay[0])}>{eventsOnDay[0].title}</span>}
               {count > 1 && <span className={styles.moreEvents}>+{count - 1}</span>}
               {count > 0 && <i aria-hidden="true" />}
             </Button></td>;
@@ -236,7 +222,7 @@ export function EventCalendar() {
             const past = seoulDateKey(new Date(new Date(event.endAt).getTime() - 1)) < today;
             return <li key={event.id} className={`${styles.eventRow} ${selected?.id === event.id ? styles.activeEvent : ""} ${past ? styles.pastEvent : ""}`}>
               <Button variant="unstyled" type="button" className={styles.eventSelect} aria-pressed={selected?.id === event.id} onClick={() => pickEvent(event)}>
-                <EventKindIcon title={event.title} />
+                <EventKindIcon event={event} />
                 {/* 버튼 이름이 "날짜 제목 상태"로 띄어 읽히도록 사이에 공백을 둡니다. 플렉스 안이라 보이지는 않습니다. */}
                 <span className={styles.eventText}>
                   <time dateTime={event.startAt} className={styles.eventDate}>{attendanceDate(event.startAt)}</time>{" "}

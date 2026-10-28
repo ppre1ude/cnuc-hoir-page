@@ -34,12 +34,21 @@ describe("운영진 월간 일정 등록", () => {
     fireEvent.click(screen.getByRole("button", { name: "2개 일정 등록" }));
     await waitFor(() => expect(createEventsBatch).toHaveBeenCalledTimes(1));
     expect(createEventsBatch.mock.calls[0][0]).toEqual([
-      expect.objectContaining({ title: "전체연습", description: "", startAt: "2026-10-04T10:00:00.000Z", endAt: "2026-10-04T12:00:00.000Z",
-        kind: "FULL_REHEARSAL", part: null }),
-      expect.objectContaining({ title: "전체연습", description: "", startAt: "2026-10-11T10:00:00.000Z", endAt: "2026-10-11T12:00:00.000Z",
-        kind: "FULL_REHEARSAL", part: null }),
+      expect.objectContaining({ title: "정기연습", description: "", startAt: "2026-10-04T10:00:00.000Z", endAt: "2026-10-04T12:00:00.000Z",
+        kind: "REGULAR_REHEARSAL", part: null }),
+      expect.objectContaining({ title: "정기연습", description: "", startAt: "2026-10-11T10:00:00.000Z", endAt: "2026-10-11T12:00:00.000Z",
+        kind: "REGULAR_REHEARSAL", part: null }),
     ]);
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith("2026-10"));
+  });
+
+  it("종류는 정기연습, 비정기연습, 파트연습, 중요 행사 순서이고 고르면 제목이 따라 바뀐다", () => {
+    renderWithSession(<EventBatchCreator onCreated={vi.fn()} />, vicePresident);
+    const select = screen.getByLabelText("종류") as HTMLSelectElement;
+    expect(Array.from(select.options).map((option) => option.textContent)).toEqual(["정기연습", "비정기연습", "파트연습", "중요 행사"]);
+    expect(screen.getByLabelText("제목")).toHaveValue("정기연습");
+    fireEvent.change(select, { target: { value: "EXTRA_REHEARSAL" } });
+    expect(screen.getByLabelText("제목")).toHaveValue("비정기연습");
   });
 
   it("월을 지우면 날짜를 고를 수 없고 등록 버튼도 꺼진다", () => {
@@ -67,7 +76,7 @@ describe("운영진 월간 일정 등록", () => {
   it("수석은 자기 파트의 파트연습과 행사만 등록하고, 파트연습 제목은 파트 이름으로 채운다", async () => {
     renderWithSession(<EventBatchCreator onCreated={vi.fn()} />, tenorLead);
     const kind = screen.getByLabelText("종류");
-    expect([...kind.querySelectorAll("option")].map((option) => option.textContent)).toEqual(["파트연습", "행사"]);
+    expect([...kind.querySelectorAll("option")].map((option) => option.textContent)).toEqual(["파트연습", "중요 행사"]);
     expect([...screen.getByLabelText("파트").querySelectorAll("option")].map((option) => option.textContent)).toEqual(["테너"]);
     expect(screen.getByLabelText("제목")).toHaveValue("테너 파트연습");
     fireEvent.change(screen.getByLabelText("월"), { target: { value: "2026-10" } });
