@@ -3,6 +3,7 @@
 import { ActionLink, Button, Feedback, PageHeader, SkeletonRows, StatusBadge } from "../../components/ui";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useSession } from "../auth/SessionProvider";
 import { getNotices, type Notice } from "../notice/notices";
@@ -349,11 +350,8 @@ export function EventCalendar() {
             part={session.part} choice={rsvpByEvent[selected.id] ?? null}
             onSaved={(choice) => setRsvpByEvent((current) => ({ ...current, [selected.id]: choice }))} />}
         </> : eventsLoaded ? <div className={styles.emptyDay}>
-          {/* lucide calendar 모양입니다. 뜻은 문장이 전하므로 보조 기술에는 숨깁니다. */}
-          <span className={styles.emptyIcon} aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
-              strokeLinejoin="round"><path d="M8 2v4M16 2v4M3 10h18" /><rect width="18" height="18" x="3" y="4" rx="2" /></svg>
-          </span>
+          {/* 쉬는 용입니다. 뜻은 문장이 전하므로 보조 기술에는 숨깁니다. */}
+          <Image src="/images/dragon-rest.png" width={112} height={112} alt="" />
           <p>{Number(selectedDate.slice(5, 7))}월 {Number(selectedDate.slice(8))}일에는 일정이 없습니다.</p>
           {nextEvent && <Button variant="secondary" type="button" onClick={() => pickEvent(nextEvent)}>
             다음 일정: {Number(seoulDateKey(nextEvent.startAt).slice(5, 7))}월 {Number(seoulDateKey(nextEvent.startAt).slice(8))}일
