@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, onTestFinished, test, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ApplicationQueue } from "./ApplicationQueue";
 import { approveApplication, getApplications, rejectApplication, type ApplicationItem } from "./adminMembers";
@@ -13,6 +13,10 @@ beforeEach(() => {
   vi.mocked(rejectApplication).mockResolvedValue();
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
+
+// 왼쪽 목록에는 이름과 파트, 기수만 보이고, 고른 신청자의 정보가 오른쪽 상세 칸에 나옵니다.
+const roster = async () => within(await screen.findByRole("list", { name: "신청자 목록" }));
+const fact = (detail: HTMLElement, label: string) => within(detail).getByText(label, { selector: "dt" }).nextElementSibling;
 
 test("마지막 페이지의 마지막 신청을 처리하면 첫 페이지를 다시 불러옵니다", async () => {
   const firstPage = Array.from({ length: 20 }, (_, index) => ({
@@ -38,7 +42,10 @@ test("마지막 페이지의 마지막 신청을 처리하면 첫 페이지를 �
 test("신청 목록에서 OB를 선택해 승인합니다", async () => {
   render(<ApplicationQueue />);
   expect(await screen.findByText("member@example.org")).toBeInTheDocument();
-  await userEvent.selectOptions(screen.getByLabelText("신청자 단원 구분"), "OB");
+  const choice = within(screen.getByRole("group", { name: "신청자 단원 구분" }));
+  await userEvent.click(choice.getByRole("button", { name: "OB" }));
+  expect(choice.getByRole("button", { name: "OB" })).toHaveAttribute("aria-pressed", "true");
+  expect(choice.getByRole("button", { name: "활동 단원" })).toHaveAttribute("aria-pressed", "false");
   await userEvent.click(screen.getByRole("button", { name: "신청자 승인" }));
   expect(approveApplication).toHaveBeenCalledWith(2, "OB");
 });
@@ -78,16 +85,40 @@ test("반려 이유를 입력하고 충돌을 안내합니다", async () => {
   expect(await screen.findByRole("alert")).toHaveTextContent("이미 처리된 신청");
 });
 
-test("신청자가 적은 파트와 기수를 이름 옆에 보이고 적지 않았으면 정보 미입력으로 표시합니다", async () => {
+test("목록에는 이름과 파트, 기수만 보이고, 처음 신청자가 골라져 상세 칸에 파트, 기수, 신청일, 이메일이 표로 나옵니다", async () => {
   vi.mocked(getApplications).mockResolvedValue({ items: [
     { id: 3, name: "홍길동", email: "hong@example.org", status: "APPROVAL_PENDING", createdAt: "2026-09-27T00:00:00Z", part: "SOPRANO", cohort: 5 },
     { id: 4, name: "Kim", email: "kim@example.org", status: "APPROVAL_PENDING", createdAt: "2026-09-27T00:00:00Z", part: null, cohort: null },
   ], page: 0, size: 20, total: 2 });
   render(<ApplicationQueue />);
-  expect(await screen.findByRole("heading", { name: "홍길동 · 소프라노 5기" })).toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: "Kim · 정보 미입력" })).toBeInTheDocument();
+  const first = await (await roster()).findByRole("button", { name: /^홍길동/ });
+  expect(first).toHaveTextContent("소프라노 5기");
+  expect(first).toHaveAttribute("aria-current", "true");
+  expect((await roster()).getByRole("button", { name: /^Kim/ })).toHaveTextContent("정보 미입력");
+  const detail = screen.getByRole("heading", { name: "홍길동" }).closest("article")!;
+  expect(fact(detail, "파트")).toHaveTextContent("소프라노");
+  expect(fact(detail, "기수")).toHaveTextContent("5기");
+  expect(fact(detail, "신청일")).toHaveTextContent("2026. 9. 27.");
+  expect(fact(detail, "이메일")).toHaveTextContent("hong@example.org");
+  expect(screen.queryByText("kim@example.org")).not.toBeInTheDocument();
+  // 반려는 접혀 있고 승인만 바로 보입니다.
+  expect(screen.getByLabelText("홍길동 가입 신청 반려").closest("details")).not.toHaveAttribute("open");
+  await userEvent.click((await roster()).getByRole("button", { name: /^Kim/ }));
+  const kim = (await screen.findByRole("heading", { name: "Kim" })).closest("article")!;
+  expect(screen.queryByRole("heading", { name: "홍길동" })).not.toBeInTheDocument();
+  expect(fact(kim, "파트")).toHaveTextContent("미입력");
+  expect(fact(kim, "기수")).toHaveTextContent("미입력");
   await userEvent.click(screen.getByRole("button", { name: "Kim 승인" }));
   expect(approveApplication).toHaveBeenCalledWith(4, "ACTIVE");
+});
+
+test("좁은 화면에서 목록으로 돌아가면 상세 칸이 비고, 다시 고를 수 있습니다", async () => {
+  render(<ApplicationQueue />);
+  await screen.findByText("member@example.org");
+  await userEvent.click(screen.getByRole("button", { name: "목록으로" }));
+  expect(screen.getByText("왼쪽 목록에서 신청자를 고르면 여기에 정보가 나옵니다.")).toBeInTheDocument();
+  await userEvent.click((await roster()).getByRole("button", { name: /^신청자/ }));
+  expect(await screen.findByText("member@example.org")).toBeInTheDocument();
 });
 
 test("API가 아직 파트와 기수를 보내지 않아도 정보 미입력으로 표시합니다", async () => {
@@ -95,5 +126,7 @@ test("API가 아직 파트와 기수를 보내지 않아도 정보 미입력으�
   const legacy = { id: 5, name: "Lee", email: "lee@example.org", status: "APPROVAL_PENDING", createdAt: "2026-09-27T00:00:00Z" } as unknown as ApplicationItem;
   vi.mocked(getApplications).mockResolvedValue({ items: [legacy], page: 0, size: 20, total: 1 });
   render(<ApplicationQueue />);
-  expect(await screen.findByRole("heading", { name: "Lee · 정보 미입력" })).toBeInTheDocument();
+  expect(await (await roster()).findByRole("button", { name: /^Lee/ })).toHaveTextContent("정보 미입력");
+  const detail = screen.getByRole("heading", { name: "Lee" }).closest("article")!;
+  expect(fact(detail, "기수")).toHaveTextContent("미입력");
 });
