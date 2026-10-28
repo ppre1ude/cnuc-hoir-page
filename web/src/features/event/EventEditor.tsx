@@ -7,11 +7,18 @@ import Link from "next/link";
 import { canManageEvent, canManageRoster, type Part } from "../auth/session";
 import { useSession } from "../auth/SessionProvider";
 import { partLabel, parts } from "../member/roles";
-import { createEvent, eventKindText, getEvents, monthBounds, scheduleKindLabel, seoulDateKey, seoulDateTime, type ChoirEvent,
+import { createEvent, eventKindText, getEvents, monthBounds, scheduleKindLabel, seoulDateKey, seoulTime, type ChoirEvent,
   scheduleKinds, type ScheduleKind, updateEvent } from "./events";
 import styles from "./EventEditor.module.css";
+import calendarStyles from "./EventCalendar.module.css";
 import { EventBatchCreator } from "./EventBatchCreator";
 import { AdminEventRsvps } from "./AdminEventRsvps";
+import { eventKind } from "./EventKind";
+
+// 목록과 상세에 쓰는 "9월 20일 (일)" 모양입니다.
+function seoulDayLabel(value: string) {
+  return new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric", weekday: "short" }).format(new Date(value));
+}
 
 function localInput(value: string) {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -128,21 +135,36 @@ export function EventEditor() {
     {listError && <Feedback tone="error">{listError} <Button variant="secondary" type="button" onClick={() => { setListError(""); setRetry(retry + 1); }}>다시 시도</Button></Feedback>}
     {saved && <p role="status">일정을 저장했습니다.</p>}
     <EventBatchCreator onCreated={refreshList} />
-    <div className={`${styles.grid} ${!selected ? styles.singleColumn : ""}`}>
-      <section className={styles.card}>
-        <div className={styles.listHeader}><h2>{validMonth ? `${month.replace("-", "년 ")}월 일정` : "일정"}</h2>
-          <label>조회 월 <Input type="month" value={month} onChange={(change) => { currentMonth.current = change.target.value; setMonth(change.target.value); setLoadedMonth(""); }} /></label>
+    <section className={styles.section} aria-labelledby="list-title">
+      <h2 id="list-title">등록된 일정</h2>
+      {/* 계정 목록과 같은 틀입니다. 왼쪽 좁은 칸에 월과 일정 목록, 오른쪽에 고른 일정의 수정 폼과 응답 집계를 둡니다. */}
+      <div className={styles.workspace} data-view={selected ? "detail" : "list"}>
+        <div className={styles.roster}>
+          <label htmlFor="list-month">조회 월</label>
+          <Input id="list-month" type="month" value={month} onChange={(change) => { currentMonth.current = change.target.value; setMonth(change.target.value); setLoadedMonth(""); }} />
+          {!validMonth && <p>조회할 월을 골라 주세요.</p>}
+          {validMonth && !visible && !listError && <SkeletonRows count={5} label="일정을 불러오는 중입니다." />}
+          {visible?.length === 0 && <p>이번 달 등록된 일정이 없습니다.</p>}
+          <ul className={styles.rosterList} aria-label="일정 목록">
+            {visible?.map((event) => <li key={event.id}>
+              <button type="button" className={styles.rosterRow} aria-current={selected?.id === event.id ? "true" : undefined} onClick={() => edit(event)}>
+                <strong>{event.title}</strong><span>{seoulDayLabel(event.startAt)}</span>
+                <small>{eventKindText(event) !== event.title && `${eventKindText(event)} `}{seoulTime(event.startAt)}</small>
+              </button>
+            </li>)}
+          </ul>
         </div>
-        {!validMonth && <p>조회할 월을 골라 주세요.</p>}
-        {validMonth && !visible && !listError && <SkeletonRows count={5} label="일정을 불러오는 중입니다." />}
-        {visible?.length === 0 && <p>이번 달 등록된 일정이 없습니다.</p>}
-        {visible?.map((event) => <Button variant="unstyled" type="button" key={event.id} className={styles.eventRow} aria-pressed={selected?.id === event.id} onClick={() => edit(event)}>
-          <strong>{event.title}</strong><span>{eventKindText(event)} · {seoulDateTime(event.startAt)}</span><span aria-hidden="true" className={styles.arrow}>→</span>
-        </Button>)}
-      </section>
-      {selected && <section className={styles.card}>
-        <h2>일정 수정</h2>
-        {selected && <p><Link href={`/admin/events/${selected.id}/attendance`}>이 일정 출석 관리</Link></p>}
+        <div className={styles.detail}>
+          <Button variant="secondary" size="small" type="button" className={styles.toList} onClick={clear}>목록으로</Button>
+          {!selected && <p className={styles.placeholder}>목록에서 일정을 선택하세요.</p>}
+          {selected && <>
+        <div className={styles.detailHeader}>
+          <h3>{selected.title}</h3>
+          <span className={`${calendarStyles.kind} ${calendarStyles.kindBadge}`} data-kind={eventKind(selected)}>{eventKindText(selected)}</span>
+        </div>
+        {/* 여러 날에 걸친 일정은 끝나는 날짜도 적습니다. */}
+        <p className={styles.when}>{seoulDayLabel(selected.startAt)} {seoulTime(selected.startAt)} ~ {seoulDayLabel(selected.endAt) !== seoulDayLabel(selected.startAt) && `${seoulDayLabel(selected.endAt)} `}{seoulTime(selected.endAt)}</p>
+        <p><Link href={`/admin/events/${selected.id}/attendance`}>이 일정 출석 관리</Link></p>
         {error && <Feedback tone="error">{error}</Feedback>}
         <form onSubmit={save} className={styles.form}>
           {!editable && <p className={styles.hint}>이 일정은 고칠 권한이 없습니다. 출석 관리와 응답 집계만 볼 수 있습니다.</p>}
@@ -164,7 +186,9 @@ export function EventEditor() {
             <Button variant="secondary" type="button" onClick={clear}>닫기</Button></div>
         </form>
         <AdminEventRsvps key={selected.id} eventId={selected.id} />
-      </section>}
-    </div>
+          </>}
+        </div>
+      </div>
+    </section>
   </div>;
 }

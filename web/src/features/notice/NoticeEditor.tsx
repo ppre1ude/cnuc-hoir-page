@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Input, Select, Textarea, Feedback, PageHeader, SkeletonRows, StatusBadge } from "../../components/ui";
+import { Button, Input, Select, Textarea, Feedback, PageHeader, SkeletonRows } from "../../components/ui";
 
 import { useEffect, useState } from "react";
 import { ApiRequestError } from "../../lib/api";
@@ -130,21 +130,27 @@ export function NoticeEditor() {
     {error && <Feedback tone="error">{error}</Feedback>}
     {saved && <Feedback tone="success">공지를 저장했습니다.</Feedback>}
     {listError && <><Feedback tone="error">{listError}</Feedback><Button variant="secondary" type="button" onClick={() => { setListError(""); setData(null); setRetry(retry + 1); }}>다시 시도</Button></>}
-    <div className={styles.grid}><div className={styles.list}>{!visibleData && !listError && <SkeletonRows count={4} label="공지 목록을 불러오는 중입니다." />}
+    {/* 계정 목록과 같은 틀입니다. 왼쪽 좁은 칸에 공지 목록과 새 공지 버튼, 오른쪽에 작성 또는 수정 폼. */}
+    <div className={styles.workspace}><div className={styles.roster}>
+      <Button variant="secondary" type="button" className={styles.newItem} onClick={() => startNew(readDraft())}>새 공지</Button>
+      {!visibleData && !listError && <SkeletonRows count={4} label="공지 목록을 불러오는 중입니다." />}
       {visibleData && <>
       {visibleData.items.length === 0 && <p>작성된 공지가 없습니다.</p>}
-      {visibleData.items.map((notice) => <Button variant="unstyled" className={styles.rowButton} type="button" key={notice.id} onClick={() => edit(notice)}>
-        <strong>{notice.title}</strong><StatusBadge tone={notice.published ? "positive" : "neutral"}>{notice.published ? "게시" : "초안"}</StatusBadge>
-        <span aria-hidden="true" className={styles.arrow}>→</span>
-      </Button>)}
+      <ul className={styles.rosterList} aria-label="공지 목록">
+        {visibleData.items.map((notice) => <li key={notice.id}>
+          <button type="button" className={styles.rosterRow} aria-current={selected?.id === notice.id ? "true" : undefined} onClick={() => edit(notice)}>
+            <strong>{notice.title}</strong><span data-tone={notice.published ? undefined : "attention"}>{notice.published ? "게시" : "초안"}</span>
+          </button>
+        </li>)}
+      </ul>
       {visibleData.total > visibleData.size && <nav className={styles.pagination} aria-label="공지 관리 페이지">
         <Button variant="secondary" type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>이전</Button>
         <span>{page + 1} / {Math.ceil(visibleData.total / visibleData.size)}</span>
         <Button variant="secondary" type="button" disabled={(page + 1) * visibleData.size >= visibleData.total} onClick={() => setPage(page + 1)}>다음</Button>
       </nav>}
     </>}</div>
-      <form className={`${styles.panel} ${styles.form}`} onSubmit={save}>
-        <h2>{selected ? "공지 수정" : "공지 작성"}</h2>
+      <form className={`${styles.detail} ${styles.form}`} onSubmit={save}>
+        <h2>{selected ? "공지 수정" : "새 공지"}</h2>
         <label htmlFor="notice-title">제목</label>
         <Input id="notice-title" value={title} onChange={(event) => update({ title: event.target.value })} maxLength={200} required />
         <label htmlFor="notice-body">본문</label>
@@ -156,7 +162,7 @@ export function NoticeEditor() {
         {adminPoll && <section className={styles.pollDetails} aria-label="투표 결과">
           <h3>{adminPoll.poll.question}</h3>
           <p>마감 {new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", dateStyle: "medium", timeStyle: "short" }).format(new Date(adminPoll.poll.closesAt))}</p>
-          <p>{adminPoll.poll.firstOption} {adminPoll.poll.firstCount}명 · {adminPoll.poll.secondOption} {adminPoll.poll.secondCount}명</p>
+          <p>{adminPoll.poll.firstOption} {adminPoll.poll.firstCount}명, {adminPoll.poll.secondOption} {adminPoll.poll.secondCount}명</p>
           <h4>응답자</h4>
           {adminPoll.respondents.length === 0 && <p>아직 응답이 없습니다.</p>}
           <ul>{adminPoll.respondents.map((respondent) => <li key={respondent.memberId}>
@@ -188,8 +194,7 @@ export function NoticeEditor() {
             <p>투표의 참석·불참은 일정의 참석 응답이나 출석 기록에 반영되지 않습니다.</p>
           </div>}
         </>}
-        <div className={styles.actions}><Button variant="primary" type="submit" disabled={busy || !title.trim() || !body.trim()}>저장</Button>
-        {selected && <Button variant="secondary" type="button" onClick={() => startNew(readDraft())}>새 공지</Button>}</div>
+        <div className={styles.actions}><Button variant="primary" type="submit" disabled={busy || !title.trim() || !body.trim()}>저장</Button></div>
       </form></div>
   </section>;
 }

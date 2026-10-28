@@ -66,6 +66,23 @@ describe("운영진 일정 편집", () => {
     expect(getEvents).toHaveBeenCalledTimes(3);
   });
 
+  it("등록이 위, 등록된 일정이 아래이고 목록에서 고른 일정만 오른쪽 상세에 나온다", async () => {
+    getEvents.mockResolvedValue([septemberEvent]);
+    renderWithSession(<EventEditor />, sessionFixture({ admin: true }));
+    const headings = screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent);
+    expect(headings).toEqual(["일정 등록", "등록된 일정"]);
+    expect(screen.queryByText(/한 번에/)).not.toBeInTheDocument();
+    expect(screen.getByText("목록에서 일정을 선택하세요.")).toBeInTheDocument();
+    const row = await screen.findByRole("button", { name: /정기 연습/ });
+    expect(row).not.toHaveTextContent("·");
+    expect(screen.queryByLabelText("시작 시각 (한국 시간)")).not.toBeInTheDocument();
+    fireEvent.click(row);
+    expect(row).toHaveAttribute("aria-current", "true");
+    expect(screen.queryByText("목록에서 일정을 선택하세요.")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "정기 연습" })).toBeInTheDocument();
+    expect(screen.getByLabelText("시작 시각 (한국 시간)")).toHaveValue("2026-09-20T19:00");
+  });
+
   it("조회 월을 지워도 화면이 멈추지 않고 월을 고르라고 안내한다", async () => {
     getEvents.mockResolvedValue([septemberEvent]);
     renderWithSession(<EventEditor />, sessionFixture({ admin: true }));

@@ -165,7 +165,7 @@ export function MemberAccountManager() {
             if (current.id === session.id) refreshSession();
           }} onRenew={() => renew(current.id)} onRevoke={(reason) => revoke(current.id, reason)}
             onReopen={() => reopen(current.id)} onApprove={(type) => approve(current.id, type)} onReject={(reason) => reject(current.id, reason)} />
-            : <p className={styles.placeholder}>왼쪽 목록에서 단원을 고르면 여기에 정보가 나옵니다.</p>}
+            : <p className={styles.placeholder}>목록에서 단원을 선택하세요.</p>}
         </div>
       </div>
     </section>

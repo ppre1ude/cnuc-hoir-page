@@ -112,6 +112,9 @@
 .rosterRow small { grid-column: 1 / -1; font-size: var(--text-small); }
 .rosterRow small[data-tone="attention"] { color: var(--color-attention); }
 .rosterRow small[data-tone="negative"] { color: var(--color-danger); }
+.rosterRow span[data-tone="attention"] { color: var(--color-attention); }
+/* 목록 맨 위의 "새 공지" 같은 새로 만들기 버튼은 목록 폭을 꽉 채웁니다. */
+.newItem { width: 100%; margin-bottom: var(--space-3); }
 .roster > p:not([class]) { margin: var(--space-4) 0 0; }
 .detail { composes: surface from "../../components/ui/ui.module.css"; }
 .detail article > p:not([class]) { margin: var(--space-1) 0; color: var(--color-muted); font-size: var(--text-label); overflow-wrap: anywhere; }

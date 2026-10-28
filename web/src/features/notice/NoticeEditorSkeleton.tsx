@@ -5,14 +5,16 @@ import styles from "../member/AdminPages.module.css";
 export function NoticeEditorSkeleton() {
   return <div className={styles.page}>
     <div className={styles.skeletonHeader}><Skeleton width="var(--space-20)" height="calc(var(--text-title) * 1.2)" /></div>
-    <div className={styles.grid}>
-      <SkeletonRows count={5} className={styles.list} />
-      <div className={`${styles.panel} ${styles.form}`}>
+    <div className={styles.workspace}>
+      <div>
+        <Skeleton height="var(--control-medium)" />
+        <SkeletonRows count={5} className={styles.rosterList} />
+      </div>
+      <div className={`${styles.detail} ${styles.form}`}>
         <Skeleton className={styles.skeletonHeading} width="30%" height="calc(var(--text-section) * 1.2)" />
         <Skeleton width="20%" />
         <Skeleton height="var(--control-medium)" />
         <Skeleton width="20%" />
-        <Skeleton height="var(--control-medium)" />
         <Skeleton height="var(--space-20)" />
       </div>
     </div>

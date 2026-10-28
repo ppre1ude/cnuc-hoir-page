@@ -30,6 +30,8 @@ function defaultTitle(kind: ScheduleKind, part: Part | null) {
   return "";
 }
 
+// 운영진이 가장 자주 하는 일은 이번 달 정기연습 날짜를 한꺼번에 넣는 것이라, 이 폼이 페이지 맨 위에 옵니다.
+// 왼쪽 달력에서 날짜를 고르고 오른쪽에 내용을 적으면 고른 날짜마다 같은 일정이 생깁니다.
 export function EventBatchCreator({ onCreated }: Props) {
   const session = useSession();
   // 이 사람이 열 수 있는 종류와 파트만 고르게 합니다. 서버도 같은 규칙으로 다시 검사합니다.
@@ -90,41 +92,46 @@ export function EventBatchCreator({ onCreated }: Props) {
   // 월 입력을 지우면 ""가 들어옵니다. 그때는 날짜를 그리지 않고 등록도 막습니다.
   const valid = /^\d{4}-\d{2}$/.test(month);
   const days = valid ? Array.from({ length: monthDays(month) }, (_, index) => index + 1) : [];
-  return <section className={`${styles.card} ${styles.batch}`}>
-    <h2>일정 한 번에 등록</h2>
-    <form onSubmit={create} className={styles.form}>
-      <label htmlFor="batch-month">월</label>
-      <Input id="batch-month" type="month" value={month} onChange={(event) => {
-        setMonth(event.target.value); setDates([]); setSaved("");
-      }} required />
-      <div className={styles.batchWeekdays}>{["월", "화", "수", "목", "금", "토", "일"].map((day) => <span key={day}>{day}</span>)}</div>
-      <div className={styles.batchDays} aria-label="등록할 날짜">
-        {valid && Array.from({ length: mondayOffset(month) }, (_, index) => <span key={`blank-${index}`} />)}
-        {days.map((day) => {
-          const date = `${month}-${String(day).padStart(2, "0")}`;
-          return <Button variant="secondary" key={date} type="button" aria-pressed={dates.includes(date)}
-            aria-label={`${day}일`} onClick={() => toggle(date)}>{day}</Button>;
-        })}
+  return <section className={styles.section} aria-labelledby="batch-title">
+    <h2 id="batch-title">일정 등록</h2>
+    <p className={styles.lead}>달력에서 날짜를 고르고 오른쪽에 내용을 적으면, 고른 날짜마다 같은 일정이 생깁니다.</p>
+    <form onSubmit={create} className={styles.workspace}>
+      <div className={styles.picker}>
+        <label htmlFor="batch-month">월</label>
+        <Input id="batch-month" type="month" value={month} onChange={(event) => {
+          setMonth(event.target.value); setDates([]); setSaved("");
+        }} required />
+        <div className={styles.weekdays}>{["월", "화", "수", "목", "금", "토", "일"].map((day) => <span key={day}>{day}</span>)}</div>
+        <div className={styles.days} aria-label="등록할 날짜">
+          {valid && Array.from({ length: mondayOffset(month) }, (_, index) => <span key={`blank-${index}`} />)}
+          {days.map((day) => {
+            const date = `${month}-${String(day).padStart(2, "0")}`;
+            return <button key={date} type="button" className={styles.day} aria-pressed={dates.includes(date)}
+              aria-label={`${day}일`} onClick={() => toggle(date)}>{day}</button>;
+          })}
+        </div>
+        <p className={styles.selectedDates}>고른 날짜: {dates.length ? dates.map((date) => `${Number(date.slice(-2))}일`).join(", ") : "없음"}</p>
       </div>
-      <p className={styles.selectedDates}>선택한 날짜: {dates.length ? dates.map((date) => `${Number(date.slice(-2))}일`).join(", ") : "없음"}</p>
-      <div className={styles.batchFields}>
-        <label>종류<Select value={kind} onChange={(event) => choose(event.target.value as ScheduleKind, part)}>
-          {kindChoices.map((item) => <option key={item} value={item}>{scheduleKindLabel[item]}</option>)}
-        </Select></label>
-        {kind === "PART_REHEARSAL" && <label>파트<Select value={part ?? ""} onChange={(event) => choose(kind, event.target.value as Part)}>
-          {partChoices.map((item) => <option key={item} value={item}>{partLabel[item]}</option>)}
-        </Select></label>}
-        <label>제목<Input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={200} required /></label>
-        <label>내용 (선택)<Textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={10000} rows={3} /></label>
-        <label>공통 시작 시각 (한국 시간)<Input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} required /></label>
-        <label>공통 종료 시각 (한국 시간)<Input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} required /></label>
+      <div className={styles.fields}>
+        <div className={styles.fieldGrid}>
+          <label>종류<Select value={kind} onChange={(event) => choose(event.target.value as ScheduleKind, part)}>
+            {kindChoices.map((item) => <option key={item} value={item}>{scheduleKindLabel[item]}</option>)}
+          </Select></label>
+          {kind === "PART_REHEARSAL" && <label>파트<Select value={part ?? ""} onChange={(event) => choose(kind, event.target.value as Part)}>
+            {partChoices.map((item) => <option key={item} value={item}>{partLabel[item]}</option>)}
+          </Select></label>}
+          <label className={styles.wide}>제목<Input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={200} required /></label>
+          <label className={styles.wide}>내용 (선택)<Textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={10000} rows={3} /></label>
+          <label>공통 시작 시각 (한국 시간)<Input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} required /></label>
+          <label>공통 종료 시각 (한국 시간)<Input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} required /></label>
+        </div>
+        <label className={styles.check}><Input type="checkbox" checked={obEligible} onChange={(event) => setObEligible(event.target.checked)} /> OB도 참여 대상</label>
+        {error && <Feedback tone="error">{error}</Feedback>}
+        {saved && <Feedback>{saved}</Feedback>}
+        <div className={styles.actions}><Button variant="primary" type="submit" disabled={busy || !valid || dates.length === 0 || !title.trim()}>
+          {busy ? "등록 중..." : `${dates.length}개 일정 등록`}
+        </Button></div>
       </div>
-      <label className={styles.check}><Input type="checkbox" checked={obEligible} onChange={(event) => setObEligible(event.target.checked)} /> OB도 참여 대상</label>
-      {error && <Feedback tone="error">{error}</Feedback>}
-      {saved && <Feedback>{saved}</Feedback>}
-      <div className={styles.actions}><Button variant="primary" type="submit" disabled={busy || !valid || dates.length === 0 || !title.trim()}>
-        {busy ? "등록 중..." : `${dates.length}개 일정 등록`}
-      </Button></div>
     </form>
   </section>;
 }
