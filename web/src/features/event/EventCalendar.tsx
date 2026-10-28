@@ -80,6 +80,8 @@ export function EventCalendar() {
   const [upcomingError, setUpcomingError] = useState("");
   const [upcomingRetry, setUpcomingRetry] = useState(0);
   const [upcomingRsvpLoaded, setUpcomingRsvpLoaded] = useState(false);
+  // 그달 응답과 따로 둡니다. 한 상태를 같이 쓰면 그달 응답이 늦게 성공할 때 이쪽 실패 안내가 지워집니다.
+  const [upcomingRsvpError, setUpcomingRsvpError] = useState("");
   // 사람이 날짜나 일정을 한 번이라도 고르면, 늦게 도착한 다가오는 내 일정이 고른 것을 덮지 않게 합니다.
   const picked = useRef(false);
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -140,8 +142,8 @@ export function EventCalendar() {
     getMyEventRsvps(from, to).then((items) => {
       if (!alive) return;
       setRsvpByEvent((current) => ({ ...current, ...choicesOf(items) }));
-      setUpcomingRsvpLoaded(true);
-    }).catch(() => { if (alive) setRsvpError("참석 응답을 불러오지 못했습니다."); });
+      setUpcomingRsvpLoaded(true); setUpcomingRsvpError("");
+    }).catch(() => { if (alive) setUpcomingRsvpError("참석 응답을 불러오지 못했습니다."); });
     return () => { alive = false; };
   }, [session, upcomingRetry]);
 
@@ -313,8 +315,9 @@ export function EventCalendar() {
       {/* 달력이 어느 달을 보든, 오늘부터 2주 안에 내가 가야 하고 응답할 일정을 모아 둡니다. */}
       <section aria-label="다가오는 내 일정" className={`${styles.card} ${styles.list}`}>
         <div className={styles.sectionHeader}><h2>다가오는 내 일정</h2></div>
-        {rsvpError && <Feedback tone="error">{rsvpError} <Button variant="secondary" type="button" onClick={() => {
-          setRsvpError(""); setRsvpRetry((value) => value + 1); setUpcomingRetry((value) => value + 1);
+        {(rsvpError || upcomingRsvpError) && <Feedback tone="error">{rsvpError || upcomingRsvpError} <Button variant="secondary" type="button" onClick={() => {
+          if (rsvpError) { setRsvpError(""); setRsvpRetry((value) => value + 1); }
+          if (upcomingRsvpError) { setUpcomingRsvpError(""); setUpcomingRetry((value) => value + 1); }
         }}>다시 시도</Button></Feedback>}
         {upcomingError && <Feedback tone="error">{upcomingError} <Button variant="secondary" type="button" onClick={() => {
           setUpcomingError(""); setUpcomingRetry((value) => value + 1);

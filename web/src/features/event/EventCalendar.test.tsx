@@ -141,6 +141,24 @@ describe("일정 중심 단원 화면", () => {
     expect(await within(detail).findByRole("heading", { name: "전체 연습" })).toBeInTheDocument();
   });
 
+  it("다가오는 일정의 응답만 못 받으면, 그달 응답이 늦게 와도 안내와 다시 시도를 남긴다", async () => {
+    let failUpcoming = true;
+    getMyEventRsvps.mockImplementation(async (from: string) => {
+      if (from === "2026-09-26T15:00:00.000Z" && failUpcoming) { failUpcoming = false; throw new Error("응답 장애"); }
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      return [];
+    });
+    renderWithSession(<EventCalendar />, ob);
+    const list = screen.getByRole("region", { name: "다가오는 내 일정" });
+    expect(await within(list).findByRole("alert")).toHaveTextContent("참석 응답을 불러오지 못했습니다.");
+    await waitFor(() => expect(getMyEventRsvps).toHaveBeenCalledTimes(2));
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    expect(within(list).getByRole("alert")).toBeInTheDocument();
+    fireEvent.click(within(list).getByRole("button", { name: "다시 시도" }));
+    expect(await within(list).findByRole("button", { name: /가을 공연 미응답/ })).toBeInTheDocument();
+    await waitFor(() => expect(within(list).queryByRole("alert")).toBeNull());
+  });
+
   it("다가오는 일정 요청의 끝 시각은 한 시간 단위로 올려 주소를 고정하고 범위를 줄이지 않는다", async () => {
     vi.setSystemTime(new Date("2026-10-29T03:20:00Z"));
     getEvents.mockResolvedValue([]);
