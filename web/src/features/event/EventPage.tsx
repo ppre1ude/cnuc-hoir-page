@@ -55,7 +55,7 @@ export function EventPage() {
   }, [event, rsvpRetry]);
 
   return <main id="member-content" tabIndex={-1} className={styles.eventPage}>
-    <Link className={styles.backLink} href="/dashboard">← 일정</Link>
+    <Link className={styles.backLink} href="/events">← 일정</Link>
     <PageHeader title={event?.title ?? "일정"} />
     {error && <Feedback tone="error">{error} <Button variant="secondary" onClick={() => { setError(""); setRetry((value) => value + 1); }}>다시 시도</Button></Feedback>}
     {!Number.isSafeInteger(Number(id)) || Number(id) < 1 ? <p>일정 주소를 확인해 주세요.</p> :

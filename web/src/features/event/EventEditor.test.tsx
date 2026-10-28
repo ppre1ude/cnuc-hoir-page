@@ -35,6 +35,7 @@ describe("운영진 일정 편집", () => {
       .mockReturnValueOnce(oldMonthRefresh)
       .mockResolvedValueOnce([octoberEvent]);
     renderWithSession(<EventEditor />, sessionFixture({ admin: true }));
+    expect(screen.getByRole("link", { name: "일정으로 가기" })).toHaveAttribute("href", "/events");
     fireEvent.click(await screen.findByRole("button", { name: /정기 연습/ }));
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
     await waitFor(() => expect(getEvents).toHaveBeenCalledTimes(2));

@@ -30,7 +30,7 @@ test("메뉴는 홈, 일정, 공지, 내 출석 순서이고 일정 상세에서
 test("세션을 기다리는 동안에도 로고와 로그아웃을 보여 줍니다", () => {
   vi.mocked(getSession).mockReturnValue(new Promise(() => undefined));
   render(<SessionProvider><MemberNavigation /></SessionProvider>);
-  expect(screen.getByRole("link", { name: "전남대학교 합창단 일정" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "전남대학교 합창단 홈" })).toHaveAttribute("href", "/dashboard");
   expect(screen.getByRole("button", { name: "로그아웃" })).toBeInTheDocument();
   expect(screen.queryByRole("link", { name: "운영진" })).not.toBeInTheDocument();
 });

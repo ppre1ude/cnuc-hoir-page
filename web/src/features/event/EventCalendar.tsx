@@ -166,7 +166,7 @@ export function EventCalendar() {
   const eventsLoaded = loadedMonth === month && !error;
 
   return <main id="member-content" tabIndex={-1} className={styles.dashboard}>
-    <PageHeader title="일정" className={styles.hero} actions={memberLinks.map((link) => <ActionLink key={link.href} variant="secondary"
+    <PageHeader title="홈" className={styles.hero} actions={memberLinks.map((link) => <ActionLink key={link.href} variant="secondary"
       href={link.href} target="_blank" rel="noopener noreferrer">{link.label} <span aria-hidden="true">↗</span></ActionLink>)} />
     {error && <div role="alert" className={styles.error}>{error} <Button variant="secondary" type="button" onClick={() => setRetry(retry + 1)}>다시 시도</Button></div>}
     <div className={styles.grid}>

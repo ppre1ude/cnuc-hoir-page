@@ -56,6 +56,7 @@ describe("일정 중심 단원 화면", () => {
 
   it("단원용 자료 링크를 일정 제목 옆에서 새 탭으로 연다", () => {
     renderWithSession(<EventCalendar />, ob);
+    expect(screen.getByRole("heading", { level: 1, name: "홈" })).toBeInTheDocument();
     const link = screen.getByRole("link", { name: "악보·자료 드라이브" });
     expect(link).toHaveAttribute("href", "https://drive.google.com/drive/folders/1hcHWeu9WPdZbLpjncsqYOm4k8UHQJAuW?usp=drive_link");
     expect(link).toHaveAttribute("target", "_blank");

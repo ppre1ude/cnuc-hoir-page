@@ -38,7 +38,7 @@ export function MemberNavigation() {
 
   return <header className={styles.header}>
     <div className={styles.inner}>
-      <Link className={styles.brand} href="/dashboard" aria-label="전남대학교 합창단 일정">
+      <Link className={styles.brand} href="/dashboard" aria-label="전남대학교 합창단 홈">
         <BrandLogo priority />
       </Link>
       <nav className={styles.nav} aria-label="단원 메뉴">
