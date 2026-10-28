@@ -1,10 +1,6 @@
-import type { Metadata } from "next";
-import { SkeletonRows } from "../../../components/ui";
-import { PageGate } from "../../../features/auth/PageGate";
-import { EventList } from "../../../features/event/EventList";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "일정" };
-
-export default function Page() {
-  return <PageGate skeleton={<SkeletonRows count={5} label="일정을 불러오는 중입니다." />}><EventList /></PageGate>;
+// 일정 목록은 홈 달력의 목록 보기로 옮겼습니다. 예전 주소로 들어오면 홈으로 보냅니다.
+export default function EventsPage() {
+  redirect("/dashboard");
 }

@@ -124,7 +124,7 @@ export function EventEditor() {
     setRetry((value) => value + 1);
   }
   return <div className={styles.page}>
-    <PageHeader title="일정 관리" actions={<ActionLink variant="secondary" href="/events">일정으로 가기</ActionLink>} />
+    <PageHeader title="일정 관리" actions={<ActionLink variant="secondary" href="/dashboard">홈으로 가기</ActionLink>} />
     {listError && <Feedback tone="error">{listError} <Button variant="secondary" type="button" onClick={() => { setListError(""); setRetry(retry + 1); }}>다시 시도</Button></Feedback>}
     {saved && <p role="status">일정을 저장했습니다.</p>}
     <EventBatchCreator onCreated={refreshList} />

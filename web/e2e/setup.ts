@@ -27,7 +27,7 @@ export default async function setup(): Promise<void> {
     await login(page, email, password);
     await expect(page).toHaveURL(/\/dashboard$/);
     await page.reload();
-    await expect(page.getByRole("heading", { name: "일정", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "홈", exact: true })).toBeVisible();
     const cookies = await context.cookies();
     expect(cookies.some((cookie) => cookie.name === "SESSION" && cookie.secure && cookie.httpOnly)).toBe(true);
 
