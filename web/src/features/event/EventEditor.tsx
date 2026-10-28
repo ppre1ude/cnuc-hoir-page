@@ -162,7 +162,8 @@ export function EventEditor() {
           <h3>{selected.title}</h3>
           <span className={`${calendarStyles.kind} ${calendarStyles.kindBadge}`} data-kind={eventKind(selected)}>{eventKindText(selected)}</span>
         </div>
-        <p className={styles.when}>{seoulDayLabel(selected.startAt)} {seoulTime(selected.startAt)} ~ {seoulTime(selected.endAt)}</p>
+        {/* 여러 날에 걸친 일정은 끝나는 날짜도 적습니다. */}
+        <p className={styles.when}>{seoulDayLabel(selected.startAt)} {seoulTime(selected.startAt)} ~ {seoulDayLabel(selected.endAt) !== seoulDayLabel(selected.startAt) && `${seoulDayLabel(selected.endAt)} `}{seoulTime(selected.endAt)}</p>
         <p><Link href={`/admin/events/${selected.id}/attendance`}>이 일정 출석 관리</Link></p>
         {error && <Feedback tone="error">{error}</Feedback>}
         <form onSubmit={save} className={styles.form}>
