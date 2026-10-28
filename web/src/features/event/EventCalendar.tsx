@@ -6,8 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSession } from "../auth/SessionProvider";
 import { getNotices, type Notice } from "../notice/notices";
-import type { Part } from "../auth/session";
-import { type ChoirEvent, type EventRsvpChoice, getEvents, getMyEventRsvps, isEventTarget, monthBounds, seoulDateKey } from "./events";
+import { type ChoirEvent, type EventRsvpChoice, getEvents, getMyEventRsvps, monthBounds, rsvpChip, seoulDateKey } from "./events";
 import { EventDetail } from "./EventDetail";
 import { EventKindIcon, eventKind } from "./EventKind";
 import { EventRsvp } from "./EventRsvp";
@@ -39,19 +38,6 @@ function eventRange(month: string) {
   const hour = 3_600_000;
   const to = new Date(Math.ceil((Date.now() + 14 * 86_400_000) / hour) * hour).toISOString();
   return to > bounds.to ? { from: bounds.from, to } : bounds;
-}
-
-type Chip = { tone: "positive" | "neutral" | "negative" | "attention"; label: string };
-
-// 목록 행은 응답을 받지 않고 상태만 보여 줍니다. 지난 일정의 "참석"이 출석으로 읽히지 않게 응답임을 밝힙니다.
-function rsvpChip(event: ChoirEvent, member: { memberType: "ACTIVE" | "OB" | null; part?: Part | null },
-  choice: EventRsvpChoice | null | undefined): Chip | null {
-  if (!isEventTarget(event, member)) return { tone: "neutral", label: "대상 아님" };
-  if (choice === undefined) return null;
-  const closed = new Date(event.startAt).getTime() <= Date.now();
-  if (choice === "ATTENDING") return closed ? { tone: "neutral", label: "참석 응답" } : { tone: "positive", label: "참석" };
-  if (choice === "ABSENT") return closed ? { tone: "neutral", label: "불참 응답" } : { tone: "negative", label: "불참" };
-  return { tone: closed ? "neutral" : "attention", label: "미응답" };
 }
 
 export function EventCalendar() {

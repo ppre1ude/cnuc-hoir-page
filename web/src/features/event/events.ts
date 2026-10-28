@@ -128,3 +128,24 @@ export function updateEvent(id: number, input: EventInput): Promise<ChoirEvent> 
 export function seoulTime(value: string) {
   return new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", timeStyle: "short" }).format(new Date(value));
 }
+
+// "2026-11"에서 count달 뒤의 달입니다. 음수면 앞의 달입니다.
+export function addMonths(month: string, count: number): string {
+  const [year, number] = month.split("-").map(Number);
+  const next = new Date(Date.UTC(year, number - 1 + count, 1));
+  return `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+export type Chip = { tone: "positive" | "neutral" | "negative" | "attention"; label: string };
+
+// 목록 행은 응답을 받지 않고 상태만 보여 줍니다. 지난 일정의 "참석"이 출석으로 읽히지 않게 응답임을 밝힙니다.
+// choice가 undefined면 응답을 아직 못 받은 것이라 칩을 그리지 않습니다.
+export function rsvpChip(event: ChoirEvent, member: { memberType: "ACTIVE" | "OB" | null; part?: Part | null },
+  choice: EventRsvpChoice | null | undefined): Chip | null {
+  if (!isEventTarget(event, member)) return { tone: "neutral", label: "대상 아님" };
+  if (choice === undefined) return null;
+  const closed = new Date(event.startAt).getTime() <= Date.now();
+  if (choice === "ATTENDING") return closed ? { tone: "neutral", label: "참석 응답" } : { tone: "positive", label: "참석" };
+  if (choice === "ABSENT") return closed ? { tone: "neutral", label: "불참 응답" } : { tone: "negative", label: "불참" };
+  return { tone: closed ? "neutral" : "attention", label: "미응답" };
+}
