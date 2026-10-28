@@ -193,7 +193,7 @@ test("목록에는 이름과 파트만 보이고, 누르면 그 사람의 정보
   const row = await roster().findByRole("button", { name: /^이서연/ });
   expect(row).toHaveTextContent("소프라노");
   expect(screen.queryByText("member3@example.test")).not.toBeInTheDocument();
-  expect(screen.getByText("왼쪽 목록에서 단원을 고르면 여기에 정보가 나옵니다.")).toBeInTheDocument();
+  expect(screen.getByText("목록에서 단원을 선택하세요.")).toBeInTheDocument();
   await userEvent.click(row);
   const detail = (await screen.findByRole("heading", { name: "이서연" })).closest("article")!;
   expect(within(detail).getByText("member3@example.test")).toBeInTheDocument();

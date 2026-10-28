@@ -88,7 +88,7 @@ export function ApplicationQueue() {
           {current ? <ApplicationDetail key={current.id} item={current} busy={busy === current.id}
             onApprove={(type) => update(current.id, () => approveApplication(current.id, type))}
             onReject={(reason) => update(current.id, () => rejectApplication(current.id, reason))} />
-            : <p className={styles.placeholder}>왼쪽 목록에서 신청자를 고르면 여기에 정보가 나옵니다.</p>}
+            : <p className={styles.placeholder}>목록에서 신청자를 선택하세요.</p>}
         </div>
       </div>}
     </section>

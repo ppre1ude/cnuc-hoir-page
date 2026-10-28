@@ -7,22 +7,24 @@ const sectionHeight = "calc(var(--text-section) * 1.2)";
 export function EventEditorSkeleton() {
   return <div className={styles.page}>
     <div className={styles.skeletonHeader}><Skeleton width="var(--space-20)" height="calc(var(--text-title) * 1.2)" /></div>
-    <div className={`${styles.card} ${styles.batch}`}>
-      <Skeleton className={styles.skeletonHeading} width="30%" height={sectionHeight} />
-      <div className={styles.form}>
-        <div className={styles.batchWeekdays}>{Array.from({ length: 7 }, (_, index) => <Skeleton key={index} />)}</div>
-        <div className={styles.batchDays}>{Array.from({ length: 35 }, (_, index) => <Skeleton key={index} height="var(--control-medium)" />)}</div>
-        <div className={styles.batchFields}>
-          {[0, 1].map((index) => <div key={index} className={styles.form}>
-            <Skeleton width="45%" />
-            <Skeleton height="var(--control-medium)" />
-          </div>)}
+    <div className={styles.section}>
+      <Skeleton className={styles.skeletonHeading} width="20%" height={sectionHeight} />
+      <div className={styles.workspace}>
+        <div>
+          <Skeleton height="var(--control-medium)" />
+          <div className={styles.days} style={{ marginTop: "var(--space-4)" }}>{Array.from({ length: 35 }, (_, index) => <Skeleton key={index} height="36px" />)}</div>
+        </div>
+        <div className={styles.fieldGrid}>
+          {[0, 1, 2, 3].map((index) => <div key={index}><Skeleton width="45%" /><Skeleton height="var(--control-medium)" /></div>)}
         </div>
       </div>
     </div>
-    <div className={styles.card}>
-      <Skeleton className={styles.skeletonHeading} width="25%" height={sectionHeight} />
-      <SkeletonRows count={5} />
+    <div className={styles.section}>
+      <Skeleton className={styles.skeletonHeading} width="20%" height={sectionHeight} />
+      <div className={styles.workspace}>
+        <SkeletonRows count={5} className={styles.rosterList} />
+        <div className={styles.detail}><Skeleton height="var(--space-20)" /></div>
+      </div>
     </div>
   </div>;
 }

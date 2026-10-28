@@ -116,7 +116,7 @@ test("좁은 화면에서 목록으로 돌아가면 상세 칸이 비고, 다시
   render(<ApplicationQueue />);
   await screen.findByText("member@example.org");
   await userEvent.click(screen.getByRole("button", { name: "목록으로" }));
-  expect(screen.getByText("왼쪽 목록에서 신청자를 고르면 여기에 정보가 나옵니다.")).toBeInTheDocument();
+  expect(screen.getByText("목록에서 신청자를 선택하세요.")).toBeInTheDocument();
   await userEvent.click((await roster()).getByRole("button", { name: /^신청자/ }));
   expect(await screen.findByText("member@example.org")).toBeInTheDocument();
 });

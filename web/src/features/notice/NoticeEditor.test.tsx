@@ -27,6 +27,21 @@ describe("공지 편집기", () => {
     createNotice.mockResolvedValue({ id: 2 });
   });
 
+  it("왼쪽 공지 목록 위의 새 공지 버튼으로 빈 작성 폼으로 돌아온다", async () => {
+    getAdminNotices.mockResolvedValue({ items: [{ id: 1, title: "기존 공지", body: "이전 본문", published: true }], page: 0, size: 20, total: 1 });
+    renderWithSession(<NoticeEditor />, sessionFixture({ admin: true }));
+    const list = await screen.findByRole("list", { name: "공지 목록" });
+    const row = screen.getByRole("button", { name: /기존 공지\s*게시/ });
+    expect(list).toContainElement(row);
+    expect(screen.getByRole("heading", { name: "새 공지" })).toBeInTheDocument();
+    fireEvent.click(row);
+    expect(row).toHaveAttribute("aria-current", "true");
+    expect(screen.getByRole("heading", { name: "공지 수정" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "새 공지" }));
+    expect(screen.getByRole("heading", { name: "새 공지" })).toBeInTheDocument();
+    expect(screen.getByLabelText("본문")).toHaveValue("");
+  });
+
   it("목록을 받는 동안 불러오는 중이라고 알린다", () => {
     getAdminNotices.mockReturnValue(new Promise(() => undefined));
     renderWithSession(<NoticeEditor />, sessionFixture({ admin: true }));
@@ -92,7 +107,7 @@ describe("공지 편집기", () => {
     });
     renderWithSession(<NoticeEditor />, sessionFixture({ admin: true }));
     fireEvent.click(await screen.findByRole("button", { name: /곡 변경\s*게시/ }));
-    expect(await screen.findByText("김민지 · 알토 12기")).toBeInTheDocument();
+    expect(await screen.findByText("김민지 알토 12기")).toBeInTheDocument();
     expect(screen.getByLabelText("투표 결과")).not.toHaveTextContent("@");
   });
 

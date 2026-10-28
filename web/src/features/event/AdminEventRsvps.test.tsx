@@ -17,7 +17,7 @@ test("참석 응답 명단은 이메일 없이 이름 옆에 파트와 기수를
   ] });
   render(<AdminEventRsvps eventId={1} />);
 
-  expect(await screen.findByText("김민지 · 소프라노 5기")).toBeInTheDocument();
+  expect(await screen.findByText("김민지 소프라노 5기")).toBeInTheDocument();
   expect(screen.getByText("김민지")).toBeInTheDocument();
   expect(document.body).not.toHaveTextContent("@");
 });

@@ -146,7 +146,7 @@ test("출석 명단은 이메일 없이 이름 옆에 파트와 기수를 보입
     { memberId: 12, name: "이하늘", part: null, cohort: null, status: "MISSED", checkedInAt: null, correctedAt: null }]);
   renderWithSession(<AdminAttendancePanel eventId={3} />, sessionFixture({ admin: true }));
 
-  expect(await screen.findByText("김소라 · 소프라노 5기")).toBeInTheDocument();
+  expect(await screen.findByText("김소라 소프라노 5기")).toBeInTheDocument();
   expect(screen.getByText("이하늘")).toBeInTheDocument();
   expect(screen.getByLabelText("단원 출석 기록")).not.toHaveTextContent("@");
 });

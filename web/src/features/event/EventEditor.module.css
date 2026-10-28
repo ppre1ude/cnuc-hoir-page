@@ -1,51 +1,59 @@
 .page { composes: page from "../../components/ui/ui.module.css"; }
-.card { composes: surface from "../../components/ui/ui.module.css"; }
 
-.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-6); align-items: start; }
-.singleColumn { grid-template-columns: minmax(0, 1fr); }
-.card h2 { margin: 0 0 var(--space-5); letter-spacing: var(--tracking-heading); }
+/* 일정 등록과 등록된 일정은 단원 계정 페이지와 같은 틀입니다. 왼쪽 좁은 칸, 오른쪽 넓은 칸. */
+.section { margin-top: var(--space-8); }
+.section h2 { margin: 0 0 var(--space-4); font-size: var(--text-section); letter-spacing: var(--tracking-heading); }
+.lead { margin: 0 0 var(--space-5); color: var(--color-muted); font-size: var(--text-label); line-height: 1.6; }
+.workspace { composes: workspace from "../member/AdminPages.module.css"; }
+.roster { composes: roster from "../member/AdminPages.module.css"; }
+.rosterList { composes: rosterList from "../member/AdminPages.module.css"; margin-top: var(--space-4); }
+.rosterRow { composes: rosterRow from "../member/AdminPages.module.css"; }
+.rosterRow small { color: var(--color-muted); }
+.detail { composes: detail from "../member/AdminPages.module.css"; }
+.placeholder { composes: placeholder from "../member/AdminPages.module.css"; }
+.toList { composes: toList from "../member/AdminPages.module.css"; }
+.roster > label, .picker > label { display: block; margin-bottom: var(--space-1); font-size: var(--text-label); font-weight: var(--weight-label); }
+.roster > p { margin: var(--space-4) 0 0; color: var(--color-muted); font-size: var(--text-label); }
 
-.batch { margin-bottom: var(--space-6); }
-.batch .form { max-width: 720px; }
-.batchWeekdays, .batchDays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--space-1); }
-.batchWeekdays { margin-top: var(--space-3); color: var(--color-muted); font-size: var(--text-small); text-align: center; }
-.batchDays button { padding-inline: 0; }
-.selectedDates { margin: var(--space-2) 0 var(--space-3); color: var(--color-primary); font-size: var(--text-label); }
-.batchFields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--space-4); }
-.batchFields label { display: block; }
-.batchFields label:nth-child(2) { grid-row: span 2; }
-.batchFields input, .batchFields textarea { display: block; margin-top: var(--space-2); }
+/* 왼쪽 달력. 날짜 칸은 작고 촘촘하게, 고른 날은 초록으로 채웁니다. */
+.weekdays, .days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.weekdays { margin-top: var(--space-4); padding-bottom: var(--space-1); border-bottom: 1px solid var(--color-line); color: var(--color-muted); font-size: var(--text-small); text-align: center; }
+.days { margin-top: var(--space-1); }
+.day { min-height: 36px; padding: 0; border: 0; border-radius: var(--radius-small); background: transparent; color: var(--color-ink); font: inherit; font-size: var(--text-label); cursor: pointer; }
+.day:hover { background: var(--color-subtle); }
+.day[aria-pressed="true"] { background: var(--color-primary); color: var(--color-surface); font-weight: var(--weight-label); }
+.selectedDates { margin: var(--space-3) 0 0; color: var(--color-primary); font-size: var(--text-label); font-weight: var(--weight-label); }
 
-.listHeader { display: flex; align-items: start; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); }
-.listHeader label { font-size: var(--text-small); font-weight: var(--weight-label); }
-.listHeader input { display: block; margin-top: var(--space-1); }
-.eventRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-1) var(--space-3); width: 100%; padding: var(--space-4) var(--space-2); border: 0; border-top: 1px solid var(--color-line); background: transparent; font: inherit; font-weight: var(--weight-label); text-align: left; cursor: pointer; }
-.eventRow:hover { background: var(--color-subtle); }
-.eventRow span { color: var(--color-muted); font-size: var(--text-small); font-weight: var(--weight-body); }
-.eventRow[aria-pressed="true"] { background: var(--color-selected); color: var(--color-primary); }
-/* 눌러서 여는 행임을 알 수 있게 단원 화면의 목록처럼 오른쪽에 화살표를 둡니다. */
-.eventRow .arrow { grid-area: 1 / 2 / 3; color: var(--color-primary); font-size: var(--text-body); }
+/* 오른쪽 입력 칸. 짧은 값은 두 칸에, 제목과 내용은 한 줄 전체에 둡니다. */
+.fields { display: grid; gap: var(--space-3); align-content: start; }
+.fieldGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3) var(--space-4); }
+.fieldGrid label { display: block; font-size: var(--text-label); font-weight: var(--weight-label); }
+.fieldGrid .wide { grid-column: 1 / -1; }
+.fieldGrid input, .fieldGrid select, .fieldGrid textarea { display: block; margin-top: var(--space-2); font-weight: var(--weight-body); }
+
+.detailHeader { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.detailHeader h3 { margin: 0; font-size: var(--text-section); letter-spacing: var(--tracking-heading); overflow-wrap: anywhere; }
+.when { margin: var(--space-1) 0 var(--space-4); color: var(--color-muted); font-size: var(--text-label); }
 
 .form { display: flex; flex-direction: column; gap: var(--space-2); }
 .form label { font-size: var(--text-label); font-weight: var(--weight-label); }
 .form input:not([type="checkbox"]), .form textarea { margin-bottom: var(--space-2); }
-.check { display: flex; align-items: center; gap: var(--space-2); min-height: var(--control-medium); }
+.check { display: flex; align-items: center; gap: var(--space-2); min-height: var(--control-medium); font-size: var(--text-label); }
 .form .check { font-weight: var(--weight-body); }
 .hint { margin: 0; color: var(--color-muted); font-size: var(--text-small); }
 .actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
 
 .rsvpSummary { margin-top: var(--space-6); padding-top: var(--space-6); border-top: 1px solid var(--color-line); }
 .rsvpSummary h3 { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin: 0 0 var(--space-3); font-size: var(--text-body); }
-.rsvpCounts { color: var(--color-primary); font-weight: var(--weight-label); }
+.rsvpCounts { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); color: var(--color-primary); font-weight: var(--weight-label); }
 .rsvpMembers { max-height: 300px; margin: 0; padding: 0; overflow-y: auto; list-style: none; }
 .rsvpMembers li { display: flex; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) 0; border-top: 1px solid var(--color-line); }
 .rsvpMembers span { min-width: 0; font-size: var(--text-label); overflow-wrap: anywhere; }
 .rsvpMembers strong { flex-shrink: 0; color: var(--color-primary); }
 
 @media (max-width: 760px) {
-  .grid { display: flex; flex-direction: column; }
-  .batchFields { display: block; }
+  .fieldGrid { grid-template-columns: minmax(0, 1fr); }
 }
 
 .skeletonHeader { composes: pageHeader from "../../components/ui/ui.module.css"; }
-.skeletonHeading { margin-bottom: var(--space-5); }
+.skeletonHeading { margin-bottom: var(--space-4); }
