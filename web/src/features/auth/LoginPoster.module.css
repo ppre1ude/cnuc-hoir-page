@@ -85,7 +85,7 @@
 /* PC: 겉면과 안쪽 면을 좌우로 펼칩니다. 두 면 모두 내용을 세로 가운데에 둡니다. */
 @media (min-width: 761px) {
   .leaflet { flex-direction: row; }
-  .cover { flex: 0 0 50%; gap: var(--space-8); padding: var(--space-12) min(8vw, 96px); }
+  .cover { flex: 0 0 50%; align-items: center; gap: var(--space-8); padding: var(--space-12) min(8vw, 96px); text-align: center; }
   .mark { width: min(100%, 440px); }
   .brand { font-size: 44px; }
   .inside { align-items: center; justify-content: center; padding: var(--space-12) min(8vw, 96px); }
