@@ -73,6 +73,8 @@
 .banner { flex: 1 1 auto; min-height: 120px; max-height: 220px; }
 .historyBody { flex: 0 0 auto; display: flex; flex-direction: column; gap: var(--space-3); }
 .historyBody .title { font-size: clamp(26px, 6.4vw, 32px); }
+/* 걸어온 길 소개는 한 문장이라 본문의 26em 폭 제한을 풀어 띠 폭에서만 줄이 바뀌게 합니다. */
+.historyBody .body { max-width: none; }
 .years { position: relative; display: flex; flex-direction: column; gap: var(--space-4); margin-top: 6px; padding-left: 28px; }
 .year { position: relative; }
 .dot { position: absolute; left: -28px; top: 4px; width: 14px; height: 14px; visibility: hidden; }
