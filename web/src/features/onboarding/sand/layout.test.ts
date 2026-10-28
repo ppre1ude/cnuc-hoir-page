@@ -11,6 +11,7 @@ describe("무대 배치", () => {
   it("PC의 내용 띠는 가운데 최대 900px이고 좌우 140px 이상을 비운다", () => {
     expect(band(stageSize(1440, 900, 1))).toEqual({ left: 270, width: 900 });
     expect(band(stageSize(1000, 900, 1))).toEqual({ left: 140, width: 720 });
+    expect(band(stageSize(2560, 1400, 1))).toEqual({ left: 680, width: 1200 });
     // 그림은 띠의 40% 지점부터 끝까지입니다.
     expect(graphicColumn(stageSize(1440, 900, 1))).toEqual({ left: 630, width: 540 });
   });
