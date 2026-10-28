@@ -3,7 +3,6 @@
 import { Button, Feedback, StatusBadge } from "../../components/ui";
 
 import { useEffect, useOptimistic, useState, useTransition } from "react";
-import Image from "next/image";
 import { ApiRequestError } from "../../lib/api";
 import type { Part } from "../auth/session";
 import { isEventTarget, setEventRsvp, type ChoirEvent, type EventRsvpChoice } from "./events";
@@ -64,8 +63,6 @@ export function EventRsvp({ event, memberType, part = null, choice, onSaved }: P
     <strong>참석 응답</strong>
     <StatusBadge tone={shown ? "positive" : "neutral"}>{shown ? labels[shown] : "미응답"}</StatusBadge>
     {closed && <span className={styles.quickStatus}>응답 마감</span>}
-    {/* 방금 참석으로 응답했을 때만 노래하는 용을 띄웁니다. 뜻은 배지가 전하므로 보조 기술에는 숨깁니다. */}
-    {savedMessage && shown === "ATTENDING" && <Image className={styles.rsvpDragon} src="/images/dragon-sing.png" width={64} height={64} alt="" />}
     {!closed && <div className={styles.rsvpButtons}>
       {(["ATTENDING", "ABSENT"] as const).map((item) => <Button variant="secondary" type="button" key={item}
         aria-pressed={shown === item} aria-disabled={busy || undefined} onClick={() => respond(item)}>{labels[item]}</Button>)}
