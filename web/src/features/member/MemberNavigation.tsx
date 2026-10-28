@@ -11,7 +11,6 @@ import styles from "./MemberNavigation.module.css";
 
 const links = [
   { href: "/dashboard", label: "홈" },
-  { href: "/events", label: "일정" },
   { href: "/notices", label: "공지" },
   { href: "/attendance", label: "내 출석" },
 ];
@@ -43,7 +42,7 @@ export function MemberNavigation() {
       </Link>
       <nav className={styles.nav} aria-label="단원 메뉴">
         {links.map((link) => <Link key={link.href} href={link.href}
-          aria-current={pathname === link.href || link.href === "/events" && pathname.startsWith("/events/") ? "page" : undefined}>
+          aria-current={pathname === link.href || link.href === "/dashboard" && pathname.startsWith("/events/") ? "page" : undefined}>
           {link.label}
         </Link>)}
         {isStaff(session) && <Link href="/admin/events" aria-current={pathname.startsWith("/admin/") ? "page" : undefined}>운영진</Link>}

@@ -11,20 +11,16 @@ vi.mock("../auth/session", async (importOriginal) => ({ ...await importOriginal<
 
 afterEach(() => { cleanup(); vi.clearAllMocks(); rememberSession(null); nav.pathname = "/dashboard"; });
 
-test("메뉴는 홈, 일정, 공지, 내 출석 순서이고 일정 상세에서는 일정이 켜집니다", () => {
+test("메뉴는 홈, 공지, 내 출석 순서이고 일정 상세에서는 홈이 켜집니다", () => {
   renderWithSession(<MemberNavigation />, sessionFixture());
-  const names = ["홈", "일정", "공지", "내 출석"];
-  expect(names.map((name) => screen.getByRole("link", { name }).getAttribute("href"))).toEqual(["/dashboard", "/events", "/notices", "/attendance"]);
+  const names = ["홈", "공지", "내 출석"];
+  expect(names.map((name) => screen.getByRole("link", { name }).getAttribute("href"))).toEqual(["/dashboard", "/notices", "/attendance"]);
   expect(screen.getByRole("link", { name: "홈" })).toHaveAttribute("aria-current", "page");
-  expect(screen.getByRole("link", { name: "일정" })).not.toHaveAttribute("aria-current");
+  expect(screen.queryByRole("link", { name: "일정" })).not.toBeInTheDocument();
   cleanup();
-  for (const path of ["/events", "/events/12"]) {
-    nav.pathname = path;
-    renderWithSession(<MemberNavigation />, sessionFixture());
-    expect(screen.getByRole("link", { name: "일정" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "홈" })).not.toHaveAttribute("aria-current");
-    cleanup();
-  }
+  nav.pathname = "/events/12";
+  renderWithSession(<MemberNavigation />, sessionFixture());
+  expect(screen.getByRole("link", { name: "홈" })).toHaveAttribute("aria-current", "page");
 });
 
 test("세션을 기다리는 동안에도 로고와 로그아웃을 보여 줍니다", () => {
