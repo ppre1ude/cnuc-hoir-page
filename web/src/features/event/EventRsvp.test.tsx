@@ -17,7 +17,7 @@ describe("행사 참석 응답", () => {
   beforeEach(() => { setEventRsvp.mockReset(); });
   afterEach(cleanup);
 
-  it("참석 응답을 저장하고 마감 전에는 불참으로 바꿀 수 있다", async () => {
+  it("참석 응답을 저장하면 노래하는 용을 띄우고, 마감 전에는 불참으로 바꿀 수 있다", async () => {
     const onSaved = vi.fn();
     setEventRsvp.mockResolvedValueOnce({ eventId: 7, choice: "ATTENDING" })
       .mockResolvedValueOnce({ eventId: 7, choice: "ABSENT" });
@@ -25,8 +25,11 @@ describe("행사 참석 응답", () => {
     fireEvent.click(screen.getByRole("button", { name: "참석" }));
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith("ATTENDING"));
     view.rerender(<EventRsvp event={event} memberType="ACTIVE" choice="ATTENDING" onSaved={onSaved} />);
+    expect(view.container.querySelector('img[src*="dragon-sing"]')).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "불참" }));
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith("ABSENT"));
+    view.rerender(<EventRsvp event={event} memberType="ACTIVE" choice="ABSENT" onSaved={onSaved} />);
+    expect(view.container.querySelector('img[src*="dragon-sing"]')).toBeNull();
   });
 
   it("참여 대상이 아니거나 시작된 행사에서는 새 응답을 받지 않는다", () => {

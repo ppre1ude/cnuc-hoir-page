@@ -83,6 +83,7 @@
 .rsvpButtons { display: flex; width: 100%; gap: var(--space-2); }
 .rsvpButtons button { flex: 1; min-height: var(--control-large); font-size: var(--text-body); }
 .rsvp p[role="alert"] { width: 100%; margin: 0; }
+.rsvpDragon { margin-left: auto; }
 .eventDetail h2 { margin: 0; overflow-wrap: anywhere; }
 .eventTime { display: flex; flex-wrap: wrap; gap: var(--space-1); margin: var(--space-3) 0 0; color: var(--color-muted); font-size: var(--text-label); }
 .description { margin: var(--space-5) 0 0; font-size: var(--text-body); line-height: 1.8; overflow-wrap: anywhere; white-space: pre-wrap; }
@@ -98,7 +99,6 @@
 /* 빈 날 안내는 상세 칸 가운데에 두고, 다음 일정 바로가기로 할 일을 이어 줍니다. */
 .emptyDay { display: grid; align-content: center; justify-items: center; gap: var(--space-4); height: 100%; padding: var(--space-10) var(--space-4); text-align: center; }
 .emptyDay p { margin: 0; color: var(--color-muted); font-size: var(--text-body); }
-.emptyIcon { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 50%; background: var(--color-selected); color: var(--color-primary); }
 .error { margin-bottom: var(--space-5); padding: var(--space-4); border: 1px solid var(--color-danger-border); border-radius: var(--radius-control); background: var(--color-danger-background); color: var(--color-danger); }
 .error button { margin-left: var(--space-2); }
 .backLink { display: inline-flex; align-items: center; min-height: var(--control-medium); margin-bottom: var(--space-4); color: var(--color-primary); font-size: var(--text-label); font-weight: var(--weight-label); text-decoration: none; }
