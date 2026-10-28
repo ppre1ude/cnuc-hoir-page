@@ -130,3 +130,16 @@ test("API가 아직 파트와 기수를 보내지 않아도 정보 미입력으�
   const detail = screen.getByRole("heading", { name: "Lee" }).closest("article")!;
   expect(fact(detail, "기수")).toHaveTextContent("미입력");
 });
+
+test("가운데 신청자를 처리하면 그 앞이 아니라 다음 신청자가 골라집니다", async () => {
+  const applicant = (id: number, name: string) => ({ id, name, email: `${id}@example.org`, status: "APPROVAL_PENDING" as const,
+    createdAt: "2026-09-27T00:00:00Z", part: null, cohort: null });
+  const [a, b, c] = [applicant(1, "가"), applicant(2, "나"), applicant(3, "다")];
+  vi.mocked(getApplications)
+    .mockResolvedValueOnce({ items: [a, b, c], page: 0, size: 20, total: 3 })
+    .mockResolvedValueOnce({ items: [a, c], page: 0, size: 20, total: 2 });
+  render(<ApplicationQueue />);
+  await userEvent.click((await roster()).getByRole("button", { name: /나/ }));
+  await userEvent.click(screen.getByRole("button", { name: "나 승인" }));
+  await waitFor(() => expect((within(screen.getByRole("list", { name: "신청자 목록" })).getByRole("button", { name: /다/ }))).toHaveAttribute("aria-current", "true"));
+});

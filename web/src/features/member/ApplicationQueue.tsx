@@ -34,13 +34,18 @@ export function ApplicationQueue() {
     if (busy !== null) return;
     setBusy(id);
     setError("");
+    // 처리한 신청자의 목록 자리를 기억해 두었다가, 새 목록에서 같은 자리(맨 끝이었으면 새 끝)의 신청자를 고릅니다.
+    const index = (data?.items ?? []).findIndex((item) => item.id === id);
     try {
       await action();
       const result = await getApplications(page);
       if (page > 0 && result.items.length === 0 && result.total <= page * result.size) {
         setData(null);
         setPage(Math.max(0, Math.ceil(result.total / result.size) - 1));
-      } else setData(result);
+      } else {
+        setData(result);
+        if (index >= 0) setSelected(result.items[Math.min(index, result.items.length - 1)]?.id);
+      }
     } catch (caught) {
       setError(caught instanceof ApiRequestError && caught.status === 409
         ? "이미 처리된 신청입니다. 목록을 새로 확인해 주세요."
@@ -51,7 +56,7 @@ export function ApplicationQueue() {
   }
 
   const items = data?.items ?? [];
-  // 처리한 신청자가 목록에서 빠지면 다음 신청자가 바로 보입니다.
+  // 고른 신청자가 목록에 없으면 첫 신청자를 보입니다.
   const current = selected === null ? null : items.find((item) => item.id === selected) ?? items[0] ?? null;
 
   return (
