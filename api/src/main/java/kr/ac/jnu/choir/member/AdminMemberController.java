@@ -52,7 +52,8 @@ public class AdminMemberController {
         var held = permissions.of(actor);
         // 이메일과 구글 연결 여부는 승인·직책 관리 권한이 있는 사람에게만 보입니다.
         boolean reveal = held.contains(Permission.APPROVE_APPLICATIONS) || held.contains(Permission.MANAGE_ROLES);
-        if (page < 0 || size < 1 || size > 100) {
+        // 계정 목록 화면은 검색과 파트 필터를 브라우저에서 하려고 전체를 한 번에 받습니다. 단원이 수천 명이 되면 서버 검색으로 바꿉니다.
+        if (page < 0 || size < 1 || size > 1000) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_PAGE", "조회 조건을 확인해 주세요.");
         }
         Page<Member> result = members.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size));

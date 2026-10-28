@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Input, Select, Feedback } from "../../components/ui";
+import { Button, Input, Select, Feedback, StatusBadge } from "../../components/ui";
 
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { ApiRequestError } from "../../lib/api";
@@ -12,6 +12,8 @@ import styles from "./AdminPages.module.css";
 type Pending = { id: number; email: string; memberType: "ACTIVE" | "OB"; name?: string | null };
 type PendingPage = { items: Pending[]; page: number; size: number; total: number };
 
+// 이 칸은 계정을 만드는 곳이 아니라, 이메일을 미리 등록해 그 구글 계정의 첫 로그인을 자동 승인하는 곳입니다.
+// 이름만으로는 그 뜻이 전해지지 않아, 제목 아래에 늘 보이는 설명 칸을 둡니다.
 export function MemberRegistration({ session, children }: { session: MemberSession; children?: ReactNode }) {
   const [revision, setRevision] = useState(0);
   const [admin, setAdmin] = useState(false);
@@ -40,39 +42,45 @@ export function MemberRegistration({ session, children }: { session: MemberSessi
       setAdmin(false);
       setRevision((value) => value + 1);
     } catch (caught) {
-      setError(caught instanceof ApiRequestError ? caught.message : "등록하지 못했습니다.");
+      setError(caught instanceof ApiRequestError ? caught.message : "미리 승인하지 못했습니다.");
     } finally { setBusy(false); }
   }
 
-  return <div className={styles.grid}>
-    <section className={styles.panel} aria-labelledby="register-title">
-      <div className={styles.panelHeader}><h2 id="register-title">단원 추가</h2></div>
-      {can(session, "MANAGE_ALLOWLIST") && <form className={styles.form} onSubmit={add}>
-        <label htmlFor="register-email">구글 계정 이메일</label>
-        <Input id="register-email" name="email" type="email" maxLength={254} required
-          value={email} onChange={(event) => setEmail(event.target.value)}
-          aria-describedby={notGmail ? "register-email-warning" : undefined} />
-        {notGmail && <p id="register-email-warning" className={styles.hint}>@gmail.com 주소가 아니면 로그인해도 바로 승인되지 않습니다. 철자를 확인하고, 맞는 주소라면 그 단원이 로그인한 뒤 가입 승인에서 직접 승인해 주세요.</p>}
-        <label htmlFor="register-name">이름 (선택)</label>
-        <Input id="register-name" name="name" maxLength={100} disabled={admin} />
-        <label htmlFor="register-type">단원 구분</label>
-        <Select id="register-type" name="memberType" defaultValue="ACTIVE">
-          <option value="ACTIVE">활동 단원</option><option value="OB">OB</option>
-        </Select>
-        {can(session, "MANAGE_SITE_ADMINS") && <label className={styles.check}><Input type="checkbox" checked={admin} onChange={(event) => setAdmin(event.target.checked)} /> 사이트 관리자 권한도 부여</label>}
-        <Button variant="primary" type="submit" disabled={busy}>등록</Button>
-        <p className={styles.hint}>@gmail.com 주소는 그 구글 계정으로 로그인하면 바로 승인됩니다. 다른 주소로 만든 구글 계정은 로그인하면 가입 승인에 올라오니 직접 승인해 주세요. 사이트 관리자 권한은 사이트 관리자만 줄 수 있습니다.</p>
-      </form>}
-      {error && <Feedback tone="error">{error}</Feedback>}
-      {can(session, "APPROVE_APPLICATIONS") && children}
-    </section>
-    {can(session, "MANAGE_ALLOWLIST") && <section className={styles.panel} aria-labelledby="pending-title">
-      <div className={styles.panelHeader}><h2 id="pending-title">로그인을 기다리는 등록</h2></div>
-      <p className={styles.hint}>등록을 삭제해도 이미 승인된 계정과 권한은 유지됩니다. 필요하면 계정 목록에서 접근을 해제해 주세요.</p>
-      {can(session, "MANAGE_SITE_ADMINS") && <PendingList key={`admin-${revision}`} admin load={getOperatorPreapprovals} remove={removeOperatorPreapproval} />}
-      <PendingList key={`member-${revision}`} load={getAllowlist} remove={removeAllowlist} />
-    </section>}
-  </div>;
+  return <section aria-labelledby="register-title">
+    <h2 id="register-title">미리 승인</h2>
+    <div className={styles.callout}>
+      <p>새 단원의 Gmail 주소를 여기에 등록해 두면, 그 사람이 구글 계정으로 처음 로그인할 때 가입 승인을 거치지 않고 바로 단원이 됩니다. 등록하지 않은 사람이 로그인하면 가입 승인 페이지에 올라오니 거기서 승인하면 됩니다. Gmail이 아닌 주소는 자동 승인이 되지 않으니 아래 1회용 링크로 초대해 주세요.</p>
+    </div>
+    <div className={styles.registerGrid}>
+      <div>
+        {can(session, "MANAGE_ALLOWLIST") && <form className={styles.form} onSubmit={add}>
+          <label htmlFor="register-email">구글 계정 이메일</label>
+          <Input id="register-email" name="email" type="email" maxLength={254} required
+            value={email} onChange={(event) => setEmail(event.target.value)}
+            aria-describedby={notGmail ? "register-email-warning" : undefined} />
+          {notGmail && <p id="register-email-warning" className={styles.hint}>@gmail.com 주소가 아니면 로그인해도 바로 승인되지 않습니다. 철자를 확인하고, 맞는 주소라면 그 단원이 로그인한 뒤 가입 승인에서 직접 승인해 주세요.</p>}
+          <label htmlFor="register-name">이름 (선택)</label>
+          <Input id="register-name" name="name" maxLength={100} disabled={admin} />
+          <label htmlFor="register-type">단원 구분</label>
+          <Select id="register-type" name="memberType" defaultValue="ACTIVE">
+            <option value="ACTIVE">활동 단원</option><option value="OB">OB</option>
+          </Select>
+          {can(session, "MANAGE_SITE_ADMINS") && <label className={styles.check}><Input type="checkbox" checked={admin} onChange={(event) => setAdmin(event.target.checked)} /> 사이트 관리자 권한도 부여</label>}
+          <Button variant="primary" type="submit" disabled={busy}>미리 승인</Button>
+        </form>}
+        {error && <Feedback tone="error">{error}</Feedback>}
+        {can(session, "APPROVE_APPLICATIONS") && children}
+      </div>
+      {can(session, "MANAGE_ALLOWLIST") && <div>
+        <h3 id="pending-title">미리 승인한 이메일</h3>
+        <p className={styles.hint}>아직 로그인하지 않은 사람입니다. 로그인하면 이 목록에서 사라지고 계정 목록에 나타납니다. 여기서 삭제해도 이미 승인된 계정은 그대로입니다.</p>
+        <ul className={styles.pendingList} aria-labelledby="pending-title">
+          {can(session, "MANAGE_SITE_ADMINS") && <PendingList key={`admin-${revision}`} admin load={getOperatorPreapprovals} remove={removeOperatorPreapproval} />}
+          <PendingList key={`member-${revision}`} load={getAllowlist} remove={removeAllowlist} />
+        </ul>
+      </div>}
+    </div>
+  </section>;
 }
 
 function PendingList({ admin = false, load, remove }: {
@@ -92,7 +100,7 @@ function PendingList({ admin = false, load, remove }: {
         setData(null);
         setPage(Math.max(0, Math.ceil(value.total / value.size) - 1));
       } else setData(value);
-    }).catch(() => { if (alive) setError("등록 목록을 불러오지 못했습니다."); });
+    }).catch(() => { if (alive) setError("미리 승인한 이메일을 불러오지 못했습니다."); });
     return () => { alive = false; };
   }, [load, page, revision]);
 
@@ -103,25 +111,28 @@ function PendingList({ admin = false, load, remove }: {
     try {
       await remove(id);
       setRevision((value) => value + 1);
-    } catch { setError("등록을 삭제하지 못했습니다."); }
+    } catch { setError("삭제하지 못했습니다."); }
     finally { setBusy(false); }
   }
 
+  // 사이트 관리자 목록과 단원 목록이 한 ul 안에 이어지므로, 줄 사이의 안내와 페이지 넘김도 li로 둡니다.
   return <>
-    {!admin && data?.items.length === 0 && <p className={styles.hint}>등록된 단원 이메일이 없습니다.</p>}
-    {data?.items.map((item) => <article className={styles.pendingRow} key={item.id}>
+    {!admin && data?.items.length === 0 && <li className={styles.pendingNote}>미리 승인한 이메일이 없습니다.</li>}
+    {data?.items.map((item) => <li className={styles.pendingRow} key={item.id}>
       <div>
-        <h2>{item.name || item.email}</h2>
-        <p>{item.name ? `${item.email} · ` : ""}{item.memberType === "OB" ? "OB" : "활동 단원"}{admin ? " · 사이트 관리자" : ""}</p>
+        <strong>{item.name || item.email}</strong>
+        {item.name && <span>{item.email}</span>}
+        <StatusBadge>{item.memberType === "OB" ? "OB" : "활동 단원"}</StatusBadge>
+        {admin && <StatusBadge tone="positive">사이트 관리자</StatusBadge>}
       </div>
-      <Button variant="danger" size="small" type="button" disabled={busy} aria-label={`${item.email} 등록 삭제`}
+      <Button variant="danger" size="small" type="button" disabled={busy} aria-label={`${item.email} 삭제`}
         onClick={() => removeItem(item.id)}>삭제</Button>
-    </article>)}
-    {data && data.total > data.size && <nav className={styles.pagination} aria-label={admin ? "운영진 등록 페이지" : "단원 등록 페이지"}>
+    </li>)}
+    {data && data.total > data.size && <li><nav className={styles.pagination} aria-label={admin ? "사이트 관리자 미리 승인 페이지" : "단원 미리 승인 페이지"}>
       <Button variant="secondary" type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>이전</Button>
       <span>{page + 1} / {Math.ceil(data.total / data.size)}</span>
       <Button variant="secondary" type="button" disabled={(page + 1) * data.size >= data.total} onClick={() => setPage(page + 1)}>다음</Button>
-    </nav>}
-    {error && <Feedback tone="error">{error}</Feedback>}
+    </nav></li>}
+    {error && <li className={styles.pendingNote}><Feedback tone="error">{error}</Feedback></li>}
   </>;
 }

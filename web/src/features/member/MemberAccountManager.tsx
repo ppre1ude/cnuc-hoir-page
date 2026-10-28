@@ -4,13 +4,14 @@ import { Button, Input, Select, Feedback, PageHeader, SkeletonRows, StatusBadge 
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ApiRequestError } from "../../lib/api";
-import { can, type MemberSession } from "../auth/session";
+import { can, type MemberSession, type Part } from "../auth/session";
 import { useSession, useSessionState } from "../auth/SessionProvider";
 import { approveApplication, cancelRejection, getMembers, inviteMember, reissueAccountSetup, rejectApplication, revokeMember,
   type IssuedInvitation, type MemberItem, type MemberPage } from "./adminMembers";
 import styles from "./AdminPages.module.css";
 import { MemberRegistration } from "./MemberRegistration";
 import { MemberFacts, MemberRoles } from "./MemberRoles";
+import { partLabel, parts } from "./roles";
 
 // 상태는 이름 옆 배지로 보입니다. 누군가를 기다리는 계정은 노랑, 막힌 계정은 빨강, 쓰고 있는 계정은 조용한 회색입니다.
 const statusLabel: Record<MemberItem["status"], string> = { INVITED: "초대 대기", EMAIL_PENDING: "이메일 확인 대기",
@@ -22,19 +23,27 @@ export function MemberAccountManager() {
   const session = useSession();
   const { refresh: refreshSession } = useSessionState();
   const [data, setData] = useState<MemberPage | null>(null);
-  const [page, setPage] = useState(0);
   const [refresh, setRefresh] = useState(0);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [issued, setIssued] = useState<IssuedInvitation | null>(null);
   const [opened, setOpened] = useState<number | null>(null);
+  const [query, setQuery] = useState("");
+  const [part, setPart] = useState<Part | "">("");
+  const [selected, setSelected] = useState<number | null>(null);
 
   useEffect(() => {
     let alive = true;
-    getMembers(page).then((result) => { if (alive) setData(result); })
+    getMembers().then((result) => { if (alive) setData(result); })
       .catch(() => { if (alive) setError("단원 계정을 불러오지 못했습니다."); });
     return () => { alive = false; };
-  }, [page, refresh]);
+  }, [refresh]);
+
+  // 검색과 파트 필터는 받아 둔 전체 목록을 브라우저에서 거릅니다. 고른 사람은 걸러져도 상세에 남아 있습니다.
+  const needle = query.trim().toLowerCase();
+  const shown = (data?.items ?? []).filter((item) =>
+    (!needle || item.name.toLowerCase().includes(needle)) && (!part || item.part === part));
+  const current = data?.items.find((item) => item.id === selected) ?? null;
 
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -52,7 +61,6 @@ export function MemberAccountManager() {
       });
       setIssued(result);
       form.reset();
-      setPage(0);
       setRefresh((value) => value + 1);
     } catch (caught) {
       setError(caught instanceof ApiRequestError && caught.code === "EMAIL_ALREADY_USED"
@@ -100,8 +108,8 @@ export function MemberAccountManager() {
     <PageHeader title="단원 계정" />
     {(can(session, "MANAGE_ALLOWLIST") || can(session, "APPROVE_APPLICATIONS")) && <MemberRegistration session={session}>
       <details className={styles.more}>
-        <summary>구글 로그인으로 승인되지 않는 경우</summary>
-        <p className={styles.hint}>구글이 이메일 소유를 확인하지 못하는 주소라서 로그인해도 승인되지 않을 때 사용합니다. 계정을 먼저 만들고 1회용 링크를 발급하니, 24시간 안에 본인에게 직접 전달해 주세요.</p>
+        <summary>Gmail이 아닌 경우: 1회용 링크로 초대</summary>
+        <p className={styles.hint}>Gmail이 아니라서 로그인해도 자동 승인되지 않는 주소에 씁니다. 계정을 먼저 만들고 1회용 링크를 발급하니, 24시간 안에 본인에게 직접 전달해 주세요.</p>
         <form className={styles.form} aria-label="1회용 링크로 초대" onSubmit={create}>
           <label htmlFor="invite-name">이름</label>
           <Input id="invite-name" name="name" maxLength={100} required />
@@ -127,19 +135,39 @@ export function MemberAccountManager() {
     <section aria-labelledby="members-title" className={styles.memberSection}>
       <h2 id="members-title">계정 목록</h2>
       {!data && error && <Button variant="secondary" type="button" onClick={() => { setError(""); setRefresh((value) => value + 1); }}>다시 시도</Button>}
-      {data?.items.length === 0 && <p>등록된 계정이 없습니다.</p>}
-      <div className={styles.list}>{!data && !error && <SkeletonRows count={4} label="계정 목록을 불러오는 중입니다." />}
-        {data?.items.map((item) => <MemberRow key={item.id} item={item} busy={busy} session={session} opened={opened === item.id} onChanged={() => {
-          setRefresh((value) => value + 1);
-          // 자기 직책·파트가 바뀌면 권한과 메뉴가 달라지므로 세션도 다시 받습니다.
-          if (item.id === session.id) refreshSession();
-        }} onRenew={() => renew(item.id)} onRevoke={(reason) => revoke(item.id, reason)}
-          onReopen={() => reopen(item.id)} onApprove={(type) => approve(item.id, type)} onReject={(reason) => reject(item.id, reason)} />)}</div>
-      {data && data.total > data.size && <nav className={styles.pagination} aria-label="계정 목록 페이지">
-        <Button variant="secondary" type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>이전</Button>
-        <span>{page + 1} / {Math.ceil(data.total / data.size)}</span>
-        <Button variant="secondary" type="button" disabled={(page + 1) * data.size >= data.total} onClick={() => setPage(page + 1)}>다음</Button>
-      </nav>}
+      <div className={styles.workspace} data-view={current ? "detail" : "list"}>
+        <div className={styles.roster}>
+          <div className={styles.filters}>
+            <Input type="search" aria-label="이름 검색" placeholder="이름 검색" value={query} onChange={(event) => setQuery(event.target.value)} />
+            <Select aria-label="파트로 거르기" value={part} onChange={(event) => setPart(event.target.value as Part | "")}>
+              <option value="">모든 파트</option>
+              {parts.map((value) => <option key={value} value={value}>{partLabel[value]}</option>)}
+            </Select>
+          </div>
+          {!data && !error && <SkeletonRows count={6} label="계정 목록을 불러오는 중입니다." />}
+          <ul className={styles.rosterList} aria-label="단원 목록">
+            {shown.map((item) => <li key={item.id}>
+              <button type="button" className={styles.rosterRow} aria-current={selected === item.id ? "true" : undefined} onClick={() => setSelected(item.id)}>
+                <strong>{item.name}</strong>
+                <span>{item.part ? partLabel[item.part] : "파트 미지정"}</span>
+                {item.status !== "APPROVED" && <small data-tone={statusTone(item.status)}>{statusLabel[item.status]}</small>}
+              </button>
+            </li>)}
+          </ul>
+          {data?.items.length === 0 && <p>등록된 계정이 없습니다.</p>}
+          {data && data.items.length > 0 && shown.length === 0 && <p>조건에 맞는 단원이 없습니다.</p>}
+        </div>
+        <div className={styles.detail}>
+          <Button variant="secondary" size="small" type="button" className={styles.toList} onClick={() => setSelected(null)}>목록으로</Button>
+          {current ? <MemberDetail key={current.id} item={current} busy={busy} session={session} opened={opened === current.id} onChanged={() => {
+            setRefresh((value) => value + 1);
+            // 자기 직책·파트가 바뀌면 권한과 메뉴가 달라지므로 세션도 다시 받습니다.
+            if (current.id === session.id) refreshSession();
+          }} onRenew={() => renew(current.id)} onRevoke={(reason) => revoke(current.id, reason)}
+            onReopen={() => reopen(current.id)} onApprove={(type) => approve(current.id, type)} onReject={(reason) => reject(current.id, reason)} />
+            : <p className={styles.placeholder}>왼쪽 목록에서 단원을 고르면 여기에 정보가 나옵니다.</p>}
+        </div>
+      </div>
     </section>
   </section>;
 }
@@ -151,7 +179,7 @@ function approvedNote(item: MemberItem, session: MemberSession): string {
   return "승인했습니다. 파트와 기수를 확인하고 직책을 더해 주세요.";
 }
 
-function MemberRow({ item, busy, session, opened, onChanged, onRenew, onRevoke, onReopen, onApprove, onReject }: {
+function MemberDetail({ item, busy, session, opened, onChanged, onRenew, onRevoke, onReopen, onApprove, onReject }: {
   item: MemberItem; busy: boolean; session: MemberSession; opened: boolean; onChanged: () => void;
   onRenew: () => void; onRevoke: (reason: string) => void; onReopen: () => void;
   onApprove: (type: "ACTIVE" | "OB") => void; onReject: (reason: string) => void;
@@ -159,7 +187,7 @@ function MemberRow({ item, busy, session, opened, onChanged, onRenew, onRevoke, 
   const [reason, setReason] = useState("");
   // 사이트 관리자·단장·부단장 계정의 접근 해제는 사이트 관리자만 할 수 있습니다.
   const leadership = item.admin || item.roles.some((role) => role.role === "PRESIDENT" || role.role === "VICE_PRESIDENT");
-  return <article className={styles.row}>
+  return <article>
     <div className={styles.rowHeader}>
       <h2>{item.name}</h2>
       <StatusBadge tone={statusTone(item.status)}>{statusLabel[item.status]}</StatusBadge>

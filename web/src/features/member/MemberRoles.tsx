@@ -10,7 +10,7 @@ import styles from "./AdminPages.module.css";
 
 export const memberTypeLabel = { ACTIVE: "활동 단원", OB: "OB" } as const;
 
-// 구분·파트·기수·직책을 행마다 같은 칸에 두어, 운영진이 표를 훑듯 사람을 찾고 상태를 읽게 합니다.
+// 구분·파트·기수·직책을 항목 이름 칸과 값 칸으로 나눈 표로 보여, 어느 값이 무엇인지 헷갈리지 않게 합니다.
 export function MemberFacts({ item }: { item: MemberItem }) {
   return <dl className={styles.facts}>
     <div><dt>단원 구분</dt><dd>{item.memberType ? memberTypeLabel[item.memberType] : "미지정"}</dd></div>

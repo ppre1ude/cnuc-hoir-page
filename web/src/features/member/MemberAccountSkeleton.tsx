@@ -7,24 +7,26 @@ const sectionHeight = "calc(var(--text-section) * 1.2)";
 export function MemberAccountSkeleton() {
   return <div className={styles.page}>
     <div className={styles.skeletonHeader}><Skeleton width="var(--space-20)" height="calc(var(--text-title) * 1.2)" /></div>
-    <div className={styles.grid}>
-      <div className={styles.panel}>
-        <div className={styles.panelHeader}><Skeleton width="30%" height={sectionHeight} /></div>
-        <div className={styles.form}>
-          {[0, 1, 2].map((index) => <div key={index} className={styles.form}>
-            <Skeleton width="35%" />
-            <Skeleton height="var(--control-medium)" />
-          </div>)}
-        </div>
+    <Skeleton className={styles.skeletonHeading} width="20%" height={sectionHeight} />
+    <Skeleton className={styles.callout} height="calc(var(--text-label) * 1.7 * 3)" />
+    <div className={styles.registerGrid}>
+      <div className={styles.form}>
+        {[0, 1, 2].map((index) => <div key={index} className={styles.form}>
+          <Skeleton width="35%" />
+          <Skeleton height="var(--control-medium)" />
+        </div>)}
       </div>
-      <div className={styles.panel}>
-        <div className={styles.panelHeader}><Skeleton width="45%" height={sectionHeight} /></div>
-        <SkeletonRows count={3} />
+      <div>
+        <Skeleton width="45%" height="calc(var(--text-body) * 1.3)" />
+        <SkeletonRows count={3} className={styles.pendingList} />
       </div>
     </div>
     <div className={styles.memberSection}>
       <Skeleton className={styles.skeletonHeading} width="20%" height={sectionHeight} />
-      <SkeletonRows count={4} className={styles.list} />
+      <div className={styles.workspace}>
+        <SkeletonRows count={6} className={styles.rosterList} />
+        <div className={styles.detail}><Skeleton height="var(--space-20)" /></div>
+      </div>
     </div>
   </div>;
 }

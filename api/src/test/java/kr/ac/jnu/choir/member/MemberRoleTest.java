@@ -240,8 +240,9 @@ class MemberRoleTest {
         Member admin = member("관리자", true);
         Member lead = member("수석", false);
         grant(lead, "SECTION_LEAD", null, null, "SOPRANO", admin);
-        String body = mvc.perform(get("/api/v1/admin/members?page=0&size=100").session(session(admin)))
-                .andReturn().getResponse().getContentAsString();
+        // 계정 목록 화면은 검색을 브라우저에서 하려고 한 번에 1000명까지 받습니다.
+        String body = mvc.perform(get("/api/v1/admin/members?page=0&size=1000").session(session(admin)))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         assertThat(body).contains("\"role\":\"SECTION_LEAD\",\"department\":null,\"unit\":null,\"part\":\"SOPRANO\"");
     }
 
