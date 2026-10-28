@@ -53,10 +53,17 @@
 /* 행 안에서 접는 동작은 행의 구분선과 겹치지 않게 윗선 없이 붙입니다. */
 .row .more { margin-top: var(--space-3); padding-top: 0; border-top: 0; }
 .issued { margin-top: var(--space-6); }
-.pendingRow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) 0; border-bottom: 1px solid var(--color-line); }
-.pendingRow > div { min-width: 0; }
-.pendingRow h2 { font-size: var(--text-body); letter-spacing: 0; overflow-wrap: anywhere; }
-.pendingRow p { margin: 0; color: var(--color-muted); font-size: var(--text-small); overflow-wrap: anywhere; }
+/* 미리 승인: 제목 아래 설명 칸, 그 아래 왼쪽 폼과 오른쪽 목록. 목록 줄은 계정 목록과 같은 굵은 윗줄과 가는 구분선입니다. */
+.callout { margin: var(--space-4) 0 var(--space-6); padding: var(--space-4) var(--space-5); border: 1px solid var(--color-highlight); border-radius: var(--radius-panel); background: var(--color-subtle); }
+.callout p { margin: 0; font-size: var(--text-label); line-height: 1.7; }
+.registerGrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--space-8); align-items: start; }
+.registerGrid h3 { margin: 0 0 var(--space-2); font-size: var(--text-body); }
+.pendingList { margin: var(--space-3) 0 0; padding: 0; border-top: 2px solid var(--color-ink); list-style: none; }
+.pendingRow { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-3) 0; border-bottom: 1px solid var(--color-line); }
+.pendingRow > div { display: flex; flex: 1; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); min-width: 0; }
+.pendingRow strong { font-weight: var(--weight-label); overflow-wrap: anywhere; }
+.pendingRow span { color: var(--color-muted); font-size: var(--text-small); overflow-wrap: anywhere; }
+.pendingNote { padding: var(--space-4) 0; color: var(--color-muted); font-size: var(--text-label); }
 
 .pagination { display: flex; align-items: center; justify-content: center; gap: var(--space-3); margin-top: var(--space-6); font-size: var(--text-label); }
 .back { display: inline-flex; align-items: center; min-height: var(--control-medium); margin-bottom: var(--space-4); color: var(--color-primary); font-size: var(--text-label); font-weight: var(--weight-label); text-decoration: none; }
@@ -78,7 +85,7 @@
 .pollDetails li strong { color: var(--color-primary); white-space: nowrap; }
 
 @media (max-width: 760px) {
-  .grid { grid-template-columns: minmax(0, 1fr); }
+  .grid, .registerGrid { grid-template-columns: minmax(0, 1fr); }
 }
 
 .roles { display: grid; gap: var(--space-3); margin-top: var(--space-3); }
