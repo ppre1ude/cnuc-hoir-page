@@ -208,7 +208,7 @@ export function EventCalendar() {
               aria-current={key === today ? "date" : undefined}
               aria-label={`${month.replace("-", "년 ")}월 ${day}일${count ? `, 일정 ${count}개` : ""}`}>
               <span className={styles.dayNumber}>{day}</span>
-              {count > 0 && <span className={`${styles.kind} ${styles.dayEvent}`} data-kind={eventKind(eventsOnDay[0].title)}>{eventsOnDay[0].title}</span>}
+              {count > 0 && <span className={`${styles.kind} ${styles.dayEvent}`} data-kind={eventKind(eventsOnDay[0])}>{eventsOnDay[0].title}</span>}
               {count > 1 && <span className={styles.moreEvents}>+{count - 1}</span>}
               {count > 0 && <i aria-hidden="true" />}
             </Button></td>;
@@ -236,7 +236,7 @@ export function EventCalendar() {
             const past = seoulDateKey(new Date(new Date(event.endAt).getTime() - 1)) < today;
             return <li key={event.id} className={`${styles.eventRow} ${selected?.id === event.id ? styles.activeEvent : ""} ${past ? styles.pastEvent : ""}`}>
               <Button variant="unstyled" type="button" className={styles.eventSelect} aria-pressed={selected?.id === event.id} onClick={() => pickEvent(event)}>
-                <EventKindIcon title={event.title} />
+                <EventKindIcon event={event} />
                 {/* 버튼 이름이 "날짜 제목 상태"로 띄어 읽히도록 사이에 공백을 둡니다. 플렉스 안이라 보이지는 않습니다. */}
                 <span className={styles.eventText}>
                   <time dateTime={event.startAt} className={styles.eventDate}>{attendanceDate(event.startAt)}</time>{" "}

@@ -8,7 +8,7 @@ import { canManageEvent, canManageRoster, type Part } from "../auth/session";
 import { useSession } from "../auth/SessionProvider";
 import { partLabel, parts } from "../member/roles";
 import { createEvent, eventKindText, getEvents, monthBounds, scheduleKindLabel, seoulDateKey, seoulDateTime, type ChoirEvent,
-  type ScheduleKind, updateEvent } from "./events";
+  scheduleKinds, type ScheduleKind, updateEvent } from "./events";
 import styles from "./EventEditor.module.css";
 import { EventBatchCreator } from "./EventBatchCreator";
 import { AdminEventRsvps } from "./AdminEventRsvps";
@@ -26,7 +26,6 @@ function utcInput(value: string) {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-const kinds: ScheduleKind[] = ["FULL_REHEARSAL", "PART_REHEARSAL", "EVENT"];
 
 export function EventEditor() {
   const session = useSession();
@@ -116,7 +115,7 @@ export function EventEditor() {
   // 고칠 수 없는 일정(예: 총무가 보는 전체연습)은 출석 관리와 응답 집계만 씁니다.
   const editable = selected !== null && canManageEvent(session, selected.kind, selected.part);
   const partChoices = parts.filter((item) => canManageEvent(session, "PART_REHEARSAL", item) || (kind === "PART_REHEARSAL" && item === part));
-  const kindChoices = kinds.filter((item) => item === kind
+  const kindChoices = scheduleKinds.filter((item) => item === kind
     || (item === "PART_REHEARSAL" ? partChoices.length > 0 : canManageEvent(session, item, null)));
   function refreshList(createdMonth: string) {
     currentMonth.current = createdMonth;

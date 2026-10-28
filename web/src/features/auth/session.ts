@@ -1,4 +1,5 @@
 import { apiRequest } from "../../lib/api";
+import type { ScheduleKind } from "../event/events";
 
 export type Part = "SOPRANO" | "ALTO" | "TENOR" | "BASS" | "PIANO";
 export type Role = "PRESIDENT" | "VICE_PRESIDENT" | "TREASURER" | "DEPARTMENT_HEAD" | "DEPARTMENT_MEMBER" | "SECTION_LEAD";
@@ -34,17 +35,17 @@ export function leadParts(session: MemberSession | null | undefined): Part[] {
 }
 
 // 일정 등록·수정 권한입니다. 서버의 EventAccess.canManage와 같습니다.
-// 전체연습은 단장·부단장, 파트연습은 단장·부단장과 그 파트 수석, 행사는 운영진 전원입니다.
-export function canManageEvent(session: MemberSession | null | undefined, kind: "FULL_REHEARSAL" | "PART_REHEARSAL" | "EVENT",
+// 정기연습과 비정기연습은 단장·부단장, 파트연습은 단장·부단장과 그 파트 수석, 행사는 운영진 전원입니다.
+export function canManageEvent(session: MemberSession | null | undefined, kind: ScheduleKind,
   part: Part | null): boolean {
-  if (kind === "FULL_REHEARSAL") return can(session, "MANAGE_FULL_REHEARSALS");
+  if (kind === "REGULAR_REHEARSAL" || kind === "EXTRA_REHEARSAL") return can(session, "MANAGE_FULL_REHEARSALS");
   if (kind === "PART_REHEARSAL") return can(session, "MANAGE_PART_REHEARSALS") || (part != null && leadParts(session).includes(part));
   return can(session, "MANAGE_EVENTS");
 }
 
 // 응답 집계와 출석 관리 권한입니다. 파트연습은 단장단(총무 포함)과 그 파트 수석, 그 밖은 운영진 전원입니다.
 export function canManageRoster(session: MemberSession | null | undefined,
-  event: { kind: "FULL_REHEARSAL" | "PART_REHEARSAL" | "EVENT"; part: Part | null }): boolean {
+  event: { kind: ScheduleKind; part: Part | null }): boolean {
   if (event.kind === "PART_REHEARSAL") {
     return can(session, "MANAGE_PART_ATTENDANCE") || (event.part != null && leadParts(session).includes(event.part));
   }

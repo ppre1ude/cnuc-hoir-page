@@ -7,7 +7,7 @@ import { ApiRequestError } from "../../lib/api";
 import { canManageEvent, type Part } from "../auth/session";
 import { useSession } from "../auth/SessionProvider";
 import { partLabel, parts } from "../member/roles";
-import { createEventsBatch, scheduleKindLabel, seoulDateKey, type EventInput, type ScheduleKind } from "./events";
+import { createEventsBatch, scheduleKindLabel, scheduleKinds, seoulDateKey, type EventInput, type ScheduleKind } from "./events";
 import styles from "./EventEditor.module.css";
 
 function monthDays(month: string) {
@@ -22,11 +22,10 @@ function mondayOffset(month: string) {
 
 type Props = { onCreated: (month: string) => void };
 
-const kinds: ScheduleKind[] = ["FULL_REHEARSAL", "PART_REHEARSAL", "EVENT"];
-
 // 종류를 고르면 채우는 제목입니다. 행사는 이름이 제각각이라 비워 둡니다.
 function defaultTitle(kind: ScheduleKind, part: Part | null) {
-  if (kind === "FULL_REHEARSAL") return "전체연습";
+  if (kind === "REGULAR_REHEARSAL") return "정기연습";
+  if (kind === "EXTRA_REHEARSAL") return "비정기연습";
   if (kind === "PART_REHEARSAL" && part) return `${partLabel[part]} 파트연습`;
   return "";
 }
@@ -35,7 +34,7 @@ export function EventBatchCreator({ onCreated }: Props) {
   const session = useSession();
   // 이 사람이 열 수 있는 종류와 파트만 고르게 합니다. 서버도 같은 규칙으로 다시 검사합니다.
   const partChoices = parts.filter((item) => canManageEvent(session, "PART_REHEARSAL", item));
-  const kindChoices = kinds.filter((item) => item === "PART_REHEARSAL" ? partChoices.length > 0 : canManageEvent(session, item, null));
+  const kindChoices = scheduleKinds.filter((item) => item === "PART_REHEARSAL" ? partChoices.length > 0 : canManageEvent(session, item, null));
   const [month, setMonth] = useState(() => seoulDateKey(new Date()).slice(0, 7));
   const [dates, setDates] = useState<string[]>([]);
   const [kind, setKind] = useState<ScheduleKind>(kindChoices[0] ?? "EVENT");

@@ -1,20 +1,22 @@
+import type { ChoirEvent } from "./events";
 import styles from "./EventCalendar.module.css";
 
 export type EventKind = "regular" | "extra" | "rehearsal" | "concert" | "trip" | "part" | "other";
 
-// ponytail: 행사에 종류 칸이 없어 제목 단어로 알아맞힙니다. 운영진이 제목을 다르게 쓰기 시작하면 종류 칸을 DB에 추가합니다.
-// 앞 규칙이 이깁니다. "파트연습"은 연습보다 파트로, "공연 리허설"은 공연보다 리허설로 읽습니다.
-const rules: [RegExp, EventKind][] = [
-  [/비정기/, "extra"],
-  [/파트/, "part"],
+// 정기연습, 비정기연습, 파트연습은 등록할 때 고른 종류를 그대로 씁니다.
+const byKind = { REGULAR_REHEARSAL: "regular", EXTRA_REHEARSAL: "extra", PART_REHEARSAL: "part" } as const;
+
+// ponytail: 중요 행사만 제목 단어로 리허설, 공연, MT를 알아맞힙니다. 맞는 단어가 없으면 일정 아이콘입니다.
+// 앞 규칙이 이깁니다. "공연 리허설"은 공연보다 리허설로 읽습니다.
+const eventRules: [RegExp, EventKind][] = [
   [/리허설/, "rehearsal"],
-  [/공연|연주회/, "concert"],
+  [/공연|연주회|발표회/, "concert"],
   [/MT|엠티|워크숍|수련회/i, "trip"],
-  [/연습|정기/, "regular"],
 ];
 
-export function eventKind(title: string): EventKind {
-  return rules.find(([pattern]) => pattern.test(title))?.[1] ?? "other";
+export function eventKind(event: Pick<ChoirEvent, "kind" | "title">): EventKind {
+  if (event.kind !== "EVENT") return byKind[event.kind];
+  return eventRules.find(([pattern]) => pattern.test(event.title))?.[1] ?? "other";
 }
 
 export const kindLabels: Record<EventKind, string> = {
@@ -32,8 +34,8 @@ const icons: Record<EventKind, React.ReactNode> = {
 };
 
 // 종류는 제목으로도 읽히므로 아이콘은 보조 표시로만 두고 보조 기술에는 숨깁니다.
-export function EventKindIcon({ title }: { title: string }) {
-  const kind = eventKind(title);
+export function EventKindIcon({ event }: { event: Pick<ChoirEvent, "kind" | "title"> }) {
+  const kind = eventKind(event);
   return <span className={`${styles.kind} ${styles.kindIcon}`} data-kind={kind} aria-hidden="true">
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{icons[kind]}</svg>
   </span>;

@@ -2,8 +2,16 @@ import { apiRequest } from "../../lib/api";
 import type { MemberSession, Part } from "../auth/session";
 import { partLabel } from "../member/roles";
 
-export type ScheduleKind = "FULL_REHEARSAL" | "PART_REHEARSAL" | "EVENT";
-export const scheduleKindLabel: Record<ScheduleKind, string> = { FULL_REHEARSAL: "전체연습", PART_REHEARSAL: "파트연습", EVENT: "행사" };
+export type ScheduleKind = "REGULAR_REHEARSAL" | "EXTRA_REHEARSAL" | "PART_REHEARSAL" | "EVENT";
+// 등록 화면의 선택지 순서입니다. EVENT는 연주회, 발표회, MT 같은 일정이라 "중요 행사"라고 부릅니다.
+export const scheduleKinds: ScheduleKind[] = ["REGULAR_REHEARSAL", "EXTRA_REHEARSAL", "PART_REHEARSAL", "EVENT"];
+export const scheduleKindLabel: Record<ScheduleKind, string> = {
+  REGULAR_REHEARSAL: "정기연습", EXTRA_REHEARSAL: "비정기연습", PART_REHEARSAL: "파트연습", EVENT: "중요 행사",
+};
+// 목록의 종류 배지와 개수 배지에 쓰는 짧은 이름입니다.
+export const kindShortLabel: Record<ScheduleKind, string> = {
+  REGULAR_REHEARSAL: "정기", EXTRA_REHEARSAL: "비정기", PART_REHEARSAL: "파트", EVENT: "중요 행사",
+};
 
 export type ChoirEvent = {
   id: number;

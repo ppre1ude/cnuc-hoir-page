@@ -32,7 +32,7 @@ describe("일정 중심 단원 화면", () => {
     getEventAttendance.mockReset();
     getMyAttendance.mockReset();
     getEvents.mockResolvedValue([
-      { id: 1, title: "정기 연습", description: "연습실", startAt: "2026-09-29T10:00:00Z", endAt: "2026-09-29T12:00:00Z", kind: "EVENT", part: null, obEligible: false, publicVisible: false },
+      { id: 1, title: "정기 연습", description: "연습실", startAt: "2026-09-29T10:00:00Z", endAt: "2026-09-29T12:00:00Z", kind: "REGULAR_REHEARSAL", part: null, obEligible: false, publicVisible: false },
       { id: 2, title: "가을 공연", description: "공연장", startAt: "2026-09-30T10:00:00Z", endAt: "2026-09-30T12:00:00Z", kind: "EVENT", part: null, obEligible: true, publicVisible: false },
     ]);
     getNotices.mockResolvedValue({ items: [{ id: 9, title: "공연 안내", publishedAt: "2026-09-20T00:00:00Z" }], page: 0, size: 20, total: 1 });
