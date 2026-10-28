@@ -117,7 +117,8 @@ function PendingList({ admin = false, load, remove }: {
 
   // 사이트 관리자 목록과 단원 목록이 한 ul 안에 이어지므로, 줄 사이의 안내와 페이지 넘김도 li로 둡니다.
   return <>
-    {!admin && data?.items.length === 0 && <li className={styles.pendingNote}>미리 승인한 이메일이 없습니다.</li>}
+    {/* 사이트 관리자 줄과 한 목록에 이어지므로, 단원 쪽이 비었다는 것만 말합니다. */}
+    {!admin && data?.items.length === 0 && <li className={styles.pendingNote}>미리 승인한 단원 이메일이 없습니다.</li>}
     {data?.items.map((item) => <li className={styles.pendingRow} key={item.id}>
       <div>
         <strong>{item.name || item.email}</strong>

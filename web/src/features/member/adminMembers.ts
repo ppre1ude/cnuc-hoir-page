@@ -56,10 +56,13 @@ export type MemberItem = {
 export type MemberPage = { items: MemberItem[]; page: number; size: number; total: number };
 export type IssuedInvitation = { memberId: number; token: string };
 
-// 이름 검색과 파트 필터는 브라우저에서 하므로 전체를 한 번에 받습니다. 1000명이면 200KB쯤입니다.
-// ponytail: 1000명을 넘기면 서버 검색(q, part 조건)으로 바꾸고 페이지 넘김을 되살립니다.
-export function getMembers(): Promise<MemberPage> {
-  return apiRequest<MemberPage>("/admin/members?page=0&size=1000");
+// 이름 검색과 파트 필터는 브라우저에서 하므로 전체를 받습니다. 1000명이면 200KB쯤이고, 넘으면 남은 페이지를 이어 받습니다.
+// ponytail: 수천 명이 되면 서버 검색(q, part 조건)과 페이지 넘김으로 바꿉니다.
+export async function getMembers(): Promise<MemberPage> {
+  const first = await apiRequest<MemberPage>("/admin/members?page=0&size=1000");
+  const rest = await Promise.all(Array.from({ length: Math.ceil(first.total / first.size) - 1 },
+    (_, index) => apiRequest<MemberPage>(`/admin/members?page=${index + 1}&size=1000`)));
+  return { ...first, items: [...first.items, ...rest.flatMap((page) => page.items)] };
 }
 
 export function inviteMember(input: { name: string; email: string; memberType: "ACTIVE" | "OB" }): Promise<IssuedInvitation> {

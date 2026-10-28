@@ -38,13 +38,13 @@ test("마지막 페이지의 유일한 항목을 지우면 이전 페이지로 �
   await userEvent.click(screen.getByRole("button", { name: "member21@gmail.com 삭제" }));
 
   expect(await screen.findByText("member1@gmail.com")).toBeInTheDocument();
-  expect(screen.queryByText("미리 승인한 이메일이 없습니다.")).not.toBeInTheDocument();
+  expect(screen.queryByText("미리 승인한 단원 이메일이 없습니다.")).not.toBeInTheDocument();
   expect(getAllowlist).toHaveBeenLastCalledWith(0);
 });
 
 test("운영진 권한을 선택하면 운영진으로, 아니면 일반 단원으로 등록합니다", async () => {
   render(<MemberRegistration session={{ id: 1, name: "관리자", status: "APPROVED", memberType: "ACTIVE", admin: true }} />);
-  await screen.findByText("미리 승인한 이메일이 없습니다.");
+  await screen.findByText("미리 승인한 단원 이메일이 없습니다.");
 
   await userEvent.type(screen.getByLabelText("구글 계정 이메일"), "member@gmail.com");
   await userEvent.type(screen.getByLabelText("이름 (선택)"), "새 단원");
@@ -62,7 +62,7 @@ test("운영진 권한을 선택하면 운영진으로, 아니면 일반 단원�
 
 test("Gmail이 아닌 주소를 입력하면 바로 승인되지 않는다고 경고합니다", async () => {
   render(<MemberRegistration session={{ id: 1, name: "관리자", status: "APPROVED", memberType: "ACTIVE", admin: true }} />);
-  await screen.findByText("미리 승인한 이메일이 없습니다.");
+  await screen.findByText("미리 승인한 단원 이메일이 없습니다.");
   // 이 칸이 무엇을 하는지는 제목 아래 설명 칸이 늘 보이게 말합니다.
   expect(screen.getByText(/Gmail 주소를 여기에 등록해 두면, 그 사람이 구글 계정으로 처음 로그인할 때 가입 승인을 거치지 않고 바로 단원이 됩니다/)).toBeInTheDocument();
 
@@ -77,7 +77,7 @@ test("Gmail이 아닌 주소를 입력하면 바로 승인되지 않는다고 �
 
 test("등록한 뒤에도 고른 단원 구분을 유지하고 이메일 칸으로 돌아갑니다", async () => {
   render(<MemberRegistration session={{ id: 1, name: "관리자", status: "APPROVED", memberType: "ACTIVE", admin: true }} />);
-  await screen.findByText("미리 승인한 이메일이 없습니다.");
+  await screen.findByText("미리 승인한 단원 이메일이 없습니다.");
   await userEvent.type(screen.getByLabelText("구글 계정 이메일"), "ob1@gmail.com");
   await userEvent.type(screen.getByLabelText("이름 (선택)"), "첫 OB");
   await userEvent.selectOptions(screen.getByLabelText("단원 구분"), "OB");
