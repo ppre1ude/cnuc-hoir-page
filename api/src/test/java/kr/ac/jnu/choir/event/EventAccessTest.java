@@ -58,9 +58,11 @@ class EventAccessTest {
             Map.entry("소프라노 단원", SOPRANO), Map.entry("파트 미지정 단원", NO_PART), Map.entry("테너 OB", TENOR_OB),
             Map.entry("수석이었던 OB", OB_WITH_OLD_LEAD));
 
-    @Test void fullRehearsalsAreManagedByPresidentAndVicePresident() {
-        expect(EVERYONE, person -> person.canManage(EventKind.FULL_REHEARSAL, null),
-                List.of("사이트 관리자", "단장", "부단장", "부단장 겸 테너수석"));
+    @Test void regularAndExtraRehearsalsAreManagedByPresidentAndVicePresident() {
+        for (EventKind kind : List.of(EventKind.REGULAR_REHEARSAL, EventKind.EXTRA_REHEARSAL)) {
+            expect(EVERYONE, person -> person.canManage(kind, null),
+                    List.of("사이트 관리자", "단장", "부단장", "부단장 겸 테너수석"));
+        }
     }
 
     @Test void partRehearsalsAreManagedByPresidentVicePresidentAndThatPartsLead() {
@@ -78,7 +80,7 @@ class EventAccessTest {
     @Test void partRehearsalRosterIsForPresidentsTreasurerAndThatPartsLead() {
         expect(EVERYONE, person -> person.canManageRoster(event(EventKind.PART_REHEARSAL, Part.TENOR)),
                 List.of("사이트 관리자", "단장", "부단장", "총무", "테너수석", "부단장 겸 테너수석"));
-        expect(EVERYONE, person -> person.canManageRoster(event(EventKind.FULL_REHEARSAL, null)),
+        expect(EVERYONE, person -> person.canManageRoster(event(EventKind.REGULAR_REHEARSAL, null)),
                 List.of("사이트 관리자", "단장", "부단장", "총무", "부장", "테너수석", "소프라노수석", "부단장 겸 테너수석"));
     }
 
@@ -95,7 +97,7 @@ class EventAccessTest {
         assertThat(EventAccess.target(MemberType.ACTIVE, null, EventKind.PART_REHEARSAL, Part.TENOR, false)).isFalse();
         assertThat(EventAccess.target(MemberType.OB, Part.TENOR, EventKind.PART_REHEARSAL, Part.TENOR, true)).isTrue();
         assertThat(EventAccess.target(MemberType.OB, Part.TENOR, EventKind.PART_REHEARSAL, Part.TENOR, false)).isFalse();
-        assertThat(EventAccess.target(MemberType.ACTIVE, null, EventKind.FULL_REHEARSAL, null, false)).isTrue();
+        assertThat(EventAccess.target(MemberType.ACTIVE, null, EventKind.REGULAR_REHEARSAL, null, false)).isTrue();
         assertThat(EventAccess.target(MemberType.OB, Part.TENOR, EventKind.EVENT, null, false)).isFalse();
         assertThat(EventAccess.target(MemberType.OB, Part.TENOR, EventKind.EVENT, null, true)).isTrue();
         assertThat(EventAccess.target(null, Part.TENOR, EventKind.EVENT, null, true)).isFalse();
