@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSession } from "../auth/SessionProvider";
 import { getNotices, type Notice } from "../notice/notices";
-import { type ChoirEvent, type EventRsvpChoice, getEvents, getMyEventRsvps, monthBounds, rsvpChip, seoulDateKey } from "./events";
+import { type ChoirEvent, type EventRsvpChoice, getEvents, getMyEventRsvps, isEventTarget, monthBounds, rsvpChip, seoulDateKey } from "./events";
 import { EventDetail } from "./EventDetail";
 import { EventKindIcon, eventKind } from "./EventKind";
 import { EventRsvp } from "./EventRsvp";
@@ -134,10 +134,12 @@ export function EventCalendar() {
     const last = seoulDateKey(new Date(new Date(event.endAt).getTime() - 1));
     return first <= selectedDate && selectedDate <= last;
   });
-  const sortedEvents = [...monthEvents].sort((first, second) => first.startAt.localeCompare(second.startAt));
+  // 이달의 일정 목록에는 내가 대상인 일정만 둡니다. 운영진이 받아 보는 다른 파트의 파트연습은 달력 칸에만 남습니다.
+  const sortedEvents = monthEvents.filter((event) => isEventTarget(event, session))
+    .sort((first, second) => first.startAt.localeCompare(second.startAt));
   const upcomingEvent = sortedEvents.find((event) => seoulDateKey(event.startAt) >= selectedDate);
   const selected = dayEvents.find((event) => event.id === selectedEventId)
-    ?? dayEvents[0] ?? upcomingEvent ?? sortedEvents[sortedEvents.length - 1];
+    ?? dayEvents.find((event) => isEventTarget(event, session)) ?? dayEvents[0] ?? upcomingEvent ?? sortedEvents[sortedEvents.length - 1];
   const selectedId = selected?.id;
   useEffect(() => {
     if (selectedId == null) return;

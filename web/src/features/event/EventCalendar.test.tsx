@@ -45,6 +45,20 @@ describe("일정 중심 단원 화면", () => {
   });
   afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
+  it("이달의 일정에는 대상인 일정만 두고, 처음 고르는 일정도 대상인 것을 먼저 고른다", async () => {
+    getEvents.mockResolvedValue([
+      { id: 31, title: "베이스 파트연습", description: "", startAt: "2026-09-27T09:00:00Z", endAt: "2026-09-27T10:30:00Z", kind: "PART_REHEARSAL", part: "BASS", obEligible: false, publicVisible: false },
+      { id: 32, title: "테너 파트연습", description: "", startAt: "2026-09-27T10:00:00Z", endAt: "2026-09-27T11:30:00Z", kind: "PART_REHEARSAL", part: "TENOR", obEligible: false, publicVisible: false },
+    ]);
+    // 운영진은 다른 파트의 파트연습도 받아 보지만, 이달의 일정 목록에는 띄우지 않습니다.
+    renderWithSession(<EventCalendar />, sessionFixture({ part: "TENOR", permissions: ["MANAGE_EVENTS", "VIEW_MINUTES"] }));
+    const list = screen.getByRole("region", { name: "이달의 일정" });
+    expect(await within(list).findByRole("button", { name: /테너 파트연습/ })).toBeInTheDocument();
+    expect(within(list).queryByRole("button", { name: /베이스 파트연습/ })).not.toBeInTheDocument();
+    expect(within(list).queryByText("대상 아님")).not.toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "선택한 일정" })).getByRole("heading", { name: "테너 파트연습" })).toBeInTheDocument();
+  });
+
   it("달력을 요일 머리글이 있는 표로 표시하고 오늘과 선택 날짜를 구분한다", async () => {
     renderWithSession(<EventCalendar />, ob);
     expect(screen.getByRole("table", { name: "2026년 09월" })).toBeInTheDocument();
@@ -174,9 +188,9 @@ describe("일정 중심 단원 화면", () => {
     getMyEventRsvps.mockResolvedValue([{ eventId: 1, choice: "ABSENT" }, { eventId: 2, choice: null }]);
     const view = renderWithSession(<EventCalendar />, ob);
     const list = screen.getByRole("region", { name: "이달의 일정" });
-    // OB는 OB 대상이 아닌 정기 연습에 응답할 수 없으므로 대상 아님으로, 가을 공연은 미응답으로 보입니다.
-    expect(await within(list).findByRole("button", { name: /09\.29 \(화\) 정기 연습 대상 아님/ })).toBeInTheDocument();
-    expect(within(list).getByRole("button", { name: /09\.30 \(수\) 가을 공연 미응답/ })).toBeInTheDocument();
+    // OB 대상이 아닌 정기 연습은 OB의 목록에서 빠지고(달력 칸에는 남음), 가을 공연은 미응답으로 보입니다.
+    expect(await within(list).findByRole("button", { name: /09\.30 \(수\) 가을 공연 미응답/ })).toBeInTheDocument();
+    expect(within(list).queryByRole("button", { name: /정기 연습/ })).toBeNull();
     expect(within(list).queryByRole("button", { name: /^참석$|^불참$/ })).toBeNull();
     expect(view.container.querySelectorAll("[data-kind='regular']").length).toBeGreaterThan(0);
     expect(view.container.querySelectorAll("[data-kind='concert']").length).toBeGreaterThan(0);
