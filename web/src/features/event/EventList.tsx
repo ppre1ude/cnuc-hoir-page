@@ -16,13 +16,12 @@ const kindColor: Record<ScheduleKind, string> = {
 };
 const weekday = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", weekday: "short" });
 
-// 응답을 못 받으면 choices가 null이고, 그때는 칩 없이 일정만 보여 줍니다.
-type Loaded = { events: ChoirEvent[]; choices: Record<number, EventRsvpChoice | null> | null };
+// 응답은 일정과 따로 받습니다. 아직 안 왔거나 못 받으면 null이고, 그때는 칩 없이 일정만 보여 줍니다.
+type Choices = Record<number, EventRsvpChoice | null> | null;
 
-function load(from: string, to: string): Promise<Loaded> {
-  const choices = getMyEventRsvps(from, to)
+function loadChoices(from: string, to: string): Promise<Choices> {
+  return getMyEventRsvps(from, to)
     .then((items) => Object.fromEntries(items.map((item) => [item.eventId, item.choice])), () => null);
-  return Promise.all([getEvents(from, to), choices]).then(([events, loaded]) => ({ events, choices: loaded }));
 }
 
 // 서울 날짜 기준으로 달마다 묶습니다. 넘겨받은 순서를 그대로 지킵니다.
@@ -50,10 +49,12 @@ export function EventList() {
     const key = seoulDateKey(new Date());
     return { key, month: key.slice(0, 7), start: new Date(`${key}T00:00:00+09:00`).toISOString() };
   });
-  const [upcoming, setUpcoming] = useState<Loaded | null>(null);
+  const [upcoming, setUpcoming] = useState<ChoirEvent[] | null>(null);
+  const [upcomingChoices, setUpcomingChoices] = useState<Choices>(null);
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
-  const [past, setPast] = useState<Loaded | null>(null);
+  const [past, setPast] = useState<ChoirEvent[] | null>(null);
+  const [pastChoices, setPastChoices] = useState<Choices>(null);
   const [pastBusy, setPastBusy] = useState(false);
   const [pastError, setPastError] = useState("");
   const pastHeading = useRef<HTMLHeadingElement>(null);
@@ -63,15 +64,19 @@ export function EventList() {
 
   useEffect(() => {
     let alive = true;
-    load(today.start, monthBounds(addMonths(today.month, 3)).to)
+    const to = monthBounds(addMonths(today.month, 3)).to;
+    getEvents(today.start, to)
       .then((value) => { if (alive) setUpcoming(value); })
       .catch(() => { if (alive) setError("일정을 불러오지 못했습니다."); });
+    loadChoices(today.start, to).then((value) => { if (alive) setUpcomingChoices(value); });
     return () => { alive = false; };
   }, [today, retry]);
 
   function loadPast() {
+    const from = monthBounds(addMonths(today.month, -3)).from;
     setPastBusy(true); setPastError("");
-    load(monthBounds(addMonths(today.month, -3)).from, today.start)
+    loadChoices(from, today.start).then(setPastChoices);
+    getEvents(from, today.start)
       .then(setPast, () => setPastError("지난 일정을 불러오지 못했습니다."))
       .finally(() => setPastBusy(false));
   }
@@ -81,7 +86,7 @@ export function EventList() {
     return year === today.month.slice(0, 4) ? `${Number(number)}월` : `${year}년 ${Number(number)}월`;
   }
 
-  function row(event: ChoirEvent, choices: Loaded["choices"]) {
+  function row(event: ChoirEvent, choices: Choices) {
     const chip = rsvpChip(event, session, choices ? choices[event.id] ?? null : undefined);
     return <li key={event.id} className={styles.row}>
       <span className={styles.date}><strong>{Number(seoulDateKey(event.startAt).slice(8))}</strong>
@@ -99,8 +104,8 @@ export function EventList() {
     </li>;
   }
 
-  const sortedUpcoming = upcoming ? [...upcoming.events].sort((a, b) => a.startAt.localeCompare(b.startAt)) : [];
-  const sortedPast = past ? [...past.events].sort((a, b) => b.startAt.localeCompare(a.startAt)) : [];
+  const sortedUpcoming = upcoming ? [...upcoming].sort((a, b) => a.startAt.localeCompare(b.startAt)) : [];
+  const sortedPast = past ? [...past].sort((a, b) => b.startAt.localeCompare(a.startAt)) : [];
 
   return <main id="member-content" tabIndex={-1} className={styles.page}>
     <PageHeader title="다가오는 일정"
@@ -123,7 +128,7 @@ export function EventList() {
             <li key={kind} className={`${calendarStyles.kind} ${styles.kindBadge}`} data-kind={kindColor[kind]}>{kindShortLabel[kind]} {count}</li>)}
           </ul>
         </div>
-        <ul className={styles.list}>{events.map((event) => row(event, upcoming!.choices))}</ul>
+        <ul className={styles.list}>{events.map((event) => row(event, upcomingChoices))}</ul>
       </section>;
     })}
     {upcoming && !past && <div className={styles.more}>
@@ -135,7 +140,7 @@ export function EventList() {
       {sortedPast.length === 0 && <p className={styles.empty}>지난 3달 동안 일정이 없습니다.</p>}
       {byMonth(sortedPast).map(([month, events]) => <div key={month} className={styles.month}>
         <h3 className={styles.monthHead}>{monthLabel(month)}</h3>
-        <ul className={styles.list}>{events.map((event) => row(event, past.choices))}</ul>
+        <ul className={styles.list}>{events.map((event) => row(event, pastChoices))}</ul>
       </div>)}
     </section>}
   </main>;

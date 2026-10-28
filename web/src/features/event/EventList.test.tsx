@@ -92,6 +92,16 @@ describe("다가오는 일정 목록", () => {
     expect(await screen.findByRole("link", { name: /오전 사진 촬영/ })).toBeInTheDocument();
   });
 
+  it("참석 응답이 늦어도 일정을 먼저 보이고, 응답이 오면 칩을 붙인다", async () => {
+    let answer: (value: unknown) => void = () => undefined;
+    getMyEventRsvps.mockReturnValue(new Promise((resolve) => { answer = resolve; }));
+    renderWithSession(<EventList />, tenor);
+    await screen.findByRole("link", { name: /제2회 정기연주회/ });
+    expect(screen.queryByText("참석")).not.toBeInTheDocument();
+    answer([{ eventId: 1, choice: "ATTENDING" }]);
+    expect(await screen.findByText("참석")).toBeInTheDocument();
+  });
+
   it("참석 응답을 못 불러와도 일정은 보이고 칩만 빠진다", async () => {
     getMyEventRsvps.mockRejectedValue(new Error("응답 조회 실패"));
     renderWithSession(<EventList />, tenor);
