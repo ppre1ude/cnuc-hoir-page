@@ -60,9 +60,11 @@ export type IssuedInvitation = { memberId: number; token: string };
 // ponytail: 수천 명이 되면 서버 검색(q, part 조건)과 페이지 넘김으로 바꿉니다.
 export async function getMembers(): Promise<MemberPage> {
   const first = await apiRequest<MemberPage>("/admin/members?page=0&size=1000");
-  const rest = await Promise.all(Array.from({ length: Math.ceil(first.total / first.size) - 1 },
-    (_, index) => apiRequest<MemberPage>(`/admin/members?page=${index + 1}&size=1000`)));
-  return { ...first, items: [...first.items, ...rest.flatMap((page) => page.items)] };
+  if (first.total <= first.size) return first;
+  // 여러 페이지면 모두 새로 받습니다. 기억한 페이지와 새 페이지가 섞이면 새 단원에 밀려 경계를 넘은 단원이 빠질 수 있습니다.
+  const pages = await Promise.all(Array.from({ length: Math.ceil(first.total / first.size) },
+    (_, index) => apiRequest<MemberPage>(`/admin/members?page=${index}&size=1000`, { cache: "reload" })));
+  return { ...first, items: pages.flatMap((page) => page.items) };
 }
 
 export function inviteMember(input: { name: string; email: string; memberType: "ACTIVE" | "OB" }): Promise<IssuedInvitation> {
