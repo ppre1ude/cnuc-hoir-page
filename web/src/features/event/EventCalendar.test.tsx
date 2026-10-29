@@ -69,6 +69,8 @@ describe("일정 중심 단원 화면", () => {
     await waitFor(() => expect(day.querySelectorAll(":scope > [data-kind]")).toHaveLength(2));
     expect([...day.querySelectorAll(":scope > [data-kind]")].map((chip) => chip.textContent)).toEqual(["테너 파트연습", "베이스 파트연습"]);
     expect(within(day).getByText("+1")).toBeInTheDocument();
+    // 칸에 숨은 일정까지 화면 낭독기가 시간순으로 읽습니다.
+    expect(day).toHaveAccessibleDescription(/베이스 파트연습.*알토 파트연습.*테너 파트연습/);
   });
 
   it("목록 보기로 바꾸면 지난 일정과 대상이 아닌 일정까지 그달 일정을 모두 늘어놓는다", async () => {
