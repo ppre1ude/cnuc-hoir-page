@@ -59,6 +59,20 @@ describe("일정 중심 단원 화면", () => {
     expect(within(screen.getByRole("region", { name: "선택한 일정" })).getByRole("heading", { name: "테너 파트연습" })).toBeInTheDocument();
   });
 
+  it("달력 칸에는 내 일정을 앞세워 두 개까지 보이고 나머지는 +N으로 줄인다", async () => {
+    const part = (id: number, title: string, hour: string, value: string) => ({ id, title, description: "", startAt: `2026-09-29T${hour}:00:00Z`,
+      endAt: `2026-09-29T${hour}:30:00Z`, kind: "PART_REHEARSAL", part: value, obEligible: false, publicVisible: false });
+    getEvents.mockResolvedValue([part(51, "베이스 파트연습", "09", "BASS"), part(52, "알토 파트연습", "10", "ALTO"),
+      part(53, "테너 파트연습", "11", "TENOR")]);
+    renderWithSession(<EventCalendar />, sessionFixture({ part: "TENOR", permissions: ["MANAGE_EVENTS"] }));
+    const day = await screen.findByRole("button", { name: /29일, 일정 3개/ });
+    await waitFor(() => expect(day.querySelectorAll(":scope > [data-kind]")).toHaveLength(2));
+    expect([...day.querySelectorAll(":scope > [data-kind]")].map((chip) => chip.textContent)).toEqual(["테너 파트연습", "베이스 파트연습"]);
+    expect(within(day).getByText("+1")).toBeInTheDocument();
+    // 칸에 숨은 일정까지 화면 낭독기가 시간순으로 읽습니다.
+    expect(day).toHaveAccessibleDescription(/베이스 파트연습.*알토 파트연습.*테너 파트연습/);
+  });
+
   it("목록 보기로 바꾸면 지난 일정과 대상이 아닌 일정까지 그달 일정을 모두 늘어놓는다", async () => {
     getEvents.mockResolvedValue([
       { id: 41, title: "지난 정기연습", description: "", startAt: "2026-09-06T09:00:00Z", endAt: "2026-09-06T11:00:00Z", kind: "REGULAR_REHEARSAL", part: null, obEligible: false, publicVisible: false },
