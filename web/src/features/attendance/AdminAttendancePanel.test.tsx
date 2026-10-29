@@ -159,16 +159,24 @@ test("정정 이유를 적기 전에는 정정 버튼이 꺼져 있고, 적으�
   vi.mocked(attendance.correctAttendance).mockResolvedValue();
   renderWithSession(<AdminAttendancePanel eventId={3} />, sessionFixture({ admin: true }));
 
-  const checkIn = await screen.findByRole("button", { name: "김소라 출석으로 정정" });
+  // 정정 칸은 왼쪽 목록에서 고른 단원 것만 보입니다.
+  expect(await screen.findByText("왼쪽 목록에서 단원을 고르면 출석 기록과 정정 칸이 나옵니다.")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: /^김소라/ }));
+  const checkIn = screen.getByRole("button", { name: "김소라 출석으로 정정" });
   expect(checkIn).toBeDisabled();
   expect(screen.getByRole("button", { name: "김소라 미출석으로 정정" })).toBeDisabled();
   fireEvent.change(screen.getByLabelText("김소라 정정 이유"), { target: { value: "  " } });
   expect(checkIn).toBeDisabled();
   fireEvent.change(screen.getByLabelText("김소라 정정 이유"), { target: { value: "지각 확인" } });
   expect(checkIn).toBeEnabled();
+  // 다른 단원으로 옮겨도 적어 둔 이유는 남고, 그 단원 버튼은 따로 꺼져 있습니다.
+  fireEvent.click(screen.getByRole("button", { name: /^이하늘/ }));
   expect(screen.getByRole("button", { name: "이하늘 출석으로 정정" })).toBeDisabled();
+  expect(screen.queryByRole("button", { name: "김소라 출석으로 정정" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: /^김소라/ }));
+  expect(screen.getByRole("button", { name: "김소라 출석으로 정정" })).toBeEnabled();
 
-  fireEvent.click(checkIn);
+  fireEvent.click(screen.getByRole("button", { name: "김소라 출석으로 정정" }));
   await waitFor(() => expect(attendance.correctAttendance).toHaveBeenCalledWith(3, 11, "CHECKED_IN", "지각 확인"));
   expect(screen.queryByRole("alert")).toBeNull();
 });
@@ -334,10 +342,27 @@ test("단원 행에 출석 시각과 정정 표시를 붙이고 지각으로 정
   renderWithSession(<AdminAttendancePanel eventId={3} />, sessionFixture({ admin: true }));
 
   expect(await screen.findByText("지각")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: /^박예영/ }));
   // Node의 ICU는 "PM 6:21", 브라우저는 "오후 6:21"로 그리므로 시각 부분만 봅니다.
   expect(screen.getByText(/6:21/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: /^최재원/ }));
   expect(screen.getByText("정정됨")).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText("최재원 정정 이유"), { target: { value: "늦게 옴" } });
   fireEvent.click(screen.getByRole("button", { name: "최재원 지각으로 정정" }));
   await waitFor(() => expect(attendance.correctAttendance).toHaveBeenCalledWith(3, 2, "LATE", "늦게 옴"));
+});
+
+test("좁은 화면에서는 단원을 고르면 상세로, 목록으로 돌아가면 그 단원 행으로 초점을 옮깁니다", async () => {
+  vi.mocked(events.getEvent).mockResolvedValue(rehearsal);
+  vi.mocked(attendance.getCheckInSession).mockResolvedValue({ sessionId: null, expiresAt: null, open: false, code: null, opensAt: "2026-09-27T08:30:00Z" });
+  vi.mocked(attendance.getAdminAttendance).mockResolvedValue([{ ...sora, status: "MISSED" }]);
+  vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
+  try {
+    renderWithSession(<AdminAttendancePanel eventId={3} />, sessionFixture({ admin: true }));
+    const row = await screen.findByRole("button", { name: /^김소라/ });
+    fireEvent.click(row);
+    expect(document.activeElement).toContainElement(screen.getByLabelText("김소라 정정 이유"));
+    fireEvent.click(screen.getByRole("button", { name: "목록으로" }));
+    expect(screen.getByRole("button", { name: /^김소라/ })).toHaveFocus();
+  } finally { vi.unstubAllGlobals(); }
 });
