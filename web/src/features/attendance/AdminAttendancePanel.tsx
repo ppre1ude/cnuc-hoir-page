@@ -31,6 +31,7 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
   const [qrImage, setQrImage] = useState("");
   const [members, setMembers] = useState<AdminAttendance[] | null>(null);
   const [reasons, setReasons] = useState<Record<number, string>>({});
+  const [selected, setSelected] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   // 열 수 있는 시각과 연습 종료를 넘겼는지는 이 값으로 판단합니다. 타이머가 그 시각에 맞춰 다시 그립니다.
@@ -150,6 +151,9 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
     });
   }
 
+  const current = members?.find((member) => member.memberId === selected) ?? null;
+  const statusLabel = (member: AdminAttendance) => member.status === "NOT_OPEN" && windowOpen ? "출석 전" : attendanceLabel[member.status];
+
   return <div className={styles.page}>
     <Link className={styles.back} href="/admin/events">← 일정 관리로 돌아가기</Link>
     <PageHeader title={`${event?.title ?? "일정"} 출석 관리`} />
@@ -172,27 +176,41 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
         <p>새로고침하면 QR은 사라지지만 코드는 그대로 보입니다. 명단은 15초마다 갱신되며, 바로 확인하려면 &apos;목록 다시 불러오기&apos;를 눌러 주세요.</p>
       </div>}
     </section>}
-    <section className={styles.panel} aria-label="단원 출석 기록">
+    </div>
+    <section aria-label="단원 출석 기록" className={styles.memberSection}>
       <div className={styles.panelHeader}><h2>단원별 상태</h2>
         <Button variant="secondary" type="button" onClick={reloadList}>목록 다시 불러오기</Button></div>
       {members === null && !message && <SkeletonRows count={3} label="출석 기록을 불러오는 중입니다." />}
       {members?.length === 0 && <p>출석 대상 단원이 없습니다.</p>}
-      {members?.map((member) => <div className={styles.row} key={member.memberId}>
-        <strong>{rosterName(member)}</strong> <StatusBadge tone={attendanceTone(member.status)}>
-          {member.status === "NOT_OPEN" && windowOpen ? "출석 전" : attendanceLabel[member.status]}</StatusBadge>
-        {member.checkedInAt && <span className={styles.time}>{seoulTime(member.checkedInAt)}</span>}
-        {member.correctedAt && <span className={styles.time}>정정됨</span>}
-        {/* 정정은 드물게 쓰므로 접어 둡니다. 이유를 적기 전에는 버튼을 꺼 둬, 화면 위쪽에 오류를 띄우지 않습니다. */}
-        <details className={styles.more}>
-          <summary aria-label={`${member.name} 정정`}>정정</summary>
-          <div className={styles.fieldGroup}><label htmlFor={`reason-${member.memberId}`}>{member.name} 정정 이유</label> <Input id={`reason-${member.memberId}`}
-            value={reasons[member.memberId] ?? ""} maxLength={500}
-            onChange={(event) => setReasons((value) => ({ ...value, [member.memberId]: event.target.value }))} /></div>
-          <div className={styles.actions}>{(Object.keys(correctionLabel) as Correction[]).map((status) => <Button key={status} variant="secondary" type="button"
-            disabled={busy || !reasons[member.memberId]?.trim() || member.status === status}
-            onClick={() => correct(member, status)}>{member.name} {correctionLabel[status]}으로 정정</Button>)}</div>
-        </details>
-      </div>)}
-    </section></div>
+      {/* 계정 목록과 같은 꼴입니다. 왼쪽에 이름과 상태만 적은 목록, 오른쪽에 고른 단원의 기록과 정정 칸을 둡니다. */}
+      {members && members.length > 0 && <div className={styles.workspace} data-view={current ? "detail" : "list"}>
+        <div className={styles.roster}><ul className={styles.rosterList} aria-label="단원 목록">
+          {members.map((member) => <li key={member.memberId}>
+            <button type="button" className={styles.rosterRow} aria-current={selected === member.memberId ? "true" : undefined} onClick={() => setSelected(member.memberId)}>
+              <strong>{rosterName(member)}</strong>
+              <StatusBadge tone={attendanceTone(member.status)}>{statusLabel(member)}</StatusBadge>
+            </button>
+          </li>)}
+        </ul></div>
+        <div className={styles.detail}>
+          <Button variant="secondary" size="small" type="button" className={styles.toList} onClick={() => setSelected(null)}>목록으로</Button>
+          {current ? <article>
+            <div className={styles.rowHeader}>
+              <h2>{rosterName(current)}</h2>
+              <StatusBadge tone={attendanceTone(current.status)}>{statusLabel(current)}</StatusBadge>
+              {current.checkedInAt && <span className={styles.time}>{seoulTime(current.checkedInAt)}</span>}
+              {current.correctedAt && <span className={styles.time}>정정됨</span>}
+            </div>
+            {/* 이유를 적기 전에는 버튼을 꺼 둬, 화면 위쪽에 오류를 띄우지 않습니다. */}
+            <div className={styles.fieldGroup}><label htmlFor={`reason-${current.memberId}`}>{current.name} 정정 이유</label> <Input id={`reason-${current.memberId}`}
+              value={reasons[current.memberId] ?? ""} maxLength={500}
+              onChange={(event) => setReasons((value) => ({ ...value, [current.memberId]: event.target.value }))} /></div>
+            <div className={styles.actions}>{(Object.keys(correctionLabel) as Correction[]).map((status) => <Button key={status} variant="secondary" type="button"
+              disabled={busy || !reasons[current.memberId]?.trim() || current.status === status}
+              onClick={() => correct(current, status)}>{current.name} {correctionLabel[status]}으로 정정</Button>)}</div>
+          </article> : <p className={styles.placeholder}>왼쪽 목록에서 단원을 고르면 출석 기록과 정정 칸이 나옵니다.</p>}
+        </div>
+      </div>}
+    </section>
   </div>;
 }
