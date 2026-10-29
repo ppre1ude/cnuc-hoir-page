@@ -171,8 +171,8 @@ function run(root: HTMLElement, { stage, canvas, photoBox, photoImg, anchorBox, 
     const copyH = copy ? copy.offsetHeight : size.h * .16;
     const gap = size.mobile ? 48 : 72; // 심벌 파일에 여백이 없으므로 잉크와 글 사이 숨을 여기서 둡니다.
     const margin = (size.mobile ? HEADER_HEIGHT.mobile : HEADER_HEIGHT.desktop) + 16;
-    // 넓은 모니터에서는 글이 고정 크기라 심벌만 커지지 않도록 PC 심벌 폭을 500px에서 멈춥니다.
-    const maxW = size.mobile ? size.w * widthRatio : Math.min(size.w * widthRatio, 500);
+    // 넓은 모니터에서는 글이 고정 크기라 심벌만 커지지 않도록 PC 심벌 폭을 480px에서 멈춥니다.
+    const maxW = size.mobile ? size.w * widthRatio : Math.min(size.w * widthRatio, 480);
     const h = Math.max(80, Math.min(maxW / markAspect, size.h - 2 * margin - gap - copyH));
     const w = h * markAspect;
     copy?.style.setProperty("--mark-offset", `${(h + gap) / 2}px`);
