@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   description: "전남대학교 합창단 단원 포털",
   openGraph: {
     title: "전남대학교 합창단",
+    description: "전남대학교 합창단 공식 홈페이지입니다.",
     siteName: "전남대학교 합창단",
     type: "website",
     locale: "ko_KR",
