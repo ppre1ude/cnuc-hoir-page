@@ -55,7 +55,16 @@
 .kind[data-kind="part"] { --kind: var(--kind-part); --kind-soft: var(--kind-part-soft); }
 .kind[data-kind="other"] { --kind: var(--kind-other); --kind-soft: var(--kind-other-soft); }
 .dayEvent { display: block; width: 100%; margin-top: var(--space-2); padding: var(--space-1) 6px; overflow: hidden; border-radius: var(--radius-small); background: var(--kind-soft); color: var(--kind); font-size: var(--text-small); font-weight: var(--weight-medium); text-overflow: ellipsis; white-space: nowrap; }
+.dayEvent + .dayEvent { margin-top: var(--space-1); }
 .moreEvents { margin-top: var(--space-1); color: var(--color-primary); font-size: var(--text-small); }
+/* 칸 아래로 겹쳐 띄웁니다. 마우스가 아래 칸으로 넘어가면 바로 그 칸 미리보기로 바뀌도록 포인터를 받지 않습니다. */
+.calendarTable td { position: relative; }
+.dayPreview { position: absolute; top: calc(100% - var(--space-2)); left: var(--space-2); z-index: 10; display: none; flex-direction: column; gap: var(--space-1); width: max-content; max-width: 260px; padding: var(--space-2); border: 1px solid var(--color-line); border-radius: var(--radius-control); background: var(--color-surface); box-shadow: 0 8px 24px rgb(0 0 0 / 0.12); pointer-events: none; }
+.dayPreview > span { display: flex; flex-direction: column; padding: var(--space-1) var(--space-2); border-radius: var(--radius-small); background: var(--kind-soft); color: var(--kind); font-size: var(--text-small); font-weight: var(--weight-medium); }
+.dayPreview time { color: var(--color-muted); font-weight: var(--weight-body); }
+/* 토·일 칸은 오른쪽 끝에 맞춰 카드 밖으로 넘치지 않게 합니다. */
+.calendarTable td:nth-child(n+6) .dayPreview { left: auto; right: var(--space-2); }
+@media (hover: hover) and (min-width: 851px) { .day:is(:hover, :focus-visible) .dayPreview { display: flex; } }
 .day i { display: none; }
 .dayList { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); min-height: var(--control-large); margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--color-line); }
 .dayList h3 { margin: 0 var(--space-2) 0 0; font-size: var(--text-body); }

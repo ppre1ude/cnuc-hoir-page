@@ -291,15 +291,20 @@ export function EventCalendar() {
               const first = seoulDateKey(event.startAt);
               const last = seoulDateKey(new Date(new Date(event.endAt).getTime() - 1));
               return first <= key && key <= last;
-            });
+            // 칸에는 두 개까지만 보이므로 내가 대상인 일정을 앞에 둡니다. 운영진이 받아 보는 다른 파트연습 뒤로 내 일정이 숨지 않습니다.
+            }).sort((first, second) => Number(isEventTarget(second, session)) - Number(isEventTarget(first, session)) || byStart(first, second));
             const count = eventsOnDay.length;
             return <td key={key}><Button variant="unstyled" type="button" className={`${styles.day} ${key === selectedDate ? styles.selectedDay : ""}`}
               onClick={() => showDay(key, null)} aria-pressed={key === selectedDate}
               aria-current={key === today ? "date" : undefined}
               aria-label={`${month.replace("-", "년 ")}월 ${day}일${count ? `, 일정 ${count}개` : ""}`}>
               <span className={styles.dayNumber}>{day}</span>
-              {count > 0 && <span className={`${styles.kind} ${styles.dayEvent}`} data-kind={eventKind(eventsOnDay[0])}>{eventsOnDay[0].title}</span>}
-              {count > 1 && <span className={styles.moreEvents}>+{count - 1}</span>}
+              {eventsOnDay.slice(0, 2).map((event) => <span key={event.id} className={`${styles.kind} ${styles.dayEvent}`}
+                data-kind={eventKind(event)}>{event.title}</span>)}
+              {count > 2 && <span className={styles.moreEvents}>+{count - 2}</span>}
+              {/* 마우스를 올리면 칸에서 잘린 제목과 숨은 일정을 시각과 함께 띄웁니다. 읽는 내용은 아래 그날 일정 목록이 전합니다. */}
+              {count > 0 && <span className={styles.dayPreview} aria-hidden="true">{[...eventsOnDay].sort(byStart).map((event) =>
+                <span key={event.id} className={styles.kind} data-kind={eventKind(event)}><time>{timeRange(event)}</time>{event.title}</span>)}</span>}
               {count > 0 && <i aria-hidden="true" />}
             </Button></td>;
           })}</tr>)}</tbody>
