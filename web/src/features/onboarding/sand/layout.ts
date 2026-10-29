@@ -25,10 +25,10 @@ export function stageSize(width: number, height: number, devicePixelRatio: numbe
   return { w, h, mobile, count: mobile ? 4200 : 7000, dpr: Math.min(1.75, devicePixelRatio || 1) };
 }
 
-/** 내용이 놓이는 가로 띠입니다. PC는 화면 가운데 900px, 넓은 모니터에서는 화면 폭의 47%(최대 1200px)로 넓어지되 좌우 140px 이상을 비워 오른쪽 목차와 겹치지 않고, 모바일은 좌우 8%를 비웁니다. CSS의 --band와 같은 계산입니다. */
+/** 내용이 놓이는 가로 띠입니다. PC는 화면 가운데 900px, 넓은 모니터에서는 화면 폭의 56%(최대 1200px)로 넓어지되 좌우 140px 이상을 비워 오른쪽 목차와 겹치지 않고, 모바일은 좌우 8%를 비웁니다. CSS의 --band와 같은 계산입니다. */
 export function band(size: StageSize) {
   if (size.mobile) return { left: size.w * .08, width: size.w * .84 };
-  const width = Math.min(Math.max(900, Math.min(1200, size.w * .47)), size.w - 280);
+  const width = Math.min(Math.max(900, Math.min(1200, size.w * .56)), size.w - 280);
   return { left: (size.w - width) / 2, width };
 }
 
