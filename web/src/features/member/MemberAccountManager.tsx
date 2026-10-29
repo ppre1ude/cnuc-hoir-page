@@ -12,6 +12,7 @@ import styles from "./AdminPages.module.css";
 import { MemberRegistration } from "./MemberRegistration";
 import { MemberFacts, MemberRoles } from "./MemberRoles";
 import { partLabel, parts } from "./roles";
+import { rosterRowId, useListDetailFocus } from "./useListDetailFocus";
 
 // 상태는 이름 옆 배지로 보입니다. 누군가를 기다리는 계정은 노랑, 막힌 계정은 빨강, 쓰고 있는 계정은 조용한 회색입니다.
 const statusLabel: Record<MemberItem["status"], string> = { INVITED: "초대 대기", EMAIL_PENDING: "이메일 확인 대기",
@@ -31,6 +32,7 @@ export function MemberAccountManager() {
   const [query, setQuery] = useState("");
   const [part, setPart] = useState<Part | "">("");
   const [selected, setSelected] = useState<number | null>(null);
+  const focus = useListDetailFocus(selected);
 
   useEffect(() => {
     let alive = true;
@@ -147,7 +149,7 @@ export function MemberAccountManager() {
           {!data && !error && <SkeletonRows count={6} label="계정 목록을 불러오는 중입니다." />}
           <ul className={styles.rosterList} aria-label="단원 목록">
             {shown.map((item) => <li key={item.id}>
-              <button type="button" className={styles.rosterRow} aria-current={selected === item.id ? "true" : undefined} onClick={() => setSelected(item.id)}>
+              <button type="button" id={rosterRowId(item.id)} className={styles.rosterRow} aria-current={selected === item.id ? "true" : undefined} onClick={() => setSelected(item.id)}>
                 <strong>{item.name}</strong>
                 <span>{item.part ? partLabel[item.part] : "파트 미지정"}</span>
                 {item.status !== "APPROVED" && <small data-tone={statusTone(item.status)}>{statusLabel[item.status]}</small>}
@@ -157,8 +159,8 @@ export function MemberAccountManager() {
           {data?.items.length === 0 && <p>등록된 계정이 없습니다.</p>}
           {data && data.items.length > 0 && shown.length === 0 && <p>조건에 맞는 단원이 없습니다.</p>}
         </div>
-        <div className={styles.detail}>
-          <Button variant="secondary" size="small" type="button" className={styles.toList} onClick={() => setSelected(null)}>목록으로</Button>
+        <div className={styles.detail} ref={focus.detail} tabIndex={-1}>
+          <Button variant="secondary" size="small" type="button" className={styles.toList} onClick={() => { focus.leave(selected); setSelected(null); }}>목록으로</Button>
           {current ? <MemberDetail key={current.id} item={current} busy={busy} session={session} opened={opened === current.id} onChanged={() => {
             setRefresh((value) => value + 1);
             // 자기 직책·파트가 바뀌면 권한과 메뉴가 달라지므로 세션도 다시 받습니다.

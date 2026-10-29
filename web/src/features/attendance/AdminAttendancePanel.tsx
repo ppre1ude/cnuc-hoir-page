@@ -16,6 +16,7 @@ import {
 type Correction = "CHECKED_IN" | "LATE" | "MISSED";
 const correctionLabel: Record<Correction, string> = { CHECKED_IN: "출석", LATE: "지각", MISSED: "미출석" };
 import { rosterName } from "../member/roles";
+import { rosterRowId, useListDetailFocus } from "../member/useListDetailFocus";
 import styles from "../member/AdminPages.module.css";
 
 // 서버 시계가 조금 늦으면 유효 시간이 지난 창을 아직 열림으로 답하므로, 이미 지난 창은 닫힌 것으로 봅니다.
@@ -32,6 +33,7 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
   const [members, setMembers] = useState<AdminAttendance[] | null>(null);
   const [reasons, setReasons] = useState<Record<number, string>>({});
   const [selected, setSelected] = useState<number | null>(null);
+  const focus = useListDetailFocus(selected);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   // 열 수 있는 시각과 연습 종료를 넘겼는지는 이 값으로 판단합니다. 타이머가 그 시각에 맞춰 다시 그립니다.
@@ -186,14 +188,14 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
       {members && members.length > 0 && <div className={styles.workspace} data-view={current ? "detail" : "list"}>
         <div className={styles.roster}><ul className={styles.rosterList} aria-label="단원 목록">
           {members.map((member) => <li key={member.memberId}>
-            <button type="button" className={styles.rosterRow} aria-current={selected === member.memberId ? "true" : undefined} onClick={() => setSelected(member.memberId)}>
+            <button type="button" id={rosterRowId(member.memberId)} className={styles.rosterRow} aria-current={selected === member.memberId ? "true" : undefined} onClick={() => setSelected(member.memberId)}>
               <strong>{rosterName(member)}</strong>
               <StatusBadge tone={attendanceTone(member.status)}>{statusLabel(member)}</StatusBadge>
             </button>
           </li>)}
         </ul></div>
-        <div className={styles.detail}>
-          <Button variant="secondary" size="small" type="button" className={styles.toList} onClick={() => setSelected(null)}>목록으로</Button>
+        <div className={styles.detail} ref={focus.detail} tabIndex={-1}>
+          <Button variant="secondary" size="small" type="button" className={styles.toList} onClick={() => { focus.leave(selected); setSelected(null); }}>목록으로</Button>
           {current ? <article>
             <div className={styles.rowHeader}>
               <h2>{rosterName(current)}</h2>

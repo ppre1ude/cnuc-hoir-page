@@ -351,3 +351,18 @@ test("단원 행에 출석 시각과 정정 표시를 붙이고 지각으로 정
   fireEvent.click(screen.getByRole("button", { name: "최재원 지각으로 정정" }));
   await waitFor(() => expect(attendance.correctAttendance).toHaveBeenCalledWith(3, 2, "LATE", "늦게 옴"));
 });
+
+test("좁은 화면에서는 단원을 고르면 상세로, 목록으로 돌아가면 그 단원 행으로 초점을 옮깁니다", async () => {
+  vi.mocked(events.getEvent).mockResolvedValue(rehearsal);
+  vi.mocked(attendance.getCheckInSession).mockResolvedValue({ sessionId: null, expiresAt: null, open: false, code: null, opensAt: "2026-09-27T08:30:00Z" });
+  vi.mocked(attendance.getAdminAttendance).mockResolvedValue([{ ...sora, status: "MISSED" }]);
+  vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
+  try {
+    renderWithSession(<AdminAttendancePanel eventId={3} />, sessionFixture({ admin: true }));
+    const row = await screen.findByRole("button", { name: /^김소라/ });
+    fireEvent.click(row);
+    expect(document.activeElement).toContainElement(screen.getByLabelText("김소라 정정 이유"));
+    fireEvent.click(screen.getByRole("button", { name: "목록으로" }));
+    expect(screen.getByRole("button", { name: /^김소라/ })).toHaveFocus();
+  } finally { vi.unstubAllGlobals(); }
+});
