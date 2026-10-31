@@ -37,6 +37,8 @@ public class Event {
     private Instant createdAt;
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+    @Column(name = "cancelled_at")
+    private Instant cancelledAt;
 
     protected Event() {}
 
@@ -59,6 +61,19 @@ public class Event {
         this.updatedAt = clock.instant();
     }
 
+    public void cancel(Clock clock) {
+        if (cancelledAt != null) return;
+        this.cancelledAt = clock.instant();
+        this.updatedAt = cancelledAt;
+    }
+
+    public void restore(Clock clock) {
+        this.cancelledAt = null;
+        this.updatedAt = clock.instant();
+    }
+
+    public boolean isCancelled() { return cancelledAt != null; }
+    public Instant getCancelledAt() { return cancelledAt; }
     public Long getId() { return id; }
     public String getTitle() { return title; }
     public String getDescription() { return description; }

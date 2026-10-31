@@ -16,6 +16,7 @@ import kr.ac.jnu.choir.member.MemberType;
 import kr.ac.jnu.choir.member.Part;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -109,6 +110,31 @@ public class EventController {
                 body.kind(), body.part(), body.obEligible(), body.publicVisible()));
     }
 
+    // 취소, 되돌리기, 삭제의 권한은 수정과 같습니다.
+    @PostMapping("/admin/events/{id}/cancel")
+    public EventItem cancel(HttpServletRequest request, @PathVariable long id) {
+        requireManageEvent(request, id);
+        return item(events.cancel(id));
+    }
+
+    @PostMapping("/admin/events/{id}/restore")
+    public EventItem restore(HttpServletRequest request, @PathVariable long id) {
+        requireManageEvent(request, id);
+        return item(events.restore(id));
+    }
+
+    @DeleteMapping("/admin/events/{id}")
+    public ResponseEntity<Void> delete(HttpServletRequest request, @PathVariable long id) {
+        requireManageEvent(request, id);
+        events.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    private void requireManageEvent(HttpServletRequest request, long id) {
+        EventAccess access = accesses.of(sessions.require(request, Permission.MANAGE_EVENTS));
+        requireManage(access.canManage(events.get(id)));
+    }
+
     private static void requireManage(boolean allowed) {
         if (!allowed) throw new ApiException(HttpStatus.FORBIDDEN, "PERMISSION_REQUIRED", "이 기능을 쓸 권한이 없습니다.");
     }
@@ -116,7 +142,7 @@ public class EventController {
     private EventItem item(Event event) {
         return new EventItem(event.getId(), event.getTitle(), event.getDescription(), event.getStartAt(),
                 event.getEndAt(), event.getKind(), event.getPart(), event.isObEligible(), event.isPublicVisible(),
-                event.getCreatedAt(), event.getUpdatedAt());
+                event.getCreatedAt(), event.getUpdatedAt(), event.getCancelledAt());
     }
 
     public record EventInput(@NotBlank @Size(max = 200) String title,
@@ -125,5 +151,6 @@ public class EventController {
     public record EventBatchInput(@NotEmpty @Size(max = 31) List<@NotNull @Valid EventInput> events) {}
     public record RsvpInput(@NotNull EventRsvpService.Choice choice) {}
     public record EventItem(Long id, String title, String description, Instant startAt, Instant endAt,
-            EventKind kind, Part part, boolean obEligible, boolean publicVisible, Instant createdAt, Instant updatedAt) {}
+            EventKind kind, Part part, boolean obEligible, boolean publicVisible, Instant createdAt, Instant updatedAt,
+            Instant cancelledAt) {}
 }

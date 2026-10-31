@@ -1,13 +1,14 @@
 "use client";
 
-import { Button, Input, Select, Textarea, Feedback, PageHeader, ActionLink, SkeletonRows } from "../../components/ui";
+import { Button, Input, Select, Textarea, Feedback, PageHeader, ActionLink, SkeletonRows, StatusBadge } from "../../components/ui";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { canManageEvent, canManageRoster, type Part } from "../auth/session";
 import { useSession } from "../auth/SessionProvider";
 import { partLabel, parts } from "../member/roles";
-import { createEvent, eventKindText, getEvents, monthBounds, scheduleKindLabel, seoulDateKey, seoulTime, type ChoirEvent,
+import { ApiRequestError } from "../../lib/api";
+import { cancelEvent, createEvent, deleteEvent, eventKindText, getEvents, monthBounds, restoreEvent, scheduleKindLabel, seoulDateKey, seoulTime, type ChoirEvent,
   scheduleKinds, type ScheduleKind, updateEvent } from "./events";
 import styles from "./EventEditor.module.css";
 import calendarStyles from "./EventCalendar.module.css";
@@ -54,7 +55,7 @@ export function EventEditor() {
   const [busy, setBusy] = useState(false);
   const [listError, setListError] = useState("");
   const [error, setError] = useState("");
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved] = useState("");
 
   useEffect(() => {
     // 월 입력을 지우면 ""가 들어옵니다. 그대로 조회하면 날짜 계산이 예외를 내 화면 전체가 멈춥니다.
@@ -82,7 +83,7 @@ export function EventEditor() {
     setSelected(event); setTitle(event.title); setDescription(event.description);
     setStartAt(localInput(event.startAt)); setEndAt(localInput(event.endAt));
     setKind(event.kind); setPart(event.part); setObEligible(event.obEligible); setPublicVisible(event.publicVisible);
-    setError(""); setSaved(false);
+    setError(""); setSaved("");
   }
 
   async function save(form: FormEvent<HTMLFormElement>) {
@@ -91,16 +92,46 @@ export function EventEditor() {
     const start = utcInput(startAt);
     const end = utcInput(endAt);
     if (!start || !end || start >= end) { setError("일정 시작과 종료 시각을 확인해 주세요."); return; }
-    setBusy(true); setError(""); setSaved(false);
+    setBusy(true); setError(""); setSaved("");
     try {
       const input = { title: title.trim(), description, startAt: start, endAt: end, kind,
         part: kind === "PART_REHEARSAL" ? part : null, obEligible, publicVisible };
       if (selected) await updateEvent(selected.id, input);
       else await createEvent(input);
-      clear(); setSaved(true);
+      clear(); setSaved("일정을 저장했습니다.");
     } catch {
       setError("일정을 저장하지 못했습니다."); setBusy(false); return;
     }
+    await reloadAfterChange();
+  }
+
+  // 취소와 되돌리기는 상세를 연 채로 바뀐 상태를 보여 주고, 삭제하면 상세를 닫습니다.
+  async function changeStatus(operation: () => Promise<ChoirEvent | void>, done: string, failed: string) {
+    if (busy) return;
+    setBusy(true); setError(""); setSaved("");
+    try {
+      const updated = await operation();
+      if (updated) edit(updated);
+      else clear();
+      setSaved(done);
+    } catch (caught) {
+      setError(caught instanceof ApiRequestError && caught.status === 409 ? caught.message : failed);
+      setBusy(false); return;
+    }
+    await reloadAfterChange();
+  }
+
+  function confirmCancel(event: ChoirEvent) {
+    if (!window.confirm(`${seoulDayLabel(event.startAt)} ${event.title} 일정을 취소할까요? 단원 달력에 취소됨으로 표시되고, 참석 응답과 출석을 더 받지 않으며, 열려 있는 출석 창도 닫힙니다. 이미 받은 기록은 그대로 남습니다.`)) return;
+    void changeStatus(() => cancelEvent(event.id), "일정을 취소했습니다.", "일정을 취소하지 못했습니다.");
+  }
+
+  function confirmDelete(event: ChoirEvent) {
+    if (!window.confirm(`${seoulDayLabel(event.startAt)} ${event.title} 일정을 완전히 삭제할까요? 삭제하면 되돌릴 수 없습니다.`)) return;
+    void changeStatus(() => deleteEvent(event.id), "일정을 삭제했습니다.", "일정을 삭제하지 못했습니다.");
+  }
+
+  async function reloadAfterChange() {
     const refreshMonth = currentMonth.current;
     const refreshVersion = ++listRequestVersion.current;
     try {
@@ -110,7 +141,7 @@ export function EventEditor() {
       setEvents(refreshed); setLoadedMonth(refreshMonth); setListError("");
     } catch {
       if (currentMonth.current === refreshMonth && listRequestVersion.current === refreshVersion) {
-        setEvents(null); setListError("일정은 저장됐지만 목록을 새로고침하지 못했습니다.");
+        setEvents(null); setListError("변경은 완료됐지만 목록을 새로고침하지 못했습니다.");
       }
     } finally { setBusy(false); }
   }
@@ -133,7 +164,7 @@ export function EventEditor() {
   return <div className={styles.page}>
     <PageHeader title="일정 관리" actions={<ActionLink variant="secondary" href="/dashboard">홈으로 가기</ActionLink>} />
     {listError && <Feedback tone="error">{listError} <Button variant="secondary" type="button" onClick={() => { setListError(""); setRetry(retry + 1); }}>다시 시도</Button></Feedback>}
-    {saved && <p role="status">일정을 저장했습니다.</p>}
+    {saved && <p role="status">{saved}</p>}
     <EventBatchCreator onCreated={refreshList} />
     <section className={styles.section} aria-labelledby="list-title">
       <h2 id="list-title">등록된 일정</h2>
@@ -148,8 +179,8 @@ export function EventEditor() {
           <ul className={styles.rosterList} aria-label="일정 목록">
             {visible?.map((event) => <li key={event.id}>
               <button type="button" className={styles.rosterRow} aria-current={selected?.id === event.id ? "true" : undefined} onClick={() => edit(event)}>
-                <strong>{event.title}</strong><span>{seoulDayLabel(event.startAt)}</span>
-                <small>{eventKindText(event) !== event.title && `${eventKindText(event)} `}{seoulTime(event.startAt)}</small>
+                <strong className={event.cancelledAt ? calendarStyles.cancelled : undefined}>{event.title}</strong><span>{seoulDayLabel(event.startAt)}</span>
+                <small>{event.cancelledAt && "취소됨 "}{eventKindText(event) !== event.title && `${eventKindText(event)} `}{seoulTime(event.startAt)}</small>
               </button>
             </li>)}
           </ul>
@@ -161,6 +192,7 @@ export function EventEditor() {
         <div className={styles.detailHeader}>
           <h3>{selected.title}</h3>
           <span className={`${calendarStyles.kind} ${calendarStyles.kindBadge}`} data-kind={eventKind(selected)}>{eventKindText(selected)}</span>
+          {selected.cancelledAt && <StatusBadge tone="negative">취소됨</StatusBadge>}
         </div>
         {/* 여러 날에 걸친 일정은 끝나는 날짜도 적습니다. */}
         <p className={styles.when}>{seoulDayLabel(selected.startAt)} {seoulTime(selected.startAt)} ~ {seoulDayLabel(selected.endAt) !== seoulDayLabel(selected.startAt) && `${seoulDayLabel(selected.endAt)} `}{seoulTime(selected.endAt)}</p>
@@ -185,6 +217,14 @@ export function EventEditor() {
           <div className={styles.actions}>{editable && <Button variant="primary" type="submit" disabled={busy || !title.trim()}>{busy ? "저장 중..." : "저장"}</Button>}
             <Button variant="secondary" type="button" onClick={clear}>닫기</Button></div>
         </form>
+        {editable && <div className={styles.actions}>
+          {!selected.cancelledAt && <Button variant="danger" type="button" disabled={busy} onClick={() => confirmCancel(selected)}>이 일정 취소하기</Button>}
+          {selected.cancelledAt && <>
+            <Button variant="secondary" type="button" disabled={busy} onClick={() => void changeStatus(() => restoreEvent(selected.id), "일정 취소를 되돌렸습니다. 닫힌 출석 창은 필요하면 다시 열어 주세요.", "취소를 되돌리지 못했습니다.")}>취소 되돌리기</Button>
+            <Button variant="danger" type="button" disabled={busy} onClick={() => confirmDelete(selected)}>완전히 삭제</Button>
+          </>}
+        </div>}
+        {selected.cancelledAt && <p className={styles.hint}>단원에게 취소됨으로 보입니다. 참석 응답이나 출석 기록이 있는 일정은 삭제할 수 없고, 기록은 그대로 남습니다.</p>}
         <AdminEventRsvps key={selected.id} eventId={selected.id} />
           </>}
         </div>

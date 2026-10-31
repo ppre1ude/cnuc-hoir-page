@@ -25,7 +25,7 @@ afterEach(() => { cleanup(); vi.useRealTimers(); vi.clearAllMocks(); });
 test("출석 창 열기 성공 후 목록 갱신 실패는 조회만 재시도합니다", async () => {
   vi.mocked(events.getEvent).mockResolvedValue({ id: 3, title: "연습", description: "설명", startAt: "2026-09-27T09:00:00Z",
     endAt: "2026-09-27T12:00:00Z", kind: "EVENT", part: null, obEligible: false, publicVisible: false, createdAt: "2026-09-01T00:00:00Z",
-    updatedAt: "2026-09-01T00:00:00Z" });
+    updatedAt: "2026-09-01T00:00:00Z", cancelledAt: null });
   vi.mocked(attendance.getCheckInSession)
     .mockResolvedValueOnce({ sessionId: null, expiresAt: null, open: false, code: null, opensAt: "2026-09-27T08:30:00Z" })
     .mockRejectedValueOnce(new Error("조회 실패"))
@@ -55,9 +55,21 @@ test("출석 기록을 받는 동안 빈 목록 안내 대신 불러오는 중�
 });
 
 const rehearsal = { id: 3, title: "연습", description: "설명", startAt: "2026-09-27T09:00:00Z", endAt: "2026-09-27T12:00:00Z",
-  kind: "EVENT" as const, part: null, obEligible: false, publicVisible: false, createdAt: "2026-09-01T00:00:00Z", updatedAt: "2026-09-01T00:00:00Z" };
+  kind: "EVENT" as const, part: null, obEligible: false, publicVisible: false, createdAt: "2026-09-01T00:00:00Z", updatedAt: "2026-09-01T00:00:00Z", cancelledAt: null as string | null };
 // 서버는 expiresAt에 행사 종료 시각을 줍니다. rehearsal은 12:00에 끝납니다.
 const issued = { sessionId: 7, expiresAt: "2026-09-27T12:00:00Z", qrUrl: "/events/3/check-in#token=secret", code: "ABCD2345" };
+
+test("취소된 일정은 출석 창을 열 수 없다고 안내하고 여는 버튼을 숨긴다", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-09-27T10:00:00Z"));
+  vi.mocked(events.getEvent).mockResolvedValue({ ...rehearsal, cancelledAt: "2026-09-27T09:30:00Z" });
+  vi.mocked(attendance.getCheckInSession).mockResolvedValue({ sessionId: 7, expiresAt: "2026-09-27T12:00:00Z", open: false, code: null, opensAt: "2026-09-27T08:30:00Z" });
+  vi.mocked(attendance.getAdminAttendance).mockResolvedValue([]);
+  renderWithSession(<AdminAttendancePanel eventId={3} />, sessionFixture({ admin: true }));
+  expect(await screen.findByText(/취소된 일정이라 출석 창을 열 수 없습니다/)).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "다시 열기" })).not.toBeInTheDocument();
+  vi.useRealTimers();
+});
 
 async function renderWithOpenWindow() {
   vi.useFakeTimers({ shouldAdvanceTime: true });

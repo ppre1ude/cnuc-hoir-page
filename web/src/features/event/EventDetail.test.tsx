@@ -6,7 +6,7 @@ import type { ChoirEvent } from "./events";
 afterEach(cleanup);
 
 const event: ChoirEvent = {
-  id: 3, title: "연습", description: "설명", startAt: "2026-09-27T09:00:00Z",
+  id: 3, title: "연습", description: "설명", cancelledAt: null, startAt: "2026-09-27T09:00:00Z",
   endAt: "2026-09-27T12:00:00Z", kind: "EVENT", part: null, obEligible: true, publicVisible: false,
   createdAt: "2026-09-01T00:00:00Z", updatedAt: "2026-09-01T00:00:00Z",
 };

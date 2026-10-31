@@ -123,6 +123,8 @@
 .skeletonStack { display: grid; gap: var(--space-4); }
 .skeletonDayList { flex: 1 1 0; min-width: 0; }
 .skeletonDayList > div { min-height: var(--control-medium); padding-block: 0; border-bottom: 0; }
+/* 취소된 일정의 제목과 시각입니다. 다른 규칙을 덮도록 뒤에 둡니다. */
+.cancelled { background: none; color: var(--color-muted); text-decoration: line-through; }
 @media (max-width: 850px) {
   .skeletonDay { height: var(--control-large); }
   /* 폰에서는 달력, 이달의 일정, 상세, 공지, 내 출석 순으로 한 줄로 쌓입니다. */

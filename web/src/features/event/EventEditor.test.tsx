@@ -1,14 +1,21 @@
 import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EventEditor } from "./EventEditor";
+import { ApiRequestError } from "../../lib/api";
 import { renderWithSession, sessionFixture } from "../../test/session";
 
 const getEvents = vi.fn();
 const updateEvent = vi.fn();
+const cancelEvent = vi.fn();
+const restoreEvent = vi.fn();
+const deleteEvent = vi.fn();
 vi.mock("./events", async (importOriginal) => ({
   ...await importOriginal<typeof import("./events")>(),
   getEvents: (...args: unknown[]) => getEvents(...args),
   updateEvent: (...args: unknown[]) => updateEvent(...args),
+  cancelEvent: (...args: unknown[]) => cancelEvent(...args),
+  restoreEvent: (...args: unknown[]) => restoreEvent(...args),
+  deleteEvent: (...args: unknown[]) => deleteEvent(...args),
 }));
 
 const septemberEvent = {
@@ -114,5 +121,60 @@ describe("운영진 일정 편집", () => {
     expect(await screen.findByRole("button", { name: /가을 공연/ })).toBeInTheDocument();
     await act(async () => { finishStaleList([]); });
     expect(screen.getByRole("button", { name: /가을 공연/ })).toBeInTheDocument();
+  });
+
+  describe("일정 취소", () => {
+    const cancelledEvent = { ...septemberEvent, cancelledAt: "2026-09-27T03:00:00Z" };
+    afterEach(() => { vi.restoreAllMocks(); cancelEvent.mockReset(); restoreEvent.mockReset(); deleteEvent.mockReset(); });
+
+    it("확인 창에서 거절하면 취소 요청을 보내지 않는다", async () => {
+      getEvents.mockResolvedValue([septemberEvent]);
+      const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+      renderWithSession(<EventEditor />, sessionFixture({ admin: true }));
+      fireEvent.click(await screen.findByRole("button", { name: /정기 연습/ }));
+      fireEvent.click(screen.getByRole("button", { name: "이 일정 취소하기" }));
+      expect(confirm.mock.calls[0][0]).toContain("이미 받은 기록은 그대로 남습니다.");
+      expect(cancelEvent).not.toHaveBeenCalled();
+    });
+
+    it("확인하면 취소하고 상세에 취소됨과 되돌리기를 보여 준다", async () => {
+      getEvents.mockResolvedValueOnce([septemberEvent]).mockResolvedValue([cancelledEvent]);
+      cancelEvent.mockResolvedValue(cancelledEvent);
+      restoreEvent.mockResolvedValue(septemberEvent);
+      vi.spyOn(window, "confirm").mockReturnValue(true);
+      renderWithSession(<EventEditor />, sessionFixture({ admin: true }));
+      fireEvent.click(await screen.findByRole("button", { name: /정기 연습/ }));
+      fireEvent.click(screen.getByRole("button", { name: "이 일정 취소하기" }));
+      expect(await screen.findByText("일정을 취소했습니다.")).toBeInTheDocument();
+      expect(cancelEvent).toHaveBeenCalledWith(1);
+      expect(screen.getByRole("button", { name: /정기 연습.*취소됨/ })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "이 일정 취소하기" })).not.toBeInTheDocument();
+      fireEvent.click(await screen.findByRole("button", { name: "취소 되돌리기" }));
+      await waitFor(() => expect(restoreEvent).toHaveBeenCalledWith(1));
+      expect(await screen.findByRole("button", { name: "이 일정 취소하기" })).toBeInTheDocument();
+    });
+
+    it("기록이 있어 삭제가 거부되면 서버가 알려 준 이유를 보여 주고 상세를 유지한다", async () => {
+      getEvents.mockResolvedValue([cancelledEvent]);
+      deleteEvent.mockRejectedValue(new ApiRequestError(409, "EVENT_HAS_RECORDS", "참석 응답이나 출석 기록이 있어 삭제할 수 없습니다."));
+      vi.spyOn(window, "confirm").mockReturnValue(true);
+      renderWithSession(<EventEditor />, sessionFixture({ admin: true }));
+      fireEvent.click(await screen.findByRole("button", { name: /정기 연습/ }));
+      fireEvent.click(screen.getByRole("button", { name: "완전히 삭제" }));
+      expect(await screen.findByText("참석 응답이나 출석 기록이 있어 삭제할 수 없습니다.")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { level: 3, name: "정기 연습" })).toBeInTheDocument();
+    });
+
+    it("삭제하면 상세를 닫고 목록을 다시 불러온다", async () => {
+      getEvents.mockResolvedValueOnce([cancelledEvent]).mockResolvedValue([]);
+      deleteEvent.mockResolvedValue(undefined);
+      vi.spyOn(window, "confirm").mockReturnValue(true);
+      renderWithSession(<EventEditor />, sessionFixture({ admin: true }));
+      fireEvent.click(await screen.findByRole("button", { name: /정기 연습/ }));
+      fireEvent.click(screen.getByRole("button", { name: "완전히 삭제" }));
+      expect(await screen.findByText("일정을 삭제했습니다.")).toBeInTheDocument();
+      expect(await screen.findByText("이번 달 등록된 일정이 없습니다.")).toBeInTheDocument();
+      expect(screen.getByText("목록에서 일정을 선택하세요.")).toBeInTheDocument();
+    });
   });
 });

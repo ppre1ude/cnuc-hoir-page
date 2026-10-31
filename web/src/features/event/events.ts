@@ -25,6 +25,8 @@ export type ChoirEvent = {
   publicVisible: boolean;
   createdAt: string;
   updatedAt: string;
+  // 값이 있으면 취소된 일정입니다. 지우지 않고 달력에 취소됨으로 남깁니다.
+  cancelledAt: string | null;
 };
 
 export type EventInput = Pick<ChoirEvent, "title" | "description" | "startAt" | "endAt" | "kind" | "part" | "obEligible" | "publicVisible">;
@@ -124,6 +126,18 @@ export function updateEvent(id: number, input: EventInput): Promise<ChoirEvent> 
   });
 }
 
+export function cancelEvent(id: number): Promise<ChoirEvent> {
+  return apiRequest<ChoirEvent>(`/admin/events/${id}/cancel`, { method: "POST" });
+}
+
+export function restoreEvent(id: number): Promise<ChoirEvent> {
+  return apiRequest<ChoirEvent>(`/admin/events/${id}/restore`, { method: "POST" });
+}
+
+export function deleteEvent(id: number): Promise<void> {
+  return apiRequest<void>(`/admin/events/${id}`, { method: "DELETE" });
+}
+
 // 운영진 명단에서 출석 시각만 "오후 6:03"처럼 보입니다.
 export function seoulTime(value: string) {
   return new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", timeStyle: "short" }).format(new Date(value));
@@ -142,6 +156,7 @@ export type Chip = { tone: "positive" | "neutral" | "negative" | "attention"; la
 // choice가 undefined면 응답을 아직 못 받은 것이라 칩을 그리지 않습니다.
 export function rsvpChip(event: ChoirEvent, member: { memberType: "ACTIVE" | "OB" | null; part?: Part | null },
   choice: EventRsvpChoice | null | undefined): Chip | null {
+  if (event.cancelledAt) return { tone: "negative", label: "취소됨" };
   if (!isEventTarget(event, member)) return { tone: "neutral", label: "대상 아님" };
   if (choice === undefined) return null;
   const closed = new Date(event.startAt).getTime() <= Date.now();

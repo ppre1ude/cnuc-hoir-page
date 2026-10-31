@@ -1,6 +1,7 @@
 package kr.ac.jnu.choir.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -172,6 +173,37 @@ class AuthorizationMatrixTest {
                     .content("{\"status\":\"CHECKED_IN\",\"reason\":\"명단 대조\"}"))
                     .andReturn().getResponse().getStatus()).isEqualTo(expectedCorrection);
         }
+    }
+
+    @Test void cancellingAndDeletingEventsFollowEditPermission() throws Exception {
+        long eventId = events.create("취소 권한 연습", "내용", Instant.parse("2099-09-20T09:00:00Z"),
+                Instant.parse("2099-09-20T11:00:00Z"), EventKind.REGULAR_REHEARSAL, null, false, false).getId();
+        MockHttpSession member = session("APPROVED", "ACTIVE", false);
+        MockHttpSession lead = staff("SECTION_LEAD");
+        MockHttpSession president = staff("PRESIDENT");
+        String admin = "/api/v1/admin/events/" + eventId;
+        assertThat(mvc.perform(post(admin + "/cancel")).andReturn().getResponse().getStatus()).isEqualTo(403);
+        // 일반 단원과, 정기연습을 고칠 수 없는 수석은 거부됩니다.
+        for (MockHttpSession role : List.of(member, lead)) {
+            String token = csrf(role);
+            assertThat(mvc.perform(post(admin + "/cancel").session(role).header("X-CSRF-TOKEN", token))
+                    .andReturn().getResponse().getStatus()).isEqualTo(403);
+            assertThat(mvc.perform(post(admin + "/restore").session(role).header("X-CSRF-TOKEN", token))
+                    .andReturn().getResponse().getStatus()).isEqualTo(403);
+            assertThat(mvc.perform(delete(admin).session(role).header("X-CSRF-TOKEN", token))
+                    .andReturn().getResponse().getStatus()).isEqualTo(403);
+        }
+        assertThat(mvc.perform(post(admin + "/cancel").session(president))
+                .andReturn().getResponse().getStatus()).isEqualTo(403);
+        String token = csrf(president);
+        assertThat(mvc.perform(post(admin + "/cancel").session(president).header("X-CSRF-TOKEN", token))
+                .andReturn().getResponse().getStatus()).isEqualTo(200);
+        assertThat(mvc.perform(post(admin + "/restore").session(president).header("X-CSRF-TOKEN", token))
+                .andReturn().getResponse().getStatus()).isEqualTo(200);
+        assertThat(mvc.perform(post(admin + "/cancel").session(president).header("X-CSRF-TOKEN", token))
+                .andReturn().getResponse().getStatus()).isEqualTo(200);
+        assertThat(mvc.perform(delete(admin).session(president).header("X-CSRF-TOKEN", token))
+                .andReturn().getResponse().getStatus()).isEqualTo(204);
     }
 
     @Test void vicePresidentApprovesApplicationsButCannotRevoke() throws Exception {

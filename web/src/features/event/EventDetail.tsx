@@ -18,8 +18,9 @@ function endLabel(event: ChoirEvent) {
 // 일정 페이지는 제목을 h1으로 이미 보여 주므로 showTitle={false}로 h2를 뺍니다.
 export function EventDetail({ event, memberType, part = null, checkInOpen, link = false, showTitle = true }: Props) {
   return <article className={styles.eventDetail}>
-    {showTitle && <h2>{event.title}</h2>}
-    <p className={styles.eventTime}><time dateTime={event.startAt}>{seoulDateTime(event.startAt)}</time><span aria-hidden="true"> ~ </span><time dateTime={event.endAt}>{endLabel(event)}</time></p>
+    {showTitle && <h2 className={event.cancelledAt ? styles.cancelled : undefined}>{event.title}</h2>}
+    {event.cancelledAt && <p><StatusBadge tone="negative">취소된 일정입니다</StatusBadge></p>}
+    <p className={`${styles.eventTime} ${event.cancelledAt ? styles.cancelled : ""}`}><time dateTime={event.startAt}>{seoulDateTime(event.startAt)}</time><span aria-hidden="true"> ~ </span><time dateTime={event.endAt}>{endLabel(event)}</time></p>
     {event.description && <p className={styles.description}><Linkify text={event.description} /></p>}
     <div className={styles.eventActions}><StatusBadge tone={event.obEligible ? "positive" : "neutral"}>
       {memberType === "OB"
