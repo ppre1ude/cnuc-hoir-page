@@ -1,6 +1,6 @@
 /* 공개 메인 모래 장면.
    긴 스크롤 영역(.landing) 안에 화면 크기의 무대(.stage)를 고정하고, 장면 글을 무대 위에 겹쳐 둡니다.
-   보이는 장면은 엔진(sand/stage.ts)이 data-active로 고르며, 자바스크립트가 없으면 맨 아래 규칙대로 세로로 쌓입니다. */
+   보이는 장면은 엔진(sand/stage.ts)이 data-active로 고르며, 자바스크립트가 없거나 화면이 낮으면 맨 아래 규칙대로 세로로 쌓입니다. */
 .landing {
   /* 페이퍼로지는 정적 굵기라 공개 메인에서는 굵기 토큰을 그에 맞춥니다. */
   --weight-medium: var(--weight-public-medium);
@@ -14,13 +14,18 @@
 :where(.landing) :is(h1, h2, h3, p, ol, ul) { margin: 0; } /* :where로 우선순위를 낮춰 아래 클래스 규칙의 여백이 이기게 합니다. */
 :where(.landing) :is(ol, ul) { padding: 0; list-style: none; }
 :where(.landing) a { text-decoration: none; }
-.stage { position: sticky; top: 0; width: 100%; height: 100dvh; min-height: 520px; overflow: hidden; }
+.stage { position: sticky; top: 0; width: 100%; height: 100dvh; overflow: hidden; }
 .canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; pointer-events: none; }
 
 /* 머리글: 작은 로고와 단원 로그인. 첫 장면에서는 큰 심벌이 있어 작은 로고를 숨깁니다. 높이는 엔진의 HEADER_HEIGHT와 같습니다. */
-.header { position: absolute; inset: 0 0 auto 0; z-index: 6; display: flex; align-items: center; justify-content: space-between; height: 64px; padding-left: max(var(--space-5), env(safe-area-inset-left, 0px)); padding-right: max(var(--space-5), env(safe-area-inset-right, 0px)); }
-.home { display: flex; }
-.headerLogo { --logo-width: min(44vw, 190px); transition: opacity .7s ease; }
+.header { position: absolute; inset: 0 0 auto 0; z-index: 6; display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); height: 64px; padding-left: max(var(--space-5), env(safe-area-inset-left, 0px)); padding-right: max(var(--space-5), env(safe-area-inset-right, 0px)); }
+.home { display: flex; transition: visibility .7s; } /* 첫 장면에서는 숨은 로고로 키보드 초점이 가지 않게 빼고, 다시 숨을 때는 흐려진 뒤 빠집니다. */
+.landing[data-current="0"] .home { visibility: hidden; }
+.actions { display: flex; gap: var(--space-2); }
+.landing[data-current="6"] .headerApply { visibility: hidden; } /* 마지막 장면에는 큰 지원서 버튼이 있습니다. */
+.headerApply { white-space: nowrap; }
+@media (max-width: 760px) { .actions a { padding-inline: 10px; } } /* 좁은 폰에서 로고와 두 버튼이 한 줄에 들어가게 합니다. */
+.headerLogo { --logo-width: min(36vw, 190px); transition: opacity .7s ease; }
 .landing[data-current="0"] .headerLogo { opacity: 0; }
 .login { white-space: nowrap; }
 
@@ -35,7 +40,7 @@
 .scene { position: absolute; opacity: 0; pointer-events: none; transform: translateY(26px); transition: opacity .7s ease, transform .7s var(--motion-ease); }
 .scene[data-active] { opacity: 1; transform: none; pointer-events: auto; }
 .copy { left: 6%; right: 6%; bottom: 7%; display: flex; flex-direction: column; gap: var(--space-3); }
-.eyebrow { display: flex; align-items: center; gap: 10px; color: var(--color-brand); font-size: var(--text-label); font-weight: var(--weight-label); }
+.eyebrow { display: flex; align-items: center; gap: 10px; color: var(--color-primary); font-size: var(--text-label); font-weight: var(--weight-label); }
 .eyebrow::before { content: ""; width: 18px; height: 1.5px; background: var(--color-brand); }
 .eyebrow span { color: var(--color-muted); font-weight: var(--weight-medium); }
 .title { font-size: clamp(28px, 7.6vw, 40px); font-weight: var(--weight-heading); letter-spacing: -.05em; line-height: 1.25; }
@@ -70,7 +75,7 @@
    길(선과 연도 점)은 입자가 그리고, 보이지 않는 .dot이 입자 좌표의 기준 자리입니다. */
 .history { left: 6%; right: 6%; top: 76px; bottom: var(--space-4); display: flex; flex-direction: column; gap: 22px; }
 .history[data-active] { transition-delay: .3s; } /* 사진이 먼저 날아와 앉은 뒤 글이 나타나도록 살짝 늦춥니다. */
-.banner { flex: 1 1 auto; min-height: 120px; max-height: 220px; }
+.banner { flex: 1 1 auto; min-height: 80px; max-height: 220px; }
 .historyBody { flex: 0 0 auto; display: flex; flex-direction: column; gap: var(--space-3); }
 .historyBody .title { font-size: clamp(26px, 6.4vw, 32px); }
 /* 걸어온 길 소개는 한 문장이라 본문의 26em 폭 제한을 풀어 띠 폭에서만 줄이 바뀌게 합니다. */
@@ -134,13 +139,14 @@
   .copy, .copy[data-active] { transform: translateY(-50%); }
 }
 
-/* 자바스크립트가 없으면 무대를 풀어 장면을 세로로 쌓습니다. 길은 왼쪽 세로선과 점으로 그립니다. */
-@media (scripting: none) {
+/* 자바스크립트가 없거나 화면이 낮으면 무대를 풀어 장면을 세로로 쌓습니다. 길은 왼쪽 세로선과 점으로 그립니다. 높이 기준은 layout.ts의 STACKED_MEDIA와 같습니다. */
+@media (scripting: none), (max-height: 559px), (max-width: 760px) and (max-height: 619px) {
   .landing { height: auto; }
   .landing .stage { position: static; display: flex; flex-direction: column; gap: var(--space-16); height: auto; min-height: 0; padding-bottom: var(--space-16); overflow: visible; }
   .landing .canvas, .landing .nav, .landing .cue, .landing .top, .landing .photoAnchor, .landing .banner { display: none; }
   .landing .header { position: static; }
   .landing[data-current] .headerLogo { opacity: 1; }
+  .landing[data-current] .home { visibility: visible; }
   .landing .scene { position: static; width: min(100% - 2 * var(--page-gutter), 900px); margin-inline: auto; opacity: 1; transform: none; pointer-events: auto; }
   .landing .centered { padding-inline: 0; }
   .landing .photo { position: relative; width: min(100% - 2 * var(--page-gutter), 900px); height: auto; margin: calc(-1 * var(--space-8)) auto 0; aspect-ratio: 4 / 3; opacity: 1; }
