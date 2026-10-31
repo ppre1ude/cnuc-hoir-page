@@ -11,7 +11,7 @@ import { startSandStage } from "./sand/stage";
 import styles from "./SandLanding.module.css";
 
 // 공개 메인: 한 번 넘기면 한 장면씩, 모래 입자가 심벌·파형·음표·오선·사진·길로 모였다 흩어집니다.
-// 장면 글은 처음부터 모두 문서에 있고, 자바스크립트가 없으면 세로로 쌓여 보입니다.
+// 장면 글은 처음부터 모두 문서에 있고, 자바스크립트가 없거나 화면이 낮으면 세로로 쌓여 보입니다.
 
 /** 오른쪽 목차. name은 화면 읽기 프로그램용, label은 화면에 보이는 글자입니다. */
 const SCENES = [
@@ -57,7 +57,10 @@ export function SandLanding() {
           <Link href="/" className={styles.home} aria-label="전남대학교 합창단 처음으로" data-sand="home">
             <BrandLogo className={styles.headerLogo} alt="" />
           </Link>
-          <ActionLink variant="secondary" href="/login" className={styles.login}>단원 로그인</ActionLink>
+          <div className={styles.actions}>
+            <ActionLink href={choirChannels.application} target="_blank" rel="noopener noreferrer" className={styles.headerApply}>지원하기</ActionLink>
+            <ActionLink variant="secondary" href="/login" className={styles.login}>단원 로그인</ActionLink>
+          </div>
         </header>
 
         <nav className={styles.nav} aria-label="장면">

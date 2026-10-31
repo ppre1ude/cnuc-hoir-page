@@ -1,7 +1,22 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { choirChannels } from "./choirProfile";
 import { SandLanding } from "./SandLanding";
+import { STACKED_MEDIA } from "./sand/layout";
+
+/** 세로 배치 기준에 맞는지를 정하고, change로 화면 높이가 바뀐 것처럼 알립니다. jsdom에는 matchMedia가 없습니다. */
+function stubStackedMedia(matches: boolean) {
+  const listeners = new Set<() => void>();
+  const media = {
+    matches,
+    addEventListener: (_: string, listener: () => void) => listeners.add(listener),
+    removeEventListener: (_: string, listener: () => void) => listeners.delete(listener),
+  };
+  vi.stubGlobal("matchMedia", (query: string) => (query === STACKED_MEDIA ? media : { matches: false }));
+  return { change(next: boolean) { media.matches = next; for (const listener of [...listeners]) listener(); } };
+}
 
 // 마크업 검사는 엔진이 시작하기 전, 곧 자바스크립트가 없을 때와 같은 문서를 봅니다. 엔진 검사에서만 실제 엔진을 켭니다.
 const engine = vi.hoisted(() => ({ real: false }));
@@ -18,6 +33,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("SandLanding", () => {
@@ -55,6 +71,46 @@ describe("SandLanding", () => {
     const nav = screen.getByRole("navigation", { name: "장면" });
     expect(within(nav).getAllByRole("button").map((button) => button.textContent)).toEqual(["소개", "01", "02", "03", "04", "걸어온 길", "지원"]);
     expect(within(nav).getByRole("button", { name: "내 목소리 장면으로 이동" })).toHaveTextContent("01");
+  });
+
+  it("머리글에서 바로 지원서로 갈 수 있다", () => {
+    const { container } = render(<SandLanding />);
+    const apply = within(container.querySelector("header")!).getByRole("link", { name: /지원하기/ });
+    expect(apply).toHaveAttribute("href", choirChannels.application);
+    expect(apply).toHaveAttribute("target", "_blank");
+  });
+
+  it("세로 배치 기준은 CSS와 엔진이 같다", () => {
+    const css = readFileSync(resolve(process.cwd(), "src/features/onboarding/SandLanding.module.css"), "utf8");
+    expect(css).toContain(`@media (scripting: none), ${STACKED_MEDIA} {`);
+  });
+
+  it("낮은 화면에서는 엔진 없이 장면을 모두 펼치고, 화면이 높아지면 엔진을 시작한다", () => {
+    engine.real = true;
+    const low = stubStackedMedia(true);
+    const { container, unmount } = render(<SandLanding />);
+    expect(container.querySelectorAll("[inert], [data-scene][aria-hidden='true']")).toHaveLength(0);
+    expect(document.documentElement.style.overscrollBehavior).toBe("");
+    low.change(false);
+    expect(container.querySelectorAll("[inert]").length).toBeGreaterThan(0);
+    expect(document.documentElement.style.overscrollBehavior).toBe("none");
+    unmount();
+    low.change(false);
+    expect(document.documentElement.style.overscrollBehavior).toBe("");
+  });
+
+  it("화면이 낮아지면 엔진이 바꾼 장면 설정을 처음대로 되돌린다", () => {
+    engine.real = true;
+    const low = stubStackedMedia(false);
+    const { container } = render(<SandLanding />);
+    low.change(true);
+    expect(container.querySelectorAll("[inert], [data-scene][aria-hidden='true']")).toHaveLength(0);
+    expect(container.firstElementChild).toHaveAttribute("data-current", "0");
+    expect(Array.from(container.querySelectorAll<HTMLElement>("[data-active]")).map((el) => el.dataset.scene)).toEqual(["0", "0"]);
+    const photo = container.querySelector("[data-sand='photo']")!;
+    expect(photo).not.toHaveAttribute("style");
+    expect(photo).not.toHaveAttribute("aria-hidden");
+    expect(screen.getByRole("button", { name: "소개 장면으로 이동", hidden: true })).toHaveAttribute("aria-current", "step");
   });
 
   it("자바스크립트 전에는 어떤 장면도 가리지 않는다", () => {

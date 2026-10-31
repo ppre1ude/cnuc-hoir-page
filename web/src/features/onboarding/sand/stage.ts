@@ -1,5 +1,5 @@
 import {
-  band, createWheelGesture, easeInOutCubic, fitTargets, gaussian, graphicColumn,
+  band, createWheelGesture, easeInOutCubic, fitTargets, gaussian, graphicColumn, STACKED_MEDIA,
   SCENE_COUNT, sceneAt, sceneScrollOffset, shuffle, stageSize, type StageSize, type Target,
 } from "./layout";
 
@@ -50,7 +50,21 @@ function findElements(root: HTMLElement): StageElements | null {
 /** 무대를 시작하고, 멈추는 함수를 돌려줍니다. 필요한 요소가 없으면 아무것도 하지 않습니다. */
 export function startSandStage(root: HTMLElement, options: SandStageOptions): () => void {
   const elements = findElements(root);
-  return elements ? run(root, elements, options) : () => {};
+  if (!elements) return () => {};
+  // 낮은 화면에서는 엔진을 끄고 CSS가 장면을 세로로 쌓습니다. 휴대폰을 돌려 기준을 넘으면 그때 켜고 끕니다.
+  const stacked = typeof window.matchMedia === "function" ? window.matchMedia(STACKED_MEDIA) : null;
+  let stop: (() => void) | null = null;
+  const sync = () => {
+    stop?.();
+    stop = stacked?.matches ? null : run(root, elements, options);
+  };
+  sync();
+  stacked?.addEventListener("change", sync);
+  return () => {
+    stacked?.removeEventListener("change", sync);
+    stop?.();
+    stop = null;
+  };
 }
 
 function run(root: HTMLElement, { stage, canvas, photoBox, photoImg, anchorBox, banner }: StageElements, { mark }: SandStageOptions) {
@@ -170,7 +184,7 @@ function run(root: HTMLElement, { stage, canvas, photoBox, photoImg, anchorBox, 
     const copy = root.querySelector<HTMLElement>(`[data-sand-mark="${scene}"]`);
     const copyH = copy ? copy.offsetHeight : size.h * .16;
     const gap = size.mobile ? 48 : 72; // 심벌 파일에 여백이 없으므로 잉크와 글 사이 숨을 여기서 둡니다.
-    const margin = (size.mobile ? HEADER_HEIGHT.mobile : HEADER_HEIGHT.desktop) + 16;
+    const margin = (size.mobile ? HEADER_HEIGHT.mobile : HEADER_HEIGHT.desktop) + 32; // 아래쪽 안내 버튼(약 100px)도 이 여백 안에 듭니다.
     // 넓은 모니터에서는 글이 고정 크기라 심벌만 커지지 않도록 PC 심벌 폭을 480px에서 멈춥니다.
     const maxW = size.mobile ? size.w * widthRatio : Math.min(size.w * widthRatio, 480);
     const h = Math.max(80, Math.min(maxW / markAspect, size.h - 2 * margin - gap - copyH));
@@ -624,5 +638,18 @@ function run(root: HTMLElement, { stage, canvas, photoBox, photoImg, anchorBox, 
     observer?.disconnect();
     for (const dispose of disposers) dispose();
     html.style.overscrollBehavior = previousOverscroll;
+    // 처음 문서로 되돌립니다. 세로 배치에서는 모든 장면이 보이고 조작되어야 합니다.
+    root.dataset.current = "0";
+    for (const el of sceneEls) {
+      el.toggleAttribute("data-active", el.dataset.scene === "0");
+      el.removeAttribute("aria-hidden");
+      el.removeAttribute("inert");
+    }
+    navButtons.forEach((button, i) => {
+      if (i === 0) button.setAttribute("aria-current", "step");
+      else button.removeAttribute("aria-current");
+    });
+    for (const name of ["style", "data-show", "aria-hidden"]) photoBox.removeAttribute(name);
+    root.querySelectorAll<HTMLElement>("[data-sand-mark]").forEach((el) => el.style.removeProperty("--mark-offset"));
   };
 }

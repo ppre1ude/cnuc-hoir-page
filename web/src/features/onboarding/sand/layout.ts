@@ -3,6 +3,8 @@
 export const SCENE_COUNT = 7;
 /** 이 너비 이하는 모바일 배치입니다. 토큰의 모바일 구간(max-width: 760px)과 같습니다. */
 export const MOBILE_MAX_WIDTH = 760;
+/** 이 높이 이하는 한 화면에 장면이 다 들어가지 않아 엔진을 끄고 세로로 쌓습니다. 휴대폰 가로와 PC 200% 확대가 여기 듭니다. CSS의 같은 @media와 맞춥니다. */
+export const STACKED_MEDIA = "(max-height: 559px), (max-width: 760px) and (max-height: 619px)";
 
 export type StageSize = { w: number; h: number; mobile: boolean; count: number; dpr: number };
 
