@@ -134,7 +134,7 @@ export function EventCalendar() {
       if (!alive) return;
       setUpcoming(items); setUpcomingError("");
       // 처음 열면 다가오는 첫 일정을 고르고 달력도 그날로 옮깁니다. 오늘 일정이 있으면 오늘이 첫 일정입니다.
-      const first = items.filter((event) => isEventTarget(event, session)).sort(byStart)[0];
+      const first = items.filter((event) => isEventTarget(event, session) && !event.cancelledAt).sort(byStart)[0];
       if (picked.current || !first) return;
       picked.current = true;
       const date = seoulDateKey(first.startAt);
@@ -200,11 +200,12 @@ export function EventCalendar() {
   const myUpcoming = (upcoming ?? []).filter((event) => isEventTarget(event, session)).sort(byStart);
   // 고른 날에 일정이 없으면 아무것도 고르지 않습니다. 다른 날 일정으로 넘어가지 않습니다.
   const selected = dayEvents.find((event) => event.id === selectedEventId)
+    ?? dayEvents.find((event) => isEventTarget(event, session) && !event.cancelledAt)
     ?? dayEvents.find((event) => isEventTarget(event, session)) ?? dayEvents[0];
   // 빈 날에는 고른 날 뒤의 내 첫 일정을 바로가기로 내밉니다. 저절로 고르지는 않습니다.
   // ponytail: 받아 둔 그달과 다가오는 2주 안에서만 찾습니다. 그 밖의 먼 날짜를 고르면 바로가기가 없습니다.
   const nextEvent = selected ? undefined : [...monthEvents, ...myUpcoming]
-    .filter((event) => isEventTarget(event, session) && seoulDateKey(event.startAt) > selectedDate).sort(byStart)[0];
+    .filter((event) => isEventTarget(event, session) && !event.cancelledAt && seoulDateKey(event.startAt) > selectedDate).sort(byStart)[0];
   const selectedId = selected?.id;
   useEffect(() => {
     if (selectedId == null) return;
@@ -270,7 +271,7 @@ export function EventCalendar() {
                   <span className={styles.rowBody}>
                     <span className={styles.rowTitle}>
                       <span className={`${styles.kind} ${styles.kindBadge}`} data-kind={kindColor[event.kind]}>{kindShortLabel[event.kind]}</span>{" "}
-                      {event.title}
+                      <span className={event.cancelledAt ? styles.cancelled : undefined}>{event.title}</span>
                     </span>{" "}
                     <span className={styles.rowMeta}>
                       <time dateTime={event.startAt}>{timeRange(event)}</time>{" "}
@@ -291,8 +292,9 @@ export function EventCalendar() {
               const first = seoulDateKey(event.startAt);
               const last = seoulDateKey(new Date(new Date(event.endAt).getTime() - 1));
               return first <= key && key <= last;
-            // 칸에는 두 개까지만 보이므로 내가 대상인 일정을 앞에 둡니다. 운영진이 받아 보는 다른 파트연습 뒤로 내 일정이 숨지 않습니다.
-            }).sort((first, second) => Number(isEventTarget(second, session)) - Number(isEventTarget(first, session)) || byStart(first, second));
+            // 칸에는 두 개까지만 보이므로 취소되지 않은 일정, 내가 대상인 일정 순으로 앞에 둡니다. 운영진이 받아 보는 다른 파트연습 뒤로 내 일정이 숨지 않습니다.
+            }).sort((first, second) => Number(Boolean(first.cancelledAt)) - Number(Boolean(second.cancelledAt))
+              || Number(isEventTarget(second, session)) - Number(isEventTarget(first, session)) || byStart(first, second));
             const count = eventsOnDay.length;
             return <td key={key}><Button variant="unstyled" type="button" className={`${styles.day} ${key === selectedDate ? styles.selectedDay : ""}`}
               onClick={() => showDay(key, null)} aria-pressed={key === selectedDate}
@@ -300,12 +302,12 @@ export function EventCalendar() {
               aria-label={`${month.replace("-", "년 ")}월 ${day}일${count ? `, 일정 ${count}개` : ""}`}
               aria-describedby={count ? `day-preview-${key}` : undefined}>
               <span className={styles.dayNumber}>{day}</span>
-              {eventsOnDay.slice(0, 2).map((event) => <span key={event.id} className={`${styles.kind} ${styles.dayEvent}`}
+              {eventsOnDay.slice(0, 2).map((event) => <span key={event.id} className={`${styles.kind} ${styles.dayEvent} ${event.cancelledAt ? styles.cancelled : ""}`}
                 data-kind={eventKind(event)}>{event.title}</span>)}
               {count > 2 && <span className={styles.moreEvents}>+{count - 2}</span>}
               {/* 마우스를 올리거나 초점이 오면 칸에서 잘린 제목과 숨은 일정을 시각과 함께 띄웁니다. 화면 낭독기는 버튼 설명으로 읽습니다. */}
               {count > 0 && <span id={`day-preview-${key}`} className={styles.dayPreview}>{[...eventsOnDay].sort(byStart).map((event) =>
-                <span key={event.id} className={styles.kind} data-kind={eventKind(event)}><time>{timeRange(event)}</time> {event.title}</span>)}</span>}
+                <span key={event.id} className={styles.kind} data-kind={eventKind(event)}><time>{timeRange(event)}</time> {event.title}{event.cancelledAt && " (취소됨)"}</span>)}</span>}
               {count > 0 && <i aria-hidden="true" />}
             </Button></td>;
           })}</tr>)}</tbody>
@@ -315,7 +317,7 @@ export function EventCalendar() {
           {!eventsLoaded && !error && <SkeletonRows count={1} label="일정을 불러오는 중입니다." className={styles.skeletonDayList} />}
           {eventsLoaded && dayEvents.length === 0 && <p>일정 없음</p>}
           {dayEvents.map((event) => <Button variant="unstyled" key={event.id} type="button" className={styles.eventButton}
-            aria-pressed={selected?.id === event.id} onClick={() => showDay(selectedDate, event.id)}>{event.title}</Button>)}
+            aria-pressed={selected?.id === event.id} onClick={() => showDay(selectedDate, event.id)}>{event.title}{event.cancelledAt && " (취소됨)"}</Button>)}
         </div>
         </>}
       </section>
@@ -340,7 +342,7 @@ export function EventCalendar() {
                 {/* 버튼 이름이 "날짜 제목 상태"로 띄어 읽히도록 사이에 공백을 둡니다. 플렉스 안이라 보이지는 않습니다. */}
                 <span className={styles.eventText}>
                   <time dateTime={event.startAt} className={styles.eventDate}>{attendanceDate(event.startAt)}</time>{" "}
-                  <span className={styles.eventTitle}>{event.title}</span>
+                  <span className={`${styles.eventTitle} ${event.cancelledAt ? styles.cancelled : ""}`}>{event.title}</span>
                 </span>{" "}
                 {chip && <StatusBadge tone={chip.tone}>{chip.label}</StatusBadge>}
               </Button>

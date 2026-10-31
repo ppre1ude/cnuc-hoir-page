@@ -164,11 +164,12 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
     {message && <Feedback tone="error">{message}</Feedback>}
     <div className={styles.grid}>{session && <section className={styles.panel} aria-label="출석 창">
       <div className={styles.panelHeader}><h2>출석 창</h2></div>
-      <p>현재 창: {session.open ? `연습 끝 ${seoulDateTime(session.expiresAt!)}까지`
+      <p>현재 창: {event?.cancelledAt ? "취소된 일정이라 출석 창을 열 수 없습니다. 이미 받은 기록은 그대로 볼 수 있습니다."
+        : session.open ? `연습 끝 ${seoulDateTime(session.expiresAt!)}까지`
         : ended ? "연습이 끝나 출석 창을 열 수 없습니다. 늦게 온 단원은 아래에서 정정해 주세요."
         : beforeOpen ? `출석 창은 ${seoulDateTime(session.opensAt)}부터 열 수 있습니다.`
         : session.sessionId ? "출석 창이 닫혀 있습니다. 늦게 온 단원이 있으면 다시 열어 주세요." : "열려 있지 않음"}</p>
-      <div className={styles.actions}>{!session.open && !ended && <Button variant="primary" type="button" disabled={busy || beforeOpen} onClick={() => action(() => openCheckIn(eventId))}>
+      <div className={styles.actions}>{!session.open && !ended && !event?.cancelledAt && <Button variant="primary" type="button" disabled={busy || beforeOpen} onClick={() => action(() => openCheckIn(eventId))}>
         {session.sessionId ? "다시 열기" : "출석 받기"}</Button>}
       {session.open && <><Button variant="secondary" type="button" disabled={busy} onClick={() => action(() => rotateCheckIn(eventId, session.sessionId!))}>QR과 코드 재발급</Button>
         <Button variant="danger" type="button" disabled={busy} onClick={() => action(async () => { await closeCheckIn(eventId); return null; })}>출석 창 닫기</Button></>}</div>

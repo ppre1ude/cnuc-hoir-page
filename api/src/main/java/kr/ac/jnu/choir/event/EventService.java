@@ -1,5 +1,6 @@
 package kr.ac.jnu.choir.event;
 
+import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -9,7 +10,9 @@ import java.util.List;
 import java.util.HashSet;
 import kr.ac.jnu.choir.common.ApiException;
 import kr.ac.jnu.choir.member.Part;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,10 +21,12 @@ public class EventService {
     private static final DateTimeFormatter SEOUL_TIME = DateTimeFormatter.ofPattern("yyyy년 M월 d일 HH:mm")
             .withZone(ZoneId.of("Asia/Seoul"));
     private final EventRepository events;
+    private final JdbcTemplate jdbc;
     private final Clock clock;
 
-    public EventService(EventRepository events, Clock clock) {
+    public EventService(EventRepository events, JdbcTemplate jdbc, Clock clock) {
         this.events = events;
+        this.jdbc = jdbc;
         this.clock = clock;
     }
 
@@ -66,7 +71,8 @@ public class EventService {
         Instant from = input.stream().map(EventController.EventInput::startAt).min(Comparator.naturalOrder()).orElseThrow();
         Instant to = input.stream().map(EventController.EventInput::endAt).max(Comparator.naturalOrder()).orElseThrow();
         events.findOverlapping(from, to).stream()
-                .filter(saved -> requested.contains(duplicateKey(saved.getTitle(), saved.getStartAt())))
+                // 취소된 일정은 같은 제목과 시각으로 다시 등록할 수 있습니다.
+                .filter(saved -> !saved.isCancelled() && requested.contains(duplicateKey(saved.getTitle(), saved.getStartAt())))
                 .map(Event::getStartAt).findFirst()
                 .ifPresent(clash -> {
                     throw new ApiException(HttpStatus.CONFLICT, "DUPLICATE_EVENT_TIME", SEOUL_TIME.format(clash)
@@ -88,6 +94,41 @@ public class EventService {
         Event event = get(id);
         event.update(title, description, startAt, endAt, kind, part, obEligible, publicVisible, clock);
         return event;
+    }
+
+    // 먼저 flush해 일정 행을 잠근 뒤 창을 닫습니다. 같은 일정을 잠그고 출석 창을 여는 요청이 닫기를 빠져나가지 못합니다.
+    @Transactional
+    public Event cancel(long id) {
+        Event event = get(id);
+        event.cancel(clock);
+        events.flush();
+        jdbc.update("UPDATE check_in_session SET closed_at = ? WHERE event_id = ? AND closed_at IS NULL",
+                Timestamp.from(clock.instant()), id);
+        return event;
+    }
+
+    // 닫힌 출석 창은 저절로 다시 열지 않습니다. 필요하면 운영진이 다시 엽니다.
+    @Transactional
+    public Event restore(long id) {
+        Event event = get(id);
+        event.restore(clock);
+        return event;
+    }
+
+    // 응답, 출석 창, 출석, 정정 기록의 외래 키에 cascade가 없어, 기록이 하나라도 있으면 DB가 삭제를 거부합니다.
+    @Transactional
+    public void delete(long id) {
+        Event event = get(id);
+        if (!event.isCancelled()) {
+            throw new ApiException(HttpStatus.CONFLICT, "EVENT_NOT_CANCELLED", "취소한 일정만 삭제할 수 있습니다.");
+        }
+        try {
+            events.delete(event);
+            events.flush();
+        } catch (DataIntegrityViolationException hasRecords) {
+            throw new ApiException(HttpStatus.CONFLICT, "EVENT_HAS_RECORDS",
+                    "참석 응답이나 출석 기록이 있어 삭제할 수 없습니다. 취소 상태로 그대로 두면 기록이 보존됩니다.");
+        }
     }
 
     // 파트연습은 파트가 하나 있어야 하고, 전체연습과 행사에는 파트가 없어야 합니다. DB 제약과 같은 규칙입니다.

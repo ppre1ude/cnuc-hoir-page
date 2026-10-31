@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EventRsvp } from "./EventRsvp";
+import { ApiRequestError } from "../../lib/api";
 
 const setEventRsvp = vi.fn();
 vi.mock("./events", async (importOriginal) => ({
@@ -10,7 +11,7 @@ vi.mock("./events", async (importOriginal) => ({
 
 const event = {
   id: 7, title: "정기 연습", description: "", startAt: "2099-10-04T10:00:00Z", endAt: "2099-10-04T12:00:00Z",
-  kind: "EVENT" as const, part: null, obEligible: false, publicVisible: false, createdAt: "2026-09-01T00:00:00Z", updatedAt: "2026-09-01T00:00:00Z",
+  kind: "EVENT" as const, part: null, obEligible: false, publicVisible: false, createdAt: "2026-09-01T00:00:00Z", updatedAt: "2026-09-01T00:00:00Z", cancelledAt: null,
 };
 
 describe("행사 참석 응답", () => {
@@ -37,6 +38,18 @@ describe("행사 참석 응답", () => {
     expect(screen.getByLabelText("참석 응답")).toHaveTextContent("불참");
     expect(screen.queryByRole("button", { name: "참석" })).toBeNull();
     expect(setEventRsvp).not.toHaveBeenCalled();
+  });
+
+  it("취소된 일정에서는 응답 칸을 그리지 않는다", () => {
+    render(<EventRsvp event={{ ...event, cancelledAt: "2026-09-02T00:00:00Z" }} memberType="ACTIVE" choice="ATTENDING" onSaved={vi.fn()} />);
+    expect(screen.queryByLabelText("참석 응답")).toBeNull();
+  });
+
+  it("보는 사이 일정이 취소되면 시작 안내가 아니라 취소 안내를 보여 준다", async () => {
+    setEventRsvp.mockRejectedValueOnce(new ApiRequestError(409, "EVENT_CANCELLED", "취소된 일정이라 참석 응답을 받지 않습니다."));
+    render(<EventRsvp event={event} memberType="ACTIVE" choice={null} onSaved={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "참석" }));
+    expect(await screen.findByText("취소된 일정이라 응답을 받지 않습니다.")).toBeInTheDocument();
   });
 });
 

@@ -59,6 +59,24 @@ describe("일정 중심 단원 화면", () => {
     expect(within(screen.getByRole("region", { name: "선택한 일정" })).getByRole("heading", { name: "테너 파트연습" })).toBeInTheDocument();
   });
 
+  it("취소된 일정은 달력과 다가오는 일정에 취소됨으로 남고, 처음 고르는 일정에서는 빠지며, 응답을 받지 않는다", async () => {
+    const practice = { description: "", kind: "REGULAR_REHEARSAL", part: null, obEligible: false, publicVisible: false };
+    getEvents.mockResolvedValue([
+      { ...practice, id: 61, title: "취소된 연습", startAt: "2026-09-29T10:00:00Z", endAt: "2026-09-29T12:00:00Z", cancelledAt: "2026-09-27T00:00:00Z" },
+      { ...practice, id: 62, title: "다음 연습", startAt: "2026-09-30T10:00:00Z", endAt: "2026-09-30T12:00:00Z", cancelledAt: null },
+    ]);
+    renderWithSession(<EventCalendar />, sessionFixture());
+    const detail = screen.getByRole("region", { name: "선택한 일정" });
+    expect(await within(detail).findByRole("heading", { name: "다음 연습" })).toBeInTheDocument();
+    const list = screen.getByRole("region", { name: "다가오는 내 일정" });
+    const row = within(list).getByRole("button", { name: /취소된 연습/ });
+    await waitFor(() => expect(row).toHaveTextContent("취소됨"));
+    fireEvent.click(row);
+    expect(await within(detail).findByText("취소된 일정입니다")).toBeInTheDocument();
+    expect(within(detail).queryByLabelText("참석 응답")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /29일, 일정 1개/ })).toHaveTextContent("취소된 연습");
+  });
+
   it("달력 칸에는 내 일정을 앞세워 두 개까지 보이고 나머지는 +N으로 줄인다", async () => {
     const part = (id: number, title: string, hour: string, value: string) => ({ id, title, description: "", startAt: `2026-09-29T${hour}:00:00Z`,
       endAt: `2026-09-29T${hour}:30:00Z`, kind: "PART_REHEARSAL", part: value, obEligible: false, publicVisible: false });

@@ -51,14 +51,14 @@ export function EventRsvp({ event, memberType, part = null, choice, onSaved }: P
       } catch (caught) {
         if (caught instanceof ApiRequestError && caught.status === 409) {
           setClosed(true);
-          setError("일정이 시작되어 응답을 변경할 수 없습니다.");
+          setError(caught.code === "EVENT_CANCELLED" ? "취소된 일정이라 응답을 받지 않습니다." : "일정이 시작되어 응답을 변경할 수 없습니다.");
         } else setError("응답을 저장하지 못했습니다. 다시 시도해 주세요.");
       }
     });
   }
 
   // 저장 중에 disabled를 걸면 누른 버튼에서 초점이 빠지므로 aria-disabled로 알리고 respond에서 막습니다.
-  if (!eligible) return null;
+  if (!eligible || event.cancelledAt) return null;
   return <div className={styles.rsvp} role="group" aria-label="참석 응답" aria-busy={busy}>
     <strong>참석 응답</strong>
     <StatusBadge tone={shown ? "positive" : "neutral"}>{shown ? labels[shown] : "미응답"}</StatusBadge>

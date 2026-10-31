@@ -61,6 +61,9 @@ public class EventRsvpService {
         if (!event.targets(member)) {
             throw new ApiException(HttpStatus.FORBIDDEN, "EVENT_NOT_ELIGIBLE", "이 행사의 참여 대상이 아닙니다.");
         }
+        if (event.cancelled()) {
+            throw new ApiException(HttpStatus.CONFLICT, "EVENT_CANCELLED", "취소된 일정이라 참석 응답을 받지 않습니다.");
+        }
         Instant now = clock.instant();
         if (!now.isBefore(event.startAt())) {
             throw new ApiException(HttpStatus.CONFLICT, "RSVP_CLOSED", "행사가 시작되어 참석 응답을 변경할 수 없습니다.");
@@ -95,10 +98,11 @@ public class EventRsvpService {
     }
 
     private EventRow event(long eventId, boolean lock) {
-        return jdbc.query("SELECT start_at, ob_eligible, kind, part FROM event WHERE id = ?" + (lock ? " FOR UPDATE" : ""),
+        return jdbc.query("SELECT start_at, ob_eligible, kind, part, cancelled_at FROM event WHERE id = ?" + (lock ? " FOR UPDATE" : ""),
                 (rs, row) -> new EventRow(rs.getObject("start_at", LocalDateTime.class).toInstant(ZoneOffset.UTC),
                         rs.getBoolean("ob_eligible"), EventKind.valueOf(rs.getString("kind")),
-                        rs.getString("part") == null ? null : Part.valueOf(rs.getString("part"))),
+                        rs.getString("part") == null ? null : Part.valueOf(rs.getString("part")),
+                        rs.getObject("cancelled_at") != null),
                 eventId).stream().findFirst().orElseThrow(() ->
                 new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "행사를 찾을 수 없습니다."));
     }
@@ -113,7 +117,7 @@ public class EventRsvpService {
         return LocalDateTime.ofInstant(instant, ZoneOffset.UTC);
     }
 
-    private record EventRow(Instant startAt, boolean obEligible, EventKind kind, Part part) {
+    private record EventRow(Instant startAt, boolean obEligible, EventKind kind, Part part, boolean cancelled) {
         boolean targets(Member member) {
             return EventAccess.target(member.getMemberType(), member.getPart(), kind, part, obEligible);
         }

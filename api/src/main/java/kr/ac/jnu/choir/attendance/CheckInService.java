@@ -46,6 +46,7 @@ public class CheckInService {
     @Transactional
     public IssuedSession open(long eventId) {
         EventRow event = lockEvent(eventId);
+        if (event.cancelled()) throw conflict("EVENT_CANCELLED", "취소된 일정이라 출석 창을 열 수 없습니다.");
         Instant now = clock.instant();
         if (now.isBefore(event.startAt().minus(OPEN_BEFORE))) {
             throw conflict("SESSION_NOT_YET", "출석 창은 연습 시작 30분 전부터 열 수 있습니다.");
@@ -97,6 +98,7 @@ public class CheckInService {
         if (attendance(eventId, member.getId()) != null) {
             throw conflict("ALREADY_CHECKED_IN", "이미 처리된 출석입니다.");
         }
+        if (event.cancelled()) throw conflict("EVENT_CANCELLED", "취소된 일정이라 출석할 수 없습니다.");
         Instant now = clock.instant();
         if (now.isBefore(event.startAt().minus(OPEN_BEFORE))) {
             throw conflict("CHECK_IN_NOT_YET", "출석은 연습 시작 30분 전부터 할 수 있습니다.");
@@ -134,7 +136,7 @@ public class CheckInService {
         MemberRow target = memberRow(member.getId());
         // ob_eligible로 거르지 않고 계산된 상태로 거릅니다. 활동 단원 시절에 남은 출석·미출석 기록을 OB가 된 뒤에도 보여야 합니다.
         // 시작 전이라도 출석 창을 연 행사는 넣습니다. 연습 10분 전에 출석해도 바로 목록에서 확인할 수 있어야 합니다.
-        return jdbc.query("SELECT id,title,ob_eligible,start_at,end_at,kind,part FROM event e WHERE start_at <= ? "
+        return jdbc.query("SELECT id,title,ob_eligible,start_at,end_at,kind,part,cancelled_at FROM event e WHERE start_at <= ? "
                 + "OR EXISTS (SELECT 1 FROM check_in_session s WHERE s.event_id = e.id) ORDER BY start_at DESC,id DESC",
                 (rs, row) -> state(eventRow(rs), target),
                 // event 시각은 UTC 기준 TIMESTAMP라 JVM 시간대를 타는 Timestamp 대신 UTC LocalDateTime으로 비교합니다.
@@ -203,6 +205,8 @@ public class CheckInService {
     private AttendanceState state(EventRow event, MemberRow target) {
         String stored = attendance(event.id(), target.id());
         if (stored != null) return new AttendanceState(event.id(), event.title(), event.startAt(), stored, false);
+        // 취소된 일정에 기록이 없으면 미출석이 아닙니다. 대상 아님으로 두어 내 출석 목록에서도 빠집니다.
+        if (event.cancelled()) return new AttendanceState(event.id(), event.title(), event.startAt(), "NOT_ELIGIBLE", false);
         boolean eligibleNow = eligible(event, target);
         boolean open = sessionOpen(event, activeSession(event.id()), clock.instant());
         if (open && eligibleNow) return new AttendanceState(event.id(), event.title(), event.startAt(), "NOT_OPEN", true);
@@ -243,7 +247,7 @@ public class CheckInService {
     private EventRow lockEvent(long eventId) { return eventRow(eventId, true); }
     private EventRow findEvent(long eventId) { return eventRow(eventId, false); }
     private EventRow eventRow(long eventId, boolean lock) {
-        List<EventRow> rows = jdbc.query("SELECT id,title,ob_eligible,start_at,end_at,kind,part FROM event WHERE id = ?"
+        List<EventRow> rows = jdbc.query("SELECT id,title,ob_eligible,start_at,end_at,kind,part,cancelled_at FROM event WHERE id = ?"
                 + (lock ? " FOR UPDATE" : ""), (rs, row) -> eventRow(rs), eventId);
         if (rows.isEmpty()) throw new ApiException(HttpStatus.NOT_FOUND, "EVENT_NOT_FOUND", "행사를 찾을 수 없습니다.");
         return rows.getFirst();
@@ -323,7 +327,8 @@ public class CheckInService {
     private static EventRow eventRow(java.sql.ResultSet rs) throws java.sql.SQLException {
         String part = rs.getString("part");
         return new EventRow(rs.getLong("id"), rs.getString("title"), rs.getBoolean("ob_eligible"), eventTime(rs, "start_at"),
-                eventTime(rs, "end_at"), EventKind.valueOf(rs.getString("kind")), part == null ? null : Part.valueOf(part));
+                eventTime(rs, "end_at"), EventKind.valueOf(rs.getString("kind")), part == null ? null : Part.valueOf(part),
+                rs.getObject("cancelled_at") != null);
     }
     private static ApiException conflict(String code, String message) {
         return new ApiException(HttpStatus.CONFLICT, code, message);
@@ -332,7 +337,7 @@ public class CheckInService {
         return new ApiException(HttpStatus.FORBIDDEN, "NOT_ELIGIBLE", "이 행사의 출석 대상이 아닙니다.");
     }
     private record EventRow(long id, String title, boolean obEligible, Instant startAt, Instant endAt, EventKind kind,
-            Part part) {}
+            Part part, boolean cancelled) {}
     private record MemberRow(long id, String name, String status, String type, String part) {}
     private record SessionRow(long id, Instant expiresAt, Instant closedAt, String qrHash, String code) {}
     public record IssuedSession(Long sessionId, Instant expiresAt, String qrUrl, String code) {}
