@@ -62,7 +62,7 @@ export function EventRsvp({ event, memberType, part = null, choice, onSaved }: P
   return <div className={styles.rsvp} role="group" aria-label="참석 응답" aria-busy={busy}>
     <strong>참석 응답</strong>
     <StatusBadge tone={shown ? "positive" : "neutral"}>{shown ? labels[shown] : "미응답"}</StatusBadge>
-    {closed && <span className={styles.quickStatus}>응답 마감</span>}
+    {closed && <StatusBadge>응답 마감</StatusBadge>}
     {!closed && <div className={styles.rsvpButtons}>
       {(["ATTENDING", "ABSENT"] as const).map((item) => <Button variant="secondary" type="button" key={item}
         aria-pressed={shown === item} aria-disabled={busy || undefined} onClick={() => respond(item)}>{labels[item]}</Button>)}

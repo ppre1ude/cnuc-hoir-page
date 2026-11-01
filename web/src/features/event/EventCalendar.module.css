@@ -4,6 +4,11 @@
 .eventPage { composes: readingPage from "../../components/ui/ui.module.css"; }
 .eventPageCard { composes: surface from "../../components/ui/ui.module.css"; }
 .hero { padding-bottom: var(--space-6); border-bottom: 1px solid var(--color-line); }
+/* 출석 창이 열린 동안에만 달력 위에 놓입니다. 현장에서 사이트를 열자마자 눈에 띄어야 합니다. */
+.checkInBanner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-5); margin-bottom: var(--space-6); padding: var(--space-5); border: 1px solid var(--color-primary); border-radius: var(--radius-control); background: var(--color-selected); }
+.checkInBanner p { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.checkInBanner strong { display: block; font-size: var(--text-section); font-weight: var(--weight-heading); letter-spacing: var(--tracking-heading); }
+.checkInBanner span { display: block; margin-top: var(--space-1); color: var(--color-muted); font-size: var(--text-label); }
 /* 달력이 주인공입니다. 왼쪽 두 줄을 차지하고, 오른쪽에 이달의 일정과 상세가 쌓이고, 아래 줄에 공지와 내 출석이 나란히 놓입니다. */
 .grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(330px, 1fr); grid-template-areas: "calendar list" "calendar detail" "notices attendance"; gap: var(--space-6); }
 .card { composes: surface from "../../components/ui/ui.module.css"; }
@@ -87,7 +92,6 @@
 .eventDate { flex: none; color: var(--color-muted); font-size: var(--text-label); font-weight: var(--weight-label); font-variant-numeric: tabular-nums; }
 .eventTitle { min-width: 0; font-size: var(--text-body); font-weight: var(--weight-label); overflow-wrap: anywhere; }
 .eventSelect > :last-child:not(.eventText) { flex: none; margin-left: auto; }
-.quickStatus { color: var(--color-muted); font-size: var(--text-label); }
 /* 저장 중인 응답 버튼은 초점을 지키려고 disabled 대신 aria-disabled를 쓰므로 같은 흐린 모양을 직접 줍니다. */
 .rsvpButtons button[aria-disabled="true"] { opacity: .5; cursor: default; }
 .rsvp { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-6); padding-top: var(--space-6); border-top: 1px solid var(--color-line); font-size: var(--text-body); }
@@ -130,6 +134,8 @@
   /* 폰에서는 달력, 이달의 일정, 상세, 공지, 내 출석 순으로 한 줄로 쌓입니다. */
   .grid { display: flex; flex-direction: column; gap: var(--space-5); }
   .card { width: 100%; }
+  .checkInBanner { margin-bottom: var(--space-5); }
+  .checkInBanner > a { width: 100%; }
   .eventList { max-height: none; }
   .calendarTable td { height: auto; }
   .day { min-height: var(--control-large); height: auto; align-items: center; padding: var(--space-2) 0; }

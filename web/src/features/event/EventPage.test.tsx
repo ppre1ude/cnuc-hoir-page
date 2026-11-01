@@ -34,6 +34,13 @@ test.each([
   expect(screen.getByRole("link", { name: "← 홈" })).toHaveAttribute("href", "/dashboard");
 });
 
+test("일정을 받는 동안 없어진 일정 페이지처럼 보이는 제목을 띄우지 않습니다", () => {
+  vi.mocked(events.getEvent).mockReturnValue(new Promise(() => {}));
+  renderWithSession(<EventPage />, member);
+  expect(screen.getByRole("status")).toHaveTextContent("일정을 불러오는 중입니다.");
+  expect(screen.queryByRole("heading")).toBeNull();
+});
+
 test("행사 상세에서 창이 닫히면 참여 버튼을 보여주지 않습니다", async () => {
   vi.mocked(attendance.getEventAttendance).mockResolvedValue({ eventId: 3, eventTitle: "연습", startAt: "2026-09-27T09:00:00Z", status: "NOT_OPEN", checkInOpen: false });
   renderWithSession(<EventPage />, member);

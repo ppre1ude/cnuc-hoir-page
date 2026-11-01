@@ -118,13 +118,10 @@ describe("일정 중심 단원 화면", () => {
     expect(await screen.findByRole("link", { name: "공연 안내" })).toHaveAttribute("href", "/notices?notice=9");
   });
 
-  it("단원용 자료 링크를 일정 제목 옆에서 새 탭으로 연다", () => {
+  it("자료 링크는 자료실로 옮겨 홈 제목 옆에 두지 않는다", () => {
     renderWithSession(<EventCalendar />, ob);
     expect(screen.getByRole("heading", { level: 1, name: "홈" })).toBeInTheDocument();
-    const link = screen.getByRole("link", { name: "악보·자료 드라이브" });
-    expect(link).toHaveAttribute("href", "https://drive.google.com/drive/folders/1hcHWeu9WPdZbLpjncsqYOm4k8UHQJAuW?usp=drive_link");
-    expect(link).toHaveAttribute("target", "_blank");
-    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    expect(screen.queryByRole("link", { name: /드라이브/ })).toBeNull();
   });
 
   it("내 출석 요약에 행사 날짜와 요일을 함께 보여 준다", async () => {
@@ -259,6 +256,23 @@ describe("일정 중심 단원 화면", () => {
     fireEvent.click(screen.getByRole("button", { name: /^2026년 09월 30일/ }));
     expect(await screen.findByRole("heading", { name: "가을 공연" })).toBeInTheDocument();
     expect(await screen.findByRole("link", { name: "현장 출석하기" })).toHaveAttribute("href", "/events/2/check-in");
+  });
+
+  it("출석 창이 열린 내 일정은 어느 일정을 골랐든 맨 위에 출석 안내를 띄우고, 창이 닫히면 내린다", async () => {
+    const practice = { description: "", kind: "REGULAR_REHEARSAL", part: null, obEligible: false, publicVisible: false, cancelledAt: null };
+    getEvents.mockResolvedValue([
+      { ...practice, id: 2, title: "곧 시작하는 연습", startAt: "2026-09-27T03:20:00Z", endAt: "2026-09-27T05:00:00Z" },
+      { ...practice, id: 3, title: "내일 연습", startAt: "2026-09-28T03:20:00Z", endAt: "2026-09-28T05:00:00Z" },
+    ]);
+    renderWithSession(<EventCalendar />, sessionFixture());
+    const banner = await screen.findByRole("region", { name: "지금 출석" });
+    expect(banner).toHaveTextContent("곧 시작하는 연습");
+    expect(within(banner).getByRole("link", { name: "현장 출석하기" })).toHaveAttribute("href", "/events/2/check-in");
+    // 시작까지 30분이 넘게 남은 일정은 물어보지 않습니다.
+    expect(getEventAttendance).not.toHaveBeenCalledWith(3);
+    getEventAttendance.mockResolvedValue({ eventId: 2, eventTitle: "행사", status: "CHECKED_IN", checkInOpen: false });
+    await vi.advanceTimersByTimeAsync(15000);
+    await waitFor(() => expect(screen.queryByRole("region", { name: "지금 출석" })).toBeNull());
   });
 
   it("목록에서 행사를 고르고 상세에서 응답하면 목록 칩이 바뀐다", async () => {

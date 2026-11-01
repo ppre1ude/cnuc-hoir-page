@@ -13,7 +13,6 @@ import { EventDetail } from "./EventDetail";
 import { EventKindIcon, eventKind } from "./EventKind";
 import { EventRsvp } from "./EventRsvp";
 import { attendanceDate, attendanceTone, getEventAttendance, getMyAttendance, memberAttendanceLabel, type AttendanceState } from "../attendance/attendance";
-import { memberLinks } from "../member/memberLinks";
 import styles from "./EventCalendar.module.css";
 
 function moveMonth(month: string, offset: number) {
@@ -48,6 +47,9 @@ function timeRange(event: ChoirEvent) {
 
 const byStart = (first: ChoirEvent, second: ChoirEvent) => first.startAt.localeCompare(second.startAt);
 
+// 출석 창은 시작 30분 전부터 열 수 있습니다. 서버의 CheckInService.OPEN_BEFORE와 같습니다.
+const checkInLeadMs = 30 * 60_000;
+
 // 그달 응답과 다가오는 일정 응답을 한 장부에 모읍니다. 아직 응답하지 않은 일정은 넣지 않습니다.
 function choicesOf(items: MyEventRsvp[]): Record<number, EventRsvpChoice> {
   return Object.fromEntries(items.filter((item) => item.choice !== null).map((item) => [item.eventId, item.choice as EventRsvpChoice]));
@@ -80,6 +82,7 @@ export function EventCalendar() {
   const [upcoming, setUpcoming] = useState<ChoirEvent[] | null>(null);
   const [upcomingError, setUpcomingError] = useState("");
   const [upcomingRetry, setUpcomingRetry] = useState(0);
+  const [checkInEvents, setCheckInEvents] = useState<ChoirEvent[]>([]);
   const [upcomingRsvpLoaded, setUpcomingRsvpLoaded] = useState(false);
   // 그달 응답과 따로 둡니다. 한 상태를 같이 쓰면 그달 응답이 늦게 성공할 때 이쪽 실패 안내가 지워집니다.
   const [upcomingRsvpError, setUpcomingRsvpError] = useState("");
@@ -217,6 +220,21 @@ export function EventCalendar() {
     const timer = window.setInterval(refresh, 15000);
     return () => { alive = false; window.clearInterval(timer); };
   }, [selectedId]);
+  // 어느 일정을 골랐든 지금 출석할 수 있는 내 일정을 화면 맨 위에 띄웁니다. 창이 열릴 수 있는 시간대의 일정만 물어봅니다.
+  useEffect(() => {
+    if (!upcoming) return;
+    let alive = true;
+    const refresh = () => {
+      const now = Date.now();
+      const candidates = upcoming.filter((event) => isEventTarget(event, session) && !event.cancelledAt
+        && new Date(event.startAt).getTime() - checkInLeadMs <= now && now < new Date(event.endAt).getTime());
+      void Promise.all(candidates.map((event) => getEventAttendance(event.id).then((state) => state.checkInOpen, () => false)))
+        .then((open) => { if (alive) setCheckInEvents(candidates.filter((_, index) => open[index])); });
+    };
+    refresh();
+    const timer = window.setInterval(refresh, 15000);
+    return () => { alive = false; window.clearInterval(timer); };
+  }, [upcoming, session]);
   // 처음 열면 오늘 일정이 골라지는데 목록 아래쪽이면 넘김 상자 밖에 숨으므로 가운데로 넘깁니다. 폰에서는 목록이 넘기지 않아 그대로 둡니다.
   // scrollIntoView는 화면 전체까지 움직이므로 목록 상자만 직접 넘깁니다.
   useEffect(() => {
@@ -234,9 +252,12 @@ export function EventCalendar() {
   const eventsLoaded = loadedMonth === month && !error;
 
   return <main id="member-content" tabIndex={-1} className={styles.dashboard}>
-    <PageHeader title="홈" className={styles.hero} actions={memberLinks.map((link) => <ActionLink key={link.href} variant="secondary"
-      href={link.href} target="_blank" rel="noopener noreferrer">{link.label} <span aria-hidden="true">↗</span></ActionLink>)} />
+    <PageHeader title="홈" className={styles.hero} />
     {error && <div role="alert" className={styles.error}>{error} <Button variant="secondary" type="button" onClick={() => setRetry(retry + 1)}>다시 시도</Button></div>}
+    {checkInEvents.map((event) => <section key={event.id} aria-label="지금 출석" className={styles.checkInBanner}>
+      <p><strong>지금 출석할 수 있습니다</strong> <span>{event.title} {timeRange(event)}</span></p>
+      <ActionLink variant="primary" size="large" href={`/events/${event.id}/check-in`}>현장 출석하기</ActionLink>
+    </section>)}
     <div className={styles.grid}>
       <section aria-label="일정 달력"className={`${styles.card} ${styles.calendar}`}>
         <div role="group" aria-label="보기 방식" className={styles.viewToggle}>

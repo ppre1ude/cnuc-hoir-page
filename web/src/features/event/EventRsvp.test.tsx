@@ -36,6 +36,7 @@ describe("행사 참석 응답", () => {
     expect(screen.queryByRole("button", { name: "참석" })).toBeNull();
     view.rerender(<EventRsvp key="2020-10-04T10:00:00Z" event={{ ...event, startAt: "2020-10-04T10:00:00Z" }} memberType="ACTIVE" choice="ABSENT" onSaved={onSaved} />);
     expect(screen.getByLabelText("참석 응답")).toHaveTextContent("불참");
+    expect(screen.getByText("응답 마감").className).toMatch(/badge/);
     expect(screen.queryByRole("button", { name: "참석" })).toBeNull();
     expect(setEventRsvp).not.toHaveBeenCalled();
   });
