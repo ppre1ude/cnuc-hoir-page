@@ -40,6 +40,11 @@ export function graphicColumn(size: StageSize) {
   return size.mobile ? b : { left: b.left + b.width * .4, width: b.width * .6 };
 }
 
+/** 03 화음의 오선 줄 간격입니다. 그림 칸 너비를 따라 커져 어느 화면에서나 오선 비율이 같습니다. */
+export function staffGap(size: StageSize) {
+  return graphicColumn(size).width * (size.mobile ? .055 : .048);
+}
+
 /** 0~1 사이 랜덤 값의 합으로 만든 가벼운 종 모양 흔들림입니다. */
 export function gaussian(random: () => number = Math.random) {
   return (random() + random() + random() - 1.5) * 1.3;
