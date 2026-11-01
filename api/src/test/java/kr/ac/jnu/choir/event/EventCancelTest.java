@@ -128,6 +128,8 @@ class EventCancelTest {
         assertThat(refusedDelete.getStatus()).isEqualTo(409);
         assertThat(refusedDelete.getContentAsString()).contains("EVENT_HAS_RECORDS");
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM event WHERE id = ?", Long.class, id)).isEqualTo(1);
+        // 삭제가 거부되면 응답도 지워지지 않습니다.
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM event_rsvp WHERE event_id = ?", Long.class, id)).isEqualTo(1);
 
         assertThat(field(send(post("/api/v1/admin/events/" + id + "/restore"), admin, null).getContentAsString(), "cancelledAt")).isEqualTo("null");
         assertThat(send(put(path + "/rsvp"), responder, "{\"choice\":\"ABSENT\"}").getStatus()).isEqualTo(200);
@@ -144,6 +146,14 @@ class EventCancelTest {
         send(post("/api/v1/admin/events/" + id + "/cancel"), admin, null);
         assertThat(send(delete("/api/v1/admin/events/" + id), admin, null).getStatus()).isEqualTo(204);
         assertThat(mvc.perform(get("/api/v1/events/" + id).session(admin)).andReturn().getResponse().getStatus()).isEqualTo(404);
+    }
+
+    @Test void deletingCancelledEventAlsoRemovesItsRsvps() throws Exception {
+        long id = create(Instant.parse("2099-11-07T10:00:00Z"), "불참 응답만 있는 일정");
+        assertThat(send(put("/api/v1/events/" + id + "/rsvp"), session(false), "{\"choice\":\"ABSENT\"}").getStatus()).isEqualTo(200);
+        send(post("/api/v1/admin/events/" + id + "/cancel"), admin, null);
+        assertThat(send(delete("/api/v1/admin/events/" + id), admin, null).getStatus()).isEqualTo(204);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM event_rsvp WHERE event_id = ?", Long.class, id)).isZero();
     }
 
     @Test void cancelledEventDoesNotBlockRegisteringSameTitleAndTimeAgain() throws Exception {

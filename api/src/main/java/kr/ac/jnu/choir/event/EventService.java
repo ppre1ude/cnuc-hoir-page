@@ -115,7 +115,7 @@ public class EventService {
         return event;
     }
 
-    // 응답, 출석 창, 출석, 정정 기록의 외래 키에 cascade가 없어, 기록이 하나라도 있으면 DB가 삭제를 거부합니다.
+    // 취소한 일정의 참석 응답은 함께 지웁니다. 출석 창, 출석, 정정 기록이 있으면 DB가 삭제를 거부하고, 지운 응답도 함께 되돌아옵니다.
     @Transactional
     public void delete(long id) {
         Event event = get(id);
@@ -123,11 +123,12 @@ public class EventService {
             throw new ApiException(HttpStatus.CONFLICT, "EVENT_NOT_CANCELLED", "취소한 일정만 삭제할 수 있습니다.");
         }
         try {
+            jdbc.update("DELETE FROM event_rsvp WHERE event_id = ?", id);
             events.delete(event);
             events.flush();
         } catch (DataIntegrityViolationException hasRecords) {
             throw new ApiException(HttpStatus.CONFLICT, "EVENT_HAS_RECORDS",
-                    "참석 응답이나 출석 기록이 있어 삭제할 수 없습니다. 취소 상태로 그대로 두면 기록이 보존됩니다.");
+                    "출석 기록이 있어 삭제할 수 없습니다. 취소 상태로 그대로 두면 기록이 보존됩니다.");
         }
     }
 

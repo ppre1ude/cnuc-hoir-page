@@ -156,12 +156,12 @@ describe("운영진 일정 편집", () => {
 
     it("기록이 있어 삭제가 거부되면 서버가 알려 준 이유를 보여 주고 상세를 유지한다", async () => {
       getEvents.mockResolvedValue([cancelledEvent]);
-      deleteEvent.mockRejectedValue(new ApiRequestError(409, "EVENT_HAS_RECORDS", "참석 응답이나 출석 기록이 있어 삭제할 수 없습니다."));
+      deleteEvent.mockRejectedValue(new ApiRequestError(409, "EVENT_HAS_RECORDS", "출석 기록이 있어 삭제할 수 없습니다."));
       vi.spyOn(window, "confirm").mockReturnValue(true);
       renderWithSession(<EventEditor />, sessionFixture({ admin: true }));
       fireEvent.click(await screen.findByRole("button", { name: /정기 연습/ }));
       fireEvent.click(screen.getByRole("button", { name: "완전히 삭제" }));
-      expect(await screen.findByText("참석 응답이나 출석 기록이 있어 삭제할 수 없습니다.")).toBeInTheDocument();
+      expect(await screen.findByText("출석 기록이 있어 삭제할 수 없습니다.")).toBeInTheDocument();
       expect(screen.getByRole("heading", { level: 3, name: "정기 연습" })).toBeInTheDocument();
     });
 

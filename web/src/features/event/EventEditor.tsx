@@ -127,7 +127,7 @@ export function EventEditor() {
   }
 
   function confirmDelete(event: ChoirEvent) {
-    if (!window.confirm(`${seoulDayLabel(event.startAt)} ${event.title} 일정을 완전히 삭제할까요? 삭제하면 되돌릴 수 없습니다.`)) return;
+    if (!window.confirm(`${seoulDayLabel(event.startAt)} ${event.title} 일정을 완전히 삭제할까요? 받은 참석 응답도 함께 지워지고, 되돌릴 수 없습니다.`)) return;
     void changeStatus(() => deleteEvent(event.id), "일정을 삭제했습니다.", "일정을 삭제하지 못했습니다.");
   }
 
@@ -224,7 +224,7 @@ export function EventEditor() {
             <Button variant="danger" type="button" disabled={busy} onClick={() => confirmDelete(selected)}>완전히 삭제</Button>
           </>}
         </div>}
-        {selected.cancelledAt && <p className={styles.hint}>단원에게 취소됨으로 보입니다. 참석 응답이나 출석 기록이 있는 일정은 삭제할 수 없고, 기록은 그대로 남습니다.</p>}
+        {selected.cancelledAt && <p className={styles.hint}>단원에게 취소됨으로 보입니다. 출석 기록이 있는 일정은 삭제할 수 없고, 기록은 그대로 남습니다.</p>}
         <AdminEventRsvps key={selected.id} eventId={selected.id} />
           </>}
         </div>
