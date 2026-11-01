@@ -1,11 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { band, createWheelGesture, fitTargets, graphicColumn, sceneAt, sceneScrollOffset, stageSize } from "./layout";
+import { band, createWheelGesture, fitTargets, graphicColumn, sceneAt, sceneScrollOffset, stageSize, staffGap } from "./layout";
 
 describe("무대 배치", () => {
   it("760px 이하는 모바일로 보고 입자 수와 화면 배율을 정한다", () => {
     expect(stageSize(390, 844, 3)).toEqual({ w: 390, h: 844, mobile: true, count: 4200, dpr: 1.75 });
     expect(stageSize(760, 900, 1).mobile).toBe(true);
     expect(stageSize(761, 900, 1)).toMatchObject({ mobile: false, count: 7000, dpr: 1 });
+  });
+
+  it("오선 간격은 그림 칸 너비를 따라 커져 어느 화면에서나 오선 비율이 같다", () => {
+    const wide = stageSize(2560, 1440, 1);
+    const pc = stageSize(1440, 900, 1);
+    expect(staffGap(pc)).toBeCloseTo(26, 0);
+    expect(staffGap(stageSize(390, 844, 1))).toBeCloseTo(18, 0);
+    expect(staffGap(wide)).toBeGreaterThan(staffGap(pc));
+    expect(graphicColumn(wide).width / staffGap(wide)).toBeCloseTo(graphicColumn(pc).width / staffGap(pc), 5);
   });
 
   it("PC의 내용 띠는 가운데 최대 900px이고 좌우 140px 이상을 비운다", () => {

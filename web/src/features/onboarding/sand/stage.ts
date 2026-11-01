@@ -1,6 +1,6 @@
 import {
   band, createWheelGesture, easeInOutCubic, fitTargets, gaussian, graphicColumn, STACKED_MEDIA,
-  SCENE_COUNT, sceneAt, sceneScrollOffset, shuffle, stageSize, type StageSize, type Target,
+  SCENE_COUNT, sceneAt, sceneScrollOffset, shuffle, staffGap, stageSize, type StageSize, type Target,
 } from "./layout";
 
 // 공개 메인의 모래 장면 무대입니다.
@@ -260,15 +260,17 @@ function run(root: HTMLElement, { stage, canvas, photoBox, photoImg, anchorBox, 
     const c = scratchClear();
     const { left, width: w } = graphicColumn(size);
     const cy = size.h * (size.mobile ? .34 : .5);
-    const gap = size.mobile ? 18 : 26;
+    const gap = staffGap(size);
+    const line = Math.max(2.4, gap * .09);
+    const stemWidth = Math.max(3, gap * .115);
     const stem = gap * 3.4;
     c.fillStyle = "#000";
-    for (let i = -2; i <= 2; i++) c.fillRect(left, cy + i * gap - 1.2, w, 2.4);
+    for (let i = -2; i <= 2; i++) c.fillRect(left, cy + i * gap - line / 2, w, line);
     const notes = [.2, .4, .6, .8].map((at, i) => ({ x: left + w * at, y: cy + gap * (1.5 - i) }));
     for (const n of notes) {
       c.save(); c.translate(n.x, n.y); c.rotate(-.35); c.beginPath(); c.ellipse(0, 0, gap * .72, gap * .48, 0, 0, Math.PI * 2); c.fill(); c.restore();
-      if (n.y > cy) c.fillRect(n.x + gap * .62, n.y - stem, 3, stem);
-      else c.fillRect(n.x - gap * .62 - 3, n.y, 3, stem);
+      if (n.y > cy) c.fillRect(n.x + gap * .62, n.y - stem, stemWidth, stem);
+      else c.fillRect(n.x - gap * .62 - stemWidth, n.y, stemWidth, stem);
     }
     const points = sample(c, { x: left, y: cy - gap * 4.5, w, h: gap * 9 }, 1, false).map((t) => {
       const onLine = Math.abs((t.y - cy) / gap - Math.round((t.y - cy) / gap)) < .08 && notes.every((n) => Math.abs(t.x - n.x) > gap);
