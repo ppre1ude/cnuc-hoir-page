@@ -5,7 +5,7 @@ import "./globals.css";
 import { OfflineNotice } from "../components/ui/OfflineNotice";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://cnuc-hoir-page.vercel.app"),
+  metadataBase: new URL("https://cnuchoir.com"),
   title: { default: "전남대학교 합창단", template: "%s | 전남대학교 합창단" },
   description: "전남대학교 합창단 단원 포털",
   openGraph: {
