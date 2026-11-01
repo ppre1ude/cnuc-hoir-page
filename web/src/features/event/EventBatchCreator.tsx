@@ -15,9 +15,9 @@ function monthDays(month: string) {
   return new Date(Date.UTC(year, number, 0)).getUTCDate();
 }
 
-function mondayOffset(month: string) {
+function sundayOffset(month: string) {
   const [year, number] = month.split("-").map(Number);
-  return (new Date(Date.UTC(year, number - 1, 1)).getUTCDay() + 6) % 7;
+  return new Date(Date.UTC(year, number - 1, 1)).getUTCDay();
 }
 
 type Props = { onCreated: (month: string) => void };
@@ -101,9 +101,9 @@ export function EventBatchCreator({ onCreated }: Props) {
         <Input id="batch-month" type="month" value={month} onChange={(event) => {
           setMonth(event.target.value); setDates([]); setSaved("");
         }} required />
-        <div className={styles.weekdays}>{["월", "화", "수", "목", "금", "토", "일"].map((day) => <span key={day}>{day}</span>)}</div>
+        <div className={styles.weekdays}>{["일", "월", "화", "수", "목", "금", "토"].map((day) => <span key={day}>{day}</span>)}</div>
         <div className={styles.days} aria-label="등록할 날짜">
-          {valid && Array.from({ length: mondayOffset(month) }, (_, index) => <span key={`blank-${index}`} />)}
+          {valid && Array.from({ length: sundayOffset(month) }, (_, index) => <span key={`blank-${index}`} />)}
           {days.map((day) => {
             const date = `${month}-${String(day).padStart(2, "0")}`;
             return <button key={date} type="button" className={styles.day} aria-pressed={dates.includes(date)}

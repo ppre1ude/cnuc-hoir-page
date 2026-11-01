@@ -112,7 +112,8 @@ describe("일정 중심 단원 화면", () => {
   it("달력을 요일 머리글이 있는 표로 표시하고 오늘과 선택 날짜를 구분한다", async () => {
     renderWithSession(<EventCalendar />, ob);
     expect(screen.getByRole("table", { name: "2026년 09월" })).toBeInTheDocument();
-    expect(screen.getAllByRole("columnheader")).toHaveLength(7);
+    expect(screen.getAllByRole("columnheader").map((header) => header.textContent)).toEqual(["일", "월", "화", "수", "목", "금", "토"]);
+    expect(screen.getByRole("button", { name: /27일/ }).closest("td")?.cellIndex).toBe(0);
     expect(screen.getByRole("button", { name: /27일/ })).toHaveAttribute("aria-current", "date");
     expect(screen.getByRole("button", { name: /27일/ })).toHaveAttribute("aria-pressed", "true");
     expect(await screen.findByRole("link", { name: "공연 안내" })).toHaveAttribute("href", "/notices?notice=9");

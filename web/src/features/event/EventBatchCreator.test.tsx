@@ -27,7 +27,9 @@ describe("운영진 월간 일정 등록", () => {
     const onCreated = vi.fn();
     renderWithSession(<EventBatchCreator onCreated={onCreated} />, vicePresident);
     fireEvent.change(screen.getByLabelText("월"), { target: { value: "2026-10" } });
-    fireEvent.click(screen.getByRole("button", { name: "4일" }));
+    const sunday = screen.getByRole("button", { name: "4일" });
+    expect(Array.from(sunday.parentElement!.children).indexOf(sunday) % 7).toBe(0);
+    fireEvent.click(sunday);
     fireEvent.click(screen.getByRole("button", { name: "11일" }));
     fireEvent.change(screen.getByLabelText("공통 시작 시각 (한국 시간)"), { target: { value: "19:00" } });
     fireEvent.change(screen.getByLabelText("공통 종료 시각 (한국 시간)"), { target: { value: "21:00" } });

@@ -26,9 +26,9 @@ function daysInMonth(month: string) {
   return new Date(Date.UTC(year, number, 0)).getUTCDate();
 }
 
-function mondayOffset(month: string) {
+function sundayOffset(month: string) {
   const [year, number] = month.split("-").map(Number);
-  return (new Date(Date.UTC(year, number - 1, 1)).getUTCDay() + 6) % 7;
+  return new Date(Date.UTC(year, number - 1, 1)).getUTCDay();
 }
 
 // 목록 보기의 종류 배지 색입니다. 중요 행사는 공연 색을 씁니다.
@@ -242,7 +242,7 @@ export function EventCalendar() {
     const row = list?.querySelector<HTMLElement>("[aria-pressed='true']");
     if (list && row && list.scrollHeight > list.clientHeight) list.scrollTop = row.offsetTop - (list.clientHeight - row.offsetHeight) / 2;
   }, [selectedId]);
-  const offset = mondayOffset(month);
+  const offset = sundayOffset(month);
   const weeks = Array.from({ length: Math.ceil((offset + daysInMonth(month)) / 7) }, (_, week) =>
     Array.from({ length: 7 }, (_, weekday) => {
       const day = week * 7 + weekday - offset + 1;
@@ -305,7 +305,7 @@ export function EventCalendar() {
           </ul>}
         </> : <>
         <table className={styles.calendarTable} aria-labelledby="calendar-month">
-          <thead><tr>{["월", "화", "수", "목", "금", "토", "일"].map((day) => <th key={day} scope="col"><abbr title={`${day}요일`}>{day}</abbr></th>)}</tr></thead>
+          <thead><tr>{["일", "월", "화", "수", "목", "금", "토"].map((day) => <th key={day} scope="col"><abbr title={`${day}요일`}>{day}</abbr></th>)}</tr></thead>
           <tbody>{weeks.map((week, index) => <tr key={index}>{week.map((day, weekday) => {
             if (day === null) return <td key={`blank-${weekday}`} />;
             const key = `${month}-${String(day).padStart(2, "0")}`;
