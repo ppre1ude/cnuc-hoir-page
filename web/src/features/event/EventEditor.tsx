@@ -192,7 +192,7 @@ export function EventEditor() {
         <div className={styles.detailHeader}>
           <h3>{selected.title}</h3>
           <span className={`${calendarStyles.kind} ${calendarStyles.kindBadge}`} data-kind={eventKind(selected)}>{eventKindText(selected)}</span>
-          {selected.cancelledAt && <StatusBadge tone="negative">취소됨</StatusBadge>}
+          {selected.cancelledAt && <StatusBadge tone="neutral">취소됨</StatusBadge>}
         </div>
         {/* 여러 날에 걸친 일정은 끝나는 날짜도 적습니다. */}
         <p className={styles.when}>{seoulDayLabel(selected.startAt)} {seoulTime(selected.startAt)} ~ {seoulDayLabel(selected.endAt) !== seoulDayLabel(selected.startAt) && `${seoulDayLabel(selected.endAt)} `}{seoulTime(selected.endAt)}</p>

@@ -156,7 +156,8 @@ export type Chip = { tone: "positive" | "neutral" | "negative" | "attention"; la
 // choice가 undefined면 응답을 아직 못 받은 것이라 칩을 그리지 않습니다.
 export function rsvpChip(event: ChoirEvent, member: { memberType: "ACTIVE" | "OB" | null; part?: Part | null },
   choice: EventRsvpChoice | null | undefined): Chip | null {
-  if (event.cancelledAt) return { tone: "negative", label: "취소됨" };
+  // 불참의 빨간색과 헷갈리지 않게 회색으로 둡니다.
+  if (event.cancelledAt) return { tone: "neutral", label: "취소됨" };
   if (!isEventTarget(event, member)) return { tone: "neutral", label: "대상 아님" };
   if (choice === undefined) return null;
   const closed = new Date(event.startAt).getTime() <= Date.now();
