@@ -13,6 +13,7 @@ const links = [
   { href: "/dashboard", label: "홈" },
   { href: "/notices", label: "공지" },
   { href: "/attendance", label: "내 출석" },
+  { href: "/resources", label: "자료실" },
 ];
 
 export function MemberNavigation() {

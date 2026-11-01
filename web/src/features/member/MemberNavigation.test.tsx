@@ -11,10 +11,10 @@ vi.mock("../auth/session", async (importOriginal) => ({ ...await importOriginal<
 
 afterEach(() => { cleanup(); vi.clearAllMocks(); rememberSession(null); nav.pathname = "/dashboard"; });
 
-test("메뉴는 홈, 공지, 내 출석 순서이고 일정 상세에서는 홈이 켜집니다", () => {
+test("메뉴는 홈, 공지, 내 출석, 자료실 순서이고 일정 상세에서는 홈이 켜집니다", () => {
   renderWithSession(<MemberNavigation />, sessionFixture());
-  const names = ["홈", "공지", "내 출석"];
-  expect(names.map((name) => screen.getByRole("link", { name }).getAttribute("href"))).toEqual(["/dashboard", "/notices", "/attendance"]);
+  const names = ["홈", "공지", "내 출석", "자료실"];
+  expect(names.map((name) => screen.getByRole("link", { name }).getAttribute("href"))).toEqual(["/dashboard", "/notices", "/attendance", "/resources"]);
   expect(screen.getByRole("link", { name: "홈" })).toHaveAttribute("aria-current", "page");
   expect(screen.queryByRole("link", { name: "일정" })).not.toBeInTheDocument();
   cleanup();
