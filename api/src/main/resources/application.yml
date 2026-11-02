@@ -15,7 +15,8 @@ spring:
     enabled: true
     locations: classpath:db/postgresql
   session:
-    timeout: 30m
+    # 마지막 요청 뒤 7일 동안 로그인을 유지합니다. 주 1회 연습이어도 출석할 때 다시 로그인하지 않게 하려는 값입니다.
+    timeout: 7d
     jdbc:
       initialize-schema: never
 choir:
@@ -29,6 +30,9 @@ server:
   servlet:
     session:
       cookie:
+        # 쿠키는 로그인할 때만 새로 쓰므로 세션보다 길게 둬, 브라우저를 닫아도 남고 7일 유지는 서버 세션이 정합니다.
+        # 그래서 계속 쓰더라도 로그인 30일 뒤에는 한 번 다시 로그인합니다.
+        max-age: 30d
         http-only: true
         secure: true
         same-site: lax
