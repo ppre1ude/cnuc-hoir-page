@@ -6,6 +6,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CsrfException;
 import org.springframework.web.filter.OncePerRequestFilter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.DispatcherType;
@@ -36,6 +37,11 @@ public class SecurityConfig {
                         .accessDeniedHandler((request, response, failure) -> {
                             response.setStatus(403);
                             response.setContentType("application/json;charset=UTF-8");
+                            // 화면이 기억한 토큰이 낡았을 때 권한 부족과 구분해 새 토큰으로 다시 보내게 합니다.
+                            if (failure instanceof CsrfException) {
+                                response.getWriter().write("{\"code\":\"CSRF_INVALID\",\"message\":\"요청이 만료되었습니다. 다시 시도해 주세요.\"}");
+                                return;
+                            }
                             boolean pending = false;
                             try {
                                 pending = sessions.current(request).getStatus() != kr.ac.jnu.choir.member.AccountStatus.APPROVED;

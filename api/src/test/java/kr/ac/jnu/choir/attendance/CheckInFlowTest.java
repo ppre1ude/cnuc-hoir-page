@@ -335,6 +335,57 @@ class CheckInFlowTest {
                 + "AND reason = '대상 변경 후 정정'", Long.class, id, recorded.getId())).isEqualTo(1);
     }
 
+    @Test void adminListResolvesEveryStatusFromLatestSession() throws Exception {
+        Member admin = member("ACTIVE", true);
+        Member checked = member("ACTIVE", false);
+        Member waiting = member("ACTIVE", false);
+        Member revokedBefore = member("ACTIVE", false);
+        Member revokedDuring = member("ACTIVE", false);
+        long id = event(false);
+        open(id, session(admin));
+        close(id, session(admin));
+        jdbc.update("UPDATE member SET status = 'REVOKED', auth_version = auth_version + 1 WHERE id = ?", revokedBefore.getId());
+        String code = field(open(id, session(admin)), "code");
+        assertThat(check(id, session(checked), code)).isEqualTo(204);
+        jdbc.update("UPDATE member SET status = 'REVOKED', auth_version = auth_version + 1 WHERE id = ?", revokedDuring.getId());
+
+        String rows = mvc.perform(get("/api/v1/admin/events/" + id + "/attendance").session(session(admin)))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(rows).containsPattern("\\\"memberId\\\":" + checked.getId() + "[^}]*\\\"status\\\":\\\"(CHECKED_IN|LATE)\\\"[^}]*\\\"checkedInAt\\\":\\\"")
+                .containsPattern("\\\"memberId\\\":" + waiting.getId() + "[^}]*\\\"status\\\":\\\"NOT_OPEN\\\"")
+                .containsPattern("\\\"memberId\\\":" + revokedBefore.getId() + "[^}]*\\\"status\\\":\\\"MISSED\\\"")
+                // 지난 창은 닫혔어도 가장 최근 창이 아직 열려 있으면 미출석으로 확정하지 않습니다.
+                .containsPattern("\\\"memberId\\\":" + revokedDuring.getId() + "[^}]*\\\"status\\\":\\\"NOT_ELIGIBLE\\\"");
+    }
+
+    @Test void myListMatchesSingleEventStateForEveryStatus() throws Exception {
+        Member admin = member("ACTIVE", true);
+        Member target = member("ACTIVE", false);
+        long recorded = event(false);
+        assertThat(check(recorded, session(target), field(open(recorded, session(admin)), "code"))).isEqualTo(204);
+        long missed = event(false);
+        open(missed, session(admin));
+        close(missed, session(admin));
+        long reopened = event(false);
+        open(reopened, session(admin));
+        close(reopened, session(admin));
+        open(reopened, session(admin));
+
+        assertThat(own(missed, target)).contains("\"status\":\"MISSED\"");
+        assertThat(own(reopened, target)).contains("\"checkInOpen\":true");
+        assertThat(myList(target)).contains(own(recorded, target), own(missed, target), own(reopened, target));
+    }
+
+    @Test void staleCsrfTokenIsReportedSeparatelyFromPermission() throws Exception {
+        Member admin = member("ACTIVE", true);
+        long id = event(false);
+        var response = mvc.perform(put("/api/v1/admin/events/" + id + "/attendance/" + admin.getId())
+                .session(session(admin)).header("X-CSRF-TOKEN", "stale").contentType("application/json")
+                .content("{\"status\":\"CHECKED_IN\",\"reason\":\"낡은 토큰\"}")).andReturn().getResponse();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThat(response.getContentAsString()).contains("CSRF_INVALID");
+    }
+
     @Test void historicalMissedSurvivesAccessRevocationAndCanBeCorrected() throws Exception {
         Member admin = member("ACTIVE", true);
         Member historical = member("ACTIVE", false);
