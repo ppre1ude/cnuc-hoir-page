@@ -136,35 +136,60 @@ public class CheckInService {
         MemberRow target = memberRow(member.getId());
         // ob_eligible로 거르지 않고 계산된 상태로 거릅니다. 활동 단원 시절에 남은 출석·미출석 기록을 OB가 된 뒤에도 보여야 합니다.
         // 시작 전이라도 출석 창을 연 행사는 넣습니다. 연습 10분 전에 출석해도 바로 목록에서 확인할 수 있어야 합니다.
-        return jdbc.query("SELECT id,title,ob_eligible,start_at,end_at,kind,part,cancelled_at FROM event e WHERE start_at <= ? "
-                + "OR EXISTS (SELECT 1 FROM check_in_session s WHERE s.event_id = e.id) ORDER BY start_at DESC,id DESC",
-                (rs, row) -> state(eventRow(rs), target),
+        // 일정이 쌓일수록 느려지지 않게, 일정마다 따로 묻지 않고 한 쿼리로 받습니다.
+        Instant now = clock.instant();
+        return jdbc.query("SELECT e.id,e.title,e.ob_eligible,e.start_at,e.end_at,e.kind,e.part,e.cancelled_at,"
+                + "a.status AS attendance_status,latest.event_id AS snapshot_event_id,latest.closed_at AS latest_closed_at,"
+                + "active.id AS active_session_id "
+                + "FROM event e "
+                + "LEFT JOIN attendance a ON a.event_id = e.id AND a.member_id = ? "
+                + "LEFT JOIN (SELECT DISTINCT ON (sess.event_id) sess.event_id,sess.closed_at "
+                + "FROM attendance_eligibility_snapshot snap "
+                + "JOIN check_in_session sess ON sess.id = snap.check_in_session_id "
+                + "WHERE snap.member_id = ? ORDER BY sess.event_id,sess.id DESC) latest ON latest.event_id = e.id "
+                + "LEFT JOIN check_in_session active ON active.event_id = e.id AND active.closed_at IS NULL "
+                + "WHERE e.start_at <= ? OR EXISTS (SELECT 1 FROM check_in_session s WHERE s.event_id = e.id) "
+                + "ORDER BY e.start_at DESC,e.id DESC",
+                (rs, row) -> {
+                    EventRow event = eventRow(rs);
+                    boolean open = rs.getObject("active_session_id") != null && withinWindow(event, now);
+                    boolean missed = rs.getObject("snapshot_event_id") != null
+                            && lapsed(event, instant(rs.getTimestamp("latest_closed_at")));
+                    return resolve(event, eligible(event, target), rs.getString("attendance_status"), open, missed);
+                },
+                member.getId(), member.getId(),
                 // event 시각은 UTC 기준 TIMESTAMP라 JVM 시간대를 타는 Timestamp 대신 UTC LocalDateTime으로 비교합니다.
-                LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC))
+                LocalDateTime.ofInstant(now, ZoneOffset.UTC))
                 .stream().filter(state -> !"NOT_ELIGIBLE".equals(state.status())).toList();
     }
 
     @Transactional(readOnly = true)
     public List<AdminAttendance> adminList(long eventId) {
         EventRow event = findEvent(eventId);
-        List<Object> args = new ArrayList<>(List.of(event.obEligible()));
-        String eligibleNow = "(status = 'APPROVED' AND (member_type = 'ACTIVE' OR (? AND member_type = 'OB'))"
-                + partCondition(event, "part", args) + ") ";
-        args.addAll(List.of(eventId, eventId));
-        return jdbc.query("SELECT id,name,status,member_type,part,cohort FROM member WHERE "
-                + eligibleNow
-                + "OR EXISTS (SELECT 1 FROM attendance a WHERE a.event_id = ? AND a.member_id = member.id) "
-                + "OR EXISTS (SELECT 1 FROM attendance_eligibility_snapshot snap "
+        boolean open = sessionOpen(event, activeSession(eventId), clock.instant());
+        List<Object> args = new ArrayList<>(List.of(eventId, eventId, event.obEligible()));
+        String eligibleNow = "(m.status = 'APPROVED' AND (m.member_type = 'ACTIVE' OR (? AND m.member_type = 'OB'))"
+                + partCondition(event, "m.part", args) + ") ";
+        // 정정할 때마다 다시 불리는 조회라, 단원마다 따로 묻지 않고 한 쿼리로 받습니다.
+        return jdbc.query("SELECT m.id,m.name,m.status,m.member_type,m.part,m.cohort,"
+                + "a.status,a.checked_in_at,a.corrected_at,latest.member_id,latest.closed_at "
+                + "FROM member m "
+                + "LEFT JOIN attendance a ON a.event_id = ? AND a.member_id = m.id "
+                + "LEFT JOIN (SELECT DISTINCT ON (snap.member_id) snap.member_id,sess.closed_at "
+                + "FROM attendance_eligibility_snapshot snap "
                 + "JOIN check_in_session sess ON sess.id = snap.check_in_session_id "
-                + "WHERE sess.event_id = ? AND snap.member_id = member.id) "
-                + "ORDER BY name,id",
+                + "WHERE sess.event_id = ? ORDER BY snap.member_id,sess.id DESC) latest ON latest.member_id = m.id "
+                + "WHERE " + eligibleNow
+                + "OR a.member_id IS NOT NULL OR latest.member_id IS NOT NULL "
+                + "ORDER BY m.name,m.id",
                 (rs, row) -> {
                     MemberRow target = new MemberRow(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getString(4),
                             rs.getString(5));
-                    AttendanceRow stored = attendanceRow(eventId, target.id());
+                    boolean missed = rs.getObject(10) != null && lapsed(event, instant(rs.getTimestamp(11)));
+                    String status = resolve(event, eligible(event, target), rs.getString(7), open, missed).status();
                     return new AdminAttendance(target.id(), target.name(), rs.getString(5),
-                            rs.getObject(6, Integer.class), state(event, target).status(),
-                            stored == null ? null : stored.checkedInAt(), stored == null ? null : stored.correctedAt());
+                            rs.getObject(6, Integer.class), status,
+                            instant(rs.getTimestamp(8)), instant(rs.getTimestamp(9)));
                 }, args.toArray());
     }
 
@@ -204,16 +229,28 @@ public class CheckInService {
 
     private AttendanceState state(EventRow event, MemberRow target) {
         String stored = attendance(event.id(), target.id());
-        if (stored != null) return new AttendanceState(event.id(), event.title(), event.startAt(), stored, false);
-        // 취소된 일정에 기록이 없으면 미출석이 아닙니다. 대상 아님으로 두어 내 출석 목록에서도 빠집니다.
-        if (event.cancelled()) return new AttendanceState(event.id(), event.title(), event.startAt(), "NOT_ELIGIBLE", false);
+        if (stored != null || event.cancelled()) return resolve(event, false, stored, false, false);
         boolean eligibleNow = eligible(event, target);
         boolean open = sessionOpen(event, activeSession(event.id()), clock.instant());
-        if (open && eligibleNow) return new AttendanceState(event.id(), event.title(), event.startAt(), "NOT_OPEN", true);
-        if (historicalMissed(event, target.id())) {
-            return new AttendanceState(event.id(), event.title(), event.startAt(), "MISSED", false);
-        }
-        return new AttendanceState(event.id(), event.title(), event.startAt(), eligibleNow ? "NOT_OPEN" : "NOT_ELIGIBLE", false);
+        // 창이 열려 있고 대상이면 미출석 여부와 상관없으므로 조회를 아낍니다.
+        return resolve(event, eligibleNow, null, open, !(open && eligibleNow) && historicalMissed(event, target.id()));
+    }
+
+    private static AttendanceState resolve(EventRow event, boolean eligibleNow, String stored, boolean open, boolean missed) {
+        boolean checkInOpen = stored == null && !event.cancelled() && open && eligibleNow;
+        String status;
+        if (stored != null) status = stored;
+        // 취소된 일정에 기록이 없으면 미출석이 아닙니다. 대상 아님으로 두어 내 출석 목록에서도 빠집니다.
+        else if (event.cancelled()) status = "NOT_ELIGIBLE";
+        else if (checkInOpen) status = "NOT_OPEN";
+        else if (missed) status = "MISSED";
+        else status = eligibleNow ? "NOT_OPEN" : "NOT_ELIGIBLE";
+        return new AttendanceState(event.id(), event.title(), event.startAt(), status, checkInOpen);
+    }
+
+    /** 단원이 포함된 가장 최근 창이 닫혔거나 연습이 끝났는지 봅니다. */
+    private boolean lapsed(EventRow event, Instant closedAt) {
+        return closedAt != null || !clock.instant().isBefore(event.endAt());
     }
 
     private boolean historicalMissed(EventRow event, long memberId) {
@@ -223,7 +260,7 @@ public class CheckInService {
                 + "WHERE sess.event_id = ? AND snap.member_id = ? ORDER BY sess.id DESC LIMIT 1",
                 (rs, row) -> sessionRow(rs), event.id(), memberId);
         if (sessions.isEmpty()) return false;
-        return sessions.getFirst().closedAt() != null || !clock.instant().isBefore(event.endAt());
+        return lapsed(event, sessions.getFirst().closedAt());
     }
 
     private static boolean withinWindow(EventRow event, Instant now) {
