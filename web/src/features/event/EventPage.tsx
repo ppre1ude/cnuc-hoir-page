@@ -1,6 +1,7 @@
 "use client";
 
 import { Button, Feedback, PageHeader, StatusBadge } from "../../components/ui";
+import { pollWhileVisible } from "../../lib/poll";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -31,7 +32,7 @@ export function EventPage() {
     const eventId = Number(id);
     if (!Number.isSafeInteger(eventId) || eventId < 1) return;
     let alive = true;
-    let timer: number | undefined;
+    let stop: (() => void) | undefined;
     getEvent(eventId).then((item) => {
       if (!alive) return;
       setEvent(item);
@@ -41,9 +42,9 @@ export function EventPage() {
         if (alive) { setAttendance(null); setAttendanceError("출석 상태를 불러오지 못했습니다."); }
       });
       void refreshAttendance();
-      timer = window.setInterval(refreshAttendance, 15000);
+      stop = pollWhileVisible(refreshAttendance);
     }).catch(() => { if (alive) setError("일정을 불러오지 못했습니다."); });
-    return () => { alive = false; if (timer !== undefined) window.clearInterval(timer); };
+    return () => { alive = false; stop?.(); };
   }, [id, retry]);
 
   useEffect(() => {

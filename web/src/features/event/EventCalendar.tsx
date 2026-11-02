@@ -1,6 +1,7 @@
 "use client";
 
 import { ActionLink, Button, Feedback, PageHeader, SkeletonRows, StatusBadge } from "../../components/ui";
+import { pollWhileVisible } from "../../lib/poll";
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
@@ -217,8 +218,8 @@ export function EventCalendar() {
       .then((value) => { if (alive) setSelectedAttendance(value); })
       .catch(() => { if (alive) setSelectedAttendance(null); });
     void refresh();
-    const timer = window.setInterval(refresh, 15000);
-    return () => { alive = false; window.clearInterval(timer); };
+    const stop = pollWhileVisible(refresh);
+    return () => { alive = false; stop(); };
   }, [selectedId]);
   // 어느 일정을 골랐든 지금 출석할 수 있는 내 일정을 화면 맨 위에 띄웁니다. 창이 열릴 수 있는 시간대의 일정만 물어봅니다.
   useEffect(() => {
@@ -228,12 +229,12 @@ export function EventCalendar() {
       const now = Date.now();
       const candidates = upcoming.filter((event) => isEventTarget(event, session) && !event.cancelledAt
         && new Date(event.startAt).getTime() - checkInLeadMs <= now && now < new Date(event.endAt).getTime());
-      void Promise.all(candidates.map((event) => getEventAttendance(event.id).then((state) => state.checkInOpen, () => false)))
+      return Promise.all(candidates.map((event) => getEventAttendance(event.id).then((state) => state.checkInOpen, () => false)))
         .then((open) => { if (alive) setCheckInEvents(candidates.filter((_, index) => open[index])); });
     };
-    refresh();
-    const timer = window.setInterval(refresh, 15000);
-    return () => { alive = false; window.clearInterval(timer); };
+    void refresh();
+    const stop = pollWhileVisible(refresh);
+    return () => { alive = false; stop(); };
   }, [upcoming, session]);
   // 처음 열면 오늘 일정이 골라지는데 목록 아래쪽이면 넘김 상자 밖에 숨으므로 가운데로 넘깁니다. 폰에서는 목록이 넘기지 않아 그대로 둡니다.
   // scrollIntoView는 화면 전체까지 움직이므로 목록 상자만 직접 넘깁니다.
