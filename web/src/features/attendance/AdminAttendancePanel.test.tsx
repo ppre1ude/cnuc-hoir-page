@@ -343,6 +343,38 @@ test("열린 창의 코드는 새로고침 뒤에도 서버에서 받아 보여 
   expect(screen.getByText(/연습 끝 .*까지/)).toBeInTheDocument();
 });
 
+test("한 단원을 저장하는 동안 다음 단원을 이어서 정정하고, 실패는 그 단원에만 보입니다", async () => {
+  vi.mocked(events.getEvent).mockResolvedValue(rehearsal);
+  vi.mocked(attendance.getCheckInSession).mockResolvedValue({ sessionId: null, expiresAt: null, open: false, code: null, opensAt: "2026-09-27T08:30:00Z" });
+  vi.mocked(attendance.getAdminAttendance).mockResolvedValue([{ ...sora, status: "MISSED" },
+    { memberId: 12, name: "이하늘", part: null, cohort: null, status: "MISSED", checkedInAt: null, correctedAt: null }]);
+  let finishSora!: () => void;
+  vi.mocked(attendance.correctAttendance)
+    .mockReturnValueOnce(new Promise<void>((resolve) => { finishSora = resolve; }))
+    .mockRejectedValueOnce(new ApiRequestError(409, "ATTENDANCE_UNCHANGED", "출석 상태가 이미 같습니다."));
+  renderWithSession(<AdminAttendancePanel eventId={3} />, sessionFixture({ admin: true }));
+
+  fireEvent.click(await screen.findByRole("button", { name: /^김소라/ }));
+  fireEvent.change(screen.getByLabelText("김소라 정정 이유"), { target: { value: "지각 확인" } });
+  fireEvent.click(screen.getByRole("button", { name: "김소라 출석으로 정정" }));
+  await waitFor(() => expect(screen.getByRole("button", { name: "김소라 출석으로 정정" })).toBeDisabled());
+
+  fireEvent.click(screen.getByRole("button", { name: /^이하늘/ }));
+  fireEvent.change(screen.getByLabelText("이하늘 정정 이유"), { target: { value: "현장 확인" } });
+  const haneul = screen.getByRole("button", { name: "이하늘 출석으로 정정" });
+  expect(haneul).toBeEnabled();
+  fireEvent.click(haneul);
+  expect(await screen.findByRole("alert")).toHaveTextContent("출석 상태가 이미 같습니다.");
+  expect(screen.getByLabelText("이하늘 정정 이유")).toHaveValue("현장 확인");
+
+  await act(async () => { finishSora(); });
+  expect(screen.getByRole("alert")).toHaveTextContent("출석 상태가 이미 같습니다.");
+  fireEvent.click(screen.getByRole("button", { name: /^김소라/ }));
+  expect(screen.getByLabelText("김소라 정정 이유")).toHaveValue("");
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(attendance.correctAttendance).toHaveBeenCalledTimes(2);
+});
+
 test("단원 행에 출석 시각과 정정 표시를 붙이고 지각으로 정정할 수 있습니다", async () => {
   vi.mocked(events.getEvent).mockResolvedValue(rehearsal);
   vi.mocked(attendance.getCheckInSession).mockResolvedValue({ sessionId: null, expiresAt: null, open: false, code: null, opensAt: "2026-09-27T08:30:00Z" });

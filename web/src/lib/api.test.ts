@@ -1,7 +1,7 @@
 import { afterEach, expect, test, vi } from "vitest";
-import { ApiRequestError, apiRequest, clearRequestCache, onPermissionDenied } from "./api";
+import { ApiRequestError, apiRequest, clearRequestCache, forgetCsrfToken, onPermissionDenied } from "./api";
 
-afterEach(() => { vi.unstubAllGlobals(); clearRequestCache(); });
+afterEach(() => { vi.unstubAllGlobals(); clearRequestCache(); forgetCsrfToken(); });
 
 test.each(["/auth/account-setup/confirm", "/admin/members/1/account-setup"])(
   "%s의 본문 없는 204 응답을 성공으로 처리합니다",
@@ -131,4 +131,42 @@ test("취소 신호가 달린 GET은 기억하지 않습니다", async () => {
   await apiRequest("/notices", { signal: new AbortController().signal });
   await apiRequest("/notices", { signal: new AbortController().signal });
   expect(fetchMock).toHaveBeenCalledTimes(2);
+});
+
+const noContent = { ok: true, status: 204, json: async () => undefined };
+const csrfToken = (token: string) => ({ ok: true, json: async () => ({ token }) });
+const sentTokens = (fetchMock: ReturnType<typeof vi.fn>) => fetchMock.mock.calls
+  .filter(([url]) => !String(url).endsWith("/auth/csrf"))
+  .map(([, init]) => new Headers((init as RequestInit).headers).get("X-CSRF-TOKEN"));
+
+test("연달아 저장해도 CSRF 토큰은 한 번만 받습니다", async () => {
+  const fetchMock = vi.fn().mockImplementation(async (url: string) => url.endsWith("/auth/csrf") ? csrfToken("first") : noContent);
+  vi.stubGlobal("fetch", fetchMock);
+  await Promise.all([apiRequest("/a", { method: "PUT" }), apiRequest("/b", { method: "PUT" })]);
+  await apiRequest("/c", { method: "PUT" });
+  expect(fetchMock).toHaveBeenCalledTimes(4);
+  expect(sentTokens(fetchMock)).toEqual(["first", "first", "first"]);
+});
+
+test("토큰이 거절되면 새로 받아 한 번만 다시 보냅니다", async () => {
+  const rejected = { ok: false, status: 403, json: async () => ({ code: "CSRF_INVALID", message: "거절" }) };
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce(csrfToken("stale")).mockResolvedValueOnce(rejected)
+    .mockResolvedValueOnce(csrfToken("fresh")).mockResolvedValueOnce(noContent);
+  vi.stubGlobal("fetch", fetchMock);
+  await expect(apiRequest("/a", { method: "PUT" })).resolves.toBeUndefined();
+  expect(sentTokens(fetchMock)).toEqual(["stale", "fresh"]);
+
+  fetchMock.mockReset();
+  fetchMock.mockResolvedValueOnce(rejected).mockResolvedValueOnce(csrfToken("newer")).mockResolvedValueOnce(rejected);
+  await expect(apiRequest("/b", { method: "PUT" })).rejects.toMatchObject({ code: "CSRF_INVALID" });
+  expect(sentTokens(fetchMock)).toEqual(["fresh", "newer"]);
+});
+
+test("로그인과 로그아웃 뒤에는 토큰을 새로 받습니다", async () => {
+  const fetchMock = vi.fn().mockImplementation(async (url: string) => url.endsWith("/auth/csrf") ? csrfToken("token") : noContent);
+  vi.stubGlobal("fetch", fetchMock);
+  await apiRequest("/auth/logout", { method: "POST" });
+  await apiRequest("/a", { method: "PUT" });
+  expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/auth/csrf"))).toHaveLength(2);
 });

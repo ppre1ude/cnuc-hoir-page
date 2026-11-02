@@ -7,6 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import QRCode from "qrcode";
 import { ApiRequestError } from "../../lib/api";
+import { pollWhileVisible } from "../../lib/poll";
 import { eventAudience, getEvent, type ChoirEvent, seoulDateTime, seoulTime } from "../event/events";
 import {
   attendanceLabel, attendanceTone, closeCheckIn, correctAttendance, getAdminAttendance, getCheckInSession,
@@ -14,6 +15,7 @@ import {
 } from "./attendance";
 
 type Correction = "CHECKED_IN" | "LATE" | "MISSED";
+const refreshFailed = "변경은 완료됐지만 출석 목록을 새로고침하지 못했습니다.";
 const correctionLabel: Record<Correction, string> = { CHECKED_IN: "출석", LATE: "지각", MISSED: "미출석" };
 import { rosterName } from "../member/roles";
 import { rosterRowId, useListDetailFocus } from "../member/useListDetailFocus";
@@ -36,6 +38,9 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
   const focus = useListDetailFocus(selected);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  // 정정은 단원별로 잠가, 한 명을 저장하는 동안에도 다음 단원을 이어서 정정할 수 있게 합니다.
+  const [correcting, setCorrecting] = useState<ReadonlySet<number>>(new Set());
+  const [correctionErrors, setCorrectionErrors] = useState<Record<number, string>>({});
   // 열 수 있는 시각과 연습 종료를 넘겼는지는 이 값으로 판단합니다. 타이머가 그 시각에 맞춰 다시 그립니다.
   const [now, setNow] = useState(() => Date.now());
 
@@ -95,12 +100,7 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
   const windowOpen = session?.open ?? false;
   useEffect(() => {
     if (!windowOpen) return;
-    // 느린 연결에서 요청이 쌓여 서로를 무효로 만들지 않게, 이전 요청이 끝난 뒤에 다음 요청을 잡습니다.
-    let stopped = false;
-    let timer = window.setTimeout(function poll() {
-      refresh().catch(() => undefined).finally(() => { if (!stopped) timer = window.setTimeout(poll, 15000); });
-    }, 15000);
-    return () => { stopped = true; window.clearTimeout(timer); };
+    return pollWhileVisible(refresh);
   }, [windowOpen, refresh]);
 
   function reloadList() {
@@ -126,7 +126,7 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
       return;
     }
     try { await refresh(); }
-    catch { setMessage("변경은 완료됐지만 출석 목록을 새로고침하지 못했습니다."); }
+    catch { setMessage(refreshFailed); }
     finally { setBusy(false); }
   }
 
@@ -145,12 +145,25 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
   const ended = session !== null && session.expiresAt !== null && new Date(session.expiresAt).getTime() <= now;
 
   async function correct(member: AdminAttendance, status: Correction) {
-    const reason = reasons[member.memberId]?.trim();
-    if (!reason) return;
-    await action(async () => {
-      await correctAttendance(eventId, member.memberId, status, reason);
-      setReasons((value) => ({ ...value, [member.memberId]: "" }));
-    });
+    const id = member.memberId;
+    const reason = reasons[id]?.trim();
+    if (!reason || correcting.has(id)) return;
+    setCorrecting((value) => new Set(value).add(id));
+    setCorrectionErrors((value) => ({ ...value, [id]: "" }));
+    let saved = false;
+    try {
+      await correctAttendance(eventId, id, status, reason);
+      saved = true;
+      setReasons((value) => ({ ...value, [id]: "" }));
+      setMembers((rows) => rows && rows.map((row) => row.memberId === id
+        ? { ...row, status, correctedAt: new Date().toISOString() } : row));
+    } catch (error) {
+      setCorrectionErrors((value) => ({ ...value, [id]: error instanceof ApiRequestError ? error.message : "요청을 처리하지 못했습니다." }));
+    }
+    setCorrecting((value) => { const next = new Set(value); next.delete(id); return next; });
+    // 이 새로고침은 저장이 끝난 뒤 나가므로, 앞서 보낸 요청의 늦은 응답이 방금 바꾼 상태를 덮지 못합니다.
+    refresh().then((applied) => { if (applied) setMessage((value) => value === refreshFailed ? "" : value); })
+      .catch(() => { if (saved) setMessage(refreshFailed); });
   }
 
   const current = members?.find((member) => member.memberId === selected) ?? null;
@@ -209,8 +222,9 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
               value={reasons[current.memberId] ?? ""} maxLength={500}
               onChange={(event) => setReasons((value) => ({ ...value, [current.memberId]: event.target.value }))} /></div>
             <div className={styles.actions}>{(Object.keys(correctionLabel) as Correction[]).map((status) => <Button key={status} variant="secondary" type="button"
-              disabled={busy || !reasons[current.memberId]?.trim() || current.status === status}
+              disabled={correcting.has(current.memberId) || !reasons[current.memberId]?.trim() || current.status === status}
               onClick={() => correct(current, status)}>{current.name} {correctionLabel[status]}으로 정정</Button>)}</div>
+            {correctionErrors[current.memberId] && <Feedback tone="error">{correctionErrors[current.memberId]}</Feedback>}
           </article> : <p className={styles.placeholder}>왼쪽 목록에서 단원을 고르면 출석 기록과 정정 칸이 나옵니다.</p>}
         </div>
       </div>}

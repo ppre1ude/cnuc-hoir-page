@@ -56,19 +56,29 @@ export function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   return promise;
 }
 
-async function send<T>(path: string, init: RequestInit | undefined, method: string): Promise<T> {
-  const headers = new Headers(init?.headers);
-  if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
-    const csrfResponse = await fetch("/api/v1/auth/csrf", {
-      credentials: "same-origin",
-      cache: "no-store",
-    });
-    if (!csrfResponse.ok) {
-      throw new ApiRequestError(csrfResponse.status, "CSRF_UNAVAILABLE", "요청을 준비할 수 없습니다.");
+// CSRF 토큰은 세션이 바뀔 때까지 그대로 쓸 수 있어, 쓰기 요청마다 받지 않고 기억합니다.
+// 다른 탭의 로그아웃이나 세션 만료로 거절되면 send가 새로 받아 한 번 다시 보냅니다.
+let csrfToken: Promise<string> | null = null;
+
+export function forgetCsrfToken(): void { csrfToken = null; }
+
+function getCsrfToken(): Promise<string> {
+  if (csrfToken) return csrfToken;
+  const pending = fetch("/api/v1/auth/csrf", { credentials: "same-origin", cache: "no-store" }).then(async (response) => {
+    if (!response.ok) {
+      throw new ApiRequestError(response.status, "CSRF_UNAVAILABLE", "요청을 준비할 수 없습니다.");
     }
-    const { token } = (await csrfResponse.json()) as { token: string };
-    headers.set("X-CSRF-TOKEN", token);
-  }
+    return ((await response.json()) as { token: string }).token;
+  });
+  csrfToken = pending;
+  pending.catch(() => { if (csrfToken === pending) csrfToken = null; });
+  return pending;
+}
+
+async function send<T>(path: string, init: RequestInit | undefined, method: string, retried = false): Promise<T> {
+  const headers = new Headers(init?.headers);
+  const write = !["GET", "HEAD", "OPTIONS"].includes(method);
+  if (write) headers.set("X-CSRF-TOKEN", await getCsrfToken());
   const response = await fetch(`/api/v1${path}`, {
     ...init,
     headers,
@@ -78,6 +88,11 @@ async function send<T>(path: string, init: RequestInit | undefined, method: stri
 
   if (!response.ok) {
     const error = (await response.json().catch(() => ({ code: "REQUEST_FAILED", message: "요청을 처리할 수 없습니다." }))) as ApiError;
+    // 토큰 거절은 요청이 처리되기 전에 일어나므로 다시 보내도 두 번 저장되지 않습니다.
+    if (write && !retried && error.code === "CSRF_INVALID") {
+      forgetCsrfToken();
+      return send<T>(path, init, method, true);
+    }
     if (typeof window !== "undefined" && !path.startsWith("/auth/")) {
       if (response.status === 401) redirectTo(loginPath(window.location));
       if (response.status === 403 && error.code === "APPROVAL_REQUIRED") redirectTo("/application-status");
@@ -88,6 +103,9 @@ async function send<T>(path: string, init: RequestInit | undefined, method: stri
     throw new ApiRequestError(response.status, error.code ?? "REQUEST_FAILED",
       error.message || "서버에 문제가 생겼습니다. 잠시 후 다시 시도해 주세요.");
   }
+
+  // 로그인과 로그아웃은 세션을 바꾸므로 다음 쓰기 요청에서 토큰을 새로 받습니다.
+  if (write && path.startsWith("/auth/")) forgetCsrfToken();
 
   if (response.status === 202 || response.status === 204) {
     return undefined as T;
