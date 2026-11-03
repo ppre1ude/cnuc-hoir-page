@@ -64,7 +64,7 @@ test("Gmail이 아닌 주소를 입력하면 바로 승인되지 않는다고 �
   render(<MemberRegistration session={{ id: 1, name: "관리자", status: "APPROVED", memberType: "ACTIVE", admin: true }} />);
   await screen.findByText("사전 등록된 단원이 없습니다.");
   // 이 칸이 무엇을 하는지는 제목 아래 설명 칸이 늘 보이게 말합니다.
-  expect(screen.getByText(/Gmail 주소를 여기에 등록해 두면, 그 사람이 구글 계정으로 처음 로그인할 때 가입 승인을 거치지 않고 바로 단원이 됩니다/)).toBeInTheDocument();
+  expect(screen.getByText(/Gmail을 미리 등록해 두는 일입니다. 등록된 사람은 구글 계정으로 처음 로그인할 때 승인 없이 바로 단원이 됩니다/)).toBeInTheDocument();
 
   const input = screen.getByLabelText("구글 계정 이메일");
   await userEvent.type(input, "hong@gmial.com");
