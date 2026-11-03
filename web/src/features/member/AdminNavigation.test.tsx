@@ -7,11 +7,11 @@ vi.mock("next/navigation", () => ({ usePathname: () => "/admin/events" }));
 
 afterEach(cleanup);
 
-test("수석에게는 공지·일정 관리와 단원 계정만 보입니다", () => {
+test("수석에게는 공지 관리, 일정 관리, 단원 정보 관리만 보입니다", () => {
   renderWithSession(<AdminNavigation />, sessionFixture({ name: "수석",
     permissions: ["MANAGE_EVENTS", "WRITE_MINUTES", "VIEW_MEMBERS", "VIEW_MINUTES"] }));
   expect(screen.getByRole("link", { name: "일정 관리" })).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "단원 계정" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "단원 정보 관리" })).toBeInTheDocument();
   expect(screen.queryByRole("link", { name: "가입 승인" })).not.toBeInTheDocument();
 });
 

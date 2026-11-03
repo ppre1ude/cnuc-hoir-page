@@ -37,7 +37,7 @@ export function MemberAccountManager() {
   useEffect(() => {
     let alive = true;
     getMembers().then((result) => { if (alive) setData(result); })
-      .catch(() => { if (alive) setError("단원 계정을 불러오지 못했습니다."); });
+      .catch(() => { if (alive) setError("단원 명단을 불러오지 못했습니다."); });
     return () => { alive = false; };
   }, [refresh]);
 
@@ -107,7 +107,7 @@ export function MemberAccountManager() {
   useEffect(() => { if (link) linkTitle.current?.focus({ preventScroll: true }); }, [link]);
 
   return <section className={styles.page}>
-    <PageHeader title="단원 계정" />
+    <PageHeader title="단원 정보 관리" />
     {(can(session, "MANAGE_ALLOWLIST") || can(session, "APPROVE_APPLICATIONS")) && <MemberRegistration session={session}>
       <details className={styles.more}>
         <summary>Gmail이 아닌 경우: 1회용 링크로 초대</summary>
@@ -135,7 +135,7 @@ export function MemberAccountManager() {
         onClick={() => navigator.clipboard.writeText(link).catch(() => setError("복사하지 못했습니다. 링크를 직접 선택해 주세요."))}>링크 복사</Button></div>
     </section>}</div>
     <section aria-labelledby="members-title" className={styles.memberSection}>
-      <h2 id="members-title">계정 목록</h2>
+      <h2 id="members-title">단원 명단</h2>
       {!data && error && <Button variant="secondary" type="button" onClick={() => { setError(""); setRefresh((value) => value + 1); }}>다시 시도</Button>}
       <div className={styles.workspace} data-view={current ? "detail" : "list"}>
         <div className={styles.roster}>
@@ -146,7 +146,7 @@ export function MemberAccountManager() {
               {parts.map((value) => <option key={value} value={value}>{partLabel[value]}</option>)}
             </Select>
           </div>
-          {!data && !error && <SkeletonRows count={6} label="계정 목록을 불러오는 중입니다." />}
+          {!data && !error && <SkeletonRows count={6} label="단원 명단을 불러오는 중입니다." />}
           <ul className={styles.rosterList} aria-label="단원 목록">
             {shown.map((item) => <li key={item.id}>
               <button type="button" id={rosterRowId(item.id)} className={styles.rosterRow} aria-current={selected === item.id ? "true" : undefined} onClick={() => setSelected(item.id)}>
@@ -156,7 +156,7 @@ export function MemberAccountManager() {
               </button>
             </li>)}
           </ul>
-          {data?.items.length === 0 && <p>등록된 계정이 없습니다.</p>}
+          {data?.items.length === 0 && <p>등록된 단원이 없습니다.</p>}
           {data && data.items.length > 0 && shown.length === 0 && <p>조건에 맞는 단원이 없습니다.</p>}
         </div>
         <div className={styles.detail} ref={focus.detail} tabIndex={-1}>

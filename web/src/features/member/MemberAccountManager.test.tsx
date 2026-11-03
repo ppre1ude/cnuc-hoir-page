@@ -43,9 +43,9 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
-test("운영진이 단원 계정을 만들면 1회용 링크를 표시합니다", async () => {
+test("운영진이 단원을 1회용 링크로 초대하면 링크를 표시합니다", async () => {
   renderWithSession(<MemberAccountManager />, operator);
-  await screen.findByText("등록된 계정이 없습니다.");
+  await screen.findByText("등록된 단원이 없습니다.");
   await userEvent.type(screen.getByLabelText("이름"), "새 단원");
   await userEvent.type(within(screen.getByRole("form", { name: "1회용 링크로 초대" })).getByLabelText("구글 계정 이메일"), "member@example.org");
   await userEvent.click(screen.getByRole("button", { name: "1회용 링크 발급" }));
@@ -220,4 +220,11 @@ test("파트를 고르면 그 파트 단원만 남고, 없으면 그렇다고 �
   expect(roster().getByRole("button", { name: /^박민준/ })).toBeInTheDocument();
   await userEvent.selectOptions(screen.getByLabelText("파트로 거르기"), "BASS");
   expect(screen.getByText("조건에 맞는 단원이 없습니다.")).toBeInTheDocument();
+});
+
+test("제목은 단원 정보 관리이고 목록 절은 단원 명단입니다", async () => {
+  renderWithSession(<MemberAccountManager />, operator);
+  expect(screen.getByRole("heading", { name: "단원 정보 관리", level: 1 })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "단원 명단", level: 2 })).toBeInTheDocument();
+  expect(await screen.findByText("등록된 단원이 없습니다.")).toBeInTheDocument();
 });

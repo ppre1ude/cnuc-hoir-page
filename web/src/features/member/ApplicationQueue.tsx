@@ -129,7 +129,7 @@ function ApplicationDetail({ item, busy, onApprove, onReject }: {
           <label htmlFor={`reason-${item.id}`}>반려 이유</label>
           <Textarea id={`reason-${item.id}`} aria-label={`${item.name} 반려 이유`} value={reason} onChange={(event) => setReason(event.target.value)} maxLength={500} />
           <div className={styles.actions}><Button variant="danger" type="button" disabled={busy || !reason.trim()} aria-label={`${item.name} 반려`} onClick={() => {
-            if (window.confirm(`${item.name}의 가입 신청을 반려할까요? 반려한 계정은 단원 계정 화면에서 반려를 취소할 수 있습니다.`)) onReject(reason.trim());
+            if (window.confirm(`${item.name}의 가입 신청을 반려할까요? 반려한 계정은 단원 정보 관리 화면에서 반려를 취소할 수 있습니다.`)) onReject(reason.trim());
           }}>반려</Button></div>
         </div>
       </details>

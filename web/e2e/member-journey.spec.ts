@@ -22,7 +22,7 @@ test("운영진 초대부터 출석 정정 반영까지 실제 서비스 흐름"
     await expect(adminPage).toHaveURL(/\/dashboard$/);
     await adminPage.goto("/admin/members");
     await expect(adminPage.getByRole("navigation", { name: "운영진 메뉴" }))
-      .toContainText("단원 계정");
+      .toContainText("단원 정보 관리");
     await adminPage.getByLabel("이름").fill(name);
     await adminPage.getByLabel("로그인 이메일").fill(email);
     await adminPage.getByRole("button", { name: "1회용 링크 발급" }).click();
@@ -132,7 +132,7 @@ test("운영진 초대부터 출석 정정 반영까지 실제 서비스 흐름"
 
     await adminPage.setViewportSize({ width: 390, height: 844 });
     for (const [route, heading] of [
-      ["/admin/members", "단원 계정"],
+      ["/admin/members", "단원 정보 관리"],
       ["/admin/notices", "공지 관리"],
       ["/admin/events", "일정 관리"],
       [`/admin/events/${eventId}/attendance`, `${eventTitle} 출석 관리`],

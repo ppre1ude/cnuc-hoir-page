@@ -198,7 +198,7 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
         <Button variant="secondary" type="button" onClick={reloadList}>목록 다시 불러오기</Button></div>
       {members === null && !message && <SkeletonRows count={3} label="출석 기록을 불러오는 중입니다." />}
       {members?.length === 0 && <p>출석 대상 단원이 없습니다.</p>}
-      {/* 계정 목록과 같은 꼴입니다. 왼쪽에 이름과 상태만 적은 목록, 오른쪽에 고른 단원의 기록과 정정 칸을 둡니다. */}
+      {/* 단원 명단과 같은 꼴입니다. 왼쪽에 이름과 상태만 적은 목록, 오른쪽에 고른 단원의 기록과 정정 칸을 둡니다. */}
       {members && members.length > 0 && <div className={styles.workspace} data-view={current ? "detail" : "list"}>
         <div className={styles.roster}><ul className={styles.rosterList} aria-label="단원 목록">
           {members.map((member) => <li key={member.memberId}>
