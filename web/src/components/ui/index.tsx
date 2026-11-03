@@ -89,3 +89,27 @@ export function Linkify({ text }: { text: string }) {
     return <Fragment key={index}><a href={url} target="_blank" rel="noopener noreferrer" className={styles.textLink}>{url}</a>{part.slice(url.length)}</Fragment>;
   })}</>;
 }
+
+// 목록의 쪽 넘김입니다. 이전과 다음은 번호 묶음과 떨어져 있고, 번호는 현재 쪽을 가운데 둔 최대 7개입니다.
+// 760px 이하에서는 번호 대신 "3 / 12"를 보입니다. 한 쪽뿐이면 그리지 않습니다.
+// ponytail: 줄임표와 첫 쪽, 끝 쪽 바로가기 없음. 합창단 공지가 열 쪽을 넘으면 그때 더합니다.
+export function Pagination({ page, size, total, onChange, label }:
+  { page: number; size: number; total: number; onChange: (page: number) => void; label: string }) {
+  const pages = Math.ceil(total / size);
+  if (pages <= 1) return null;
+  const start = Math.max(0, Math.min(page - 3, pages - 7));
+  const numbers = Array.from({ length: Math.min(7, pages) }, (_, index) => start + index);
+  return <nav aria-label={label} className={styles.pagination}>
+    <Button type="button" disabled={page === 0} onClick={() => onChange(page - 1)}>이전</Button>
+    <div className={styles.pages}>
+      {numbers.map((number) => <Button key={number} type="button" variant={number === page ? "primary" : "secondary"}
+        aria-label={`${number + 1}쪽`} aria-current={number === page ? "page" : undefined}
+        onClick={() => { if (number !== page) onChange(number); }}>{number + 1}</Button>)}
+    </div>
+    <span className={styles.pageSummary}>
+      <span aria-hidden="true">{page + 1} / {pages}</span>
+      <span className={styles.srOnly}>{pages}쪽 중 {page + 1}쪽</span>
+    </span>
+    <Button type="button" disabled={page + 1 >= pages} onClick={() => onChange(page + 1)}>다음</Button>
+  </nav>;
+}

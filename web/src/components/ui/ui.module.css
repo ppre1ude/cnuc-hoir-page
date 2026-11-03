@@ -83,3 +83,12 @@
 /* 연결이 끊겼을 때 화면 아래에 띄우는 알림. 건너뛰기 링크(50)보다 아래, 상단 메뉴(20)보다 위에 둡니다. */
 .offline { position: fixed; inset: auto 0 0; z-index: 40; display: flex; justify-content: center; padding: var(--space-3) var(--page-gutter); pointer-events: none; }
 .offline > p { margin: 0; pointer-events: auto; }
+/* 쪽 넘김. 이전과 다음은 번호 묶음과 --space-4, 번호 사이는 --space-2입니다. 현재 쪽은 초록 채움과 aria-current로 구분합니다. */
+.pagination { display: flex; align-items: center; justify-content: center; gap: var(--space-4); margin-top: var(--space-8); font-size: var(--text-label); }
+.pages { display: flex; gap: var(--space-2); }
+.pages > button { min-width: var(--control-medium); padding-inline: var(--space-2); }
+.pageSummary { display: none; }
+@media (max-width: 760px) {
+  .pages { display: none; }
+  .pageSummary { display: inline; }
+}
