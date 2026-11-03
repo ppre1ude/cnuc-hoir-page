@@ -110,5 +110,5 @@ test("사이트 관리자로 사전 등록한 이메일은 같은 목록에서 �
 
 test("사전 등록이 무엇인지 설명하는 안내 상자가 있습니다", () => {
   render(<MemberRegistration session={{ id: 1, name: "관리자", status: "APPROVED", memberType: "ACTIVE", admin: true }} />);
-  expect(screen.getByRole("complementary")).toHaveTextContent("사전 등록이 뭔가요?");
+  expect(screen.getByText("사전 등록이 뭔가요?").closest("aside")).toHaveTextContent("승인 없이 바로 단원이 됩니다");
 });

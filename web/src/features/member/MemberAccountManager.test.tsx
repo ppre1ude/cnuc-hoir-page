@@ -25,7 +25,7 @@ function pending(id: number, name: string): MemberItem {
   return { ...member(id, name), status: "APPROVAL_PENDING", memberType: null, part: "ALTO", cohort: 2 };
 }
 // 목록은 이름과 파트만 보이고, 누른 사람의 정보가 옆 칸에 나옵니다. 상세 칸의 article을 돌려줍니다.
-const roster = () => within(screen.getByRole("list", { name: "단원 목록" }));
+const roster = () => within(screen.getByRole("list", { name: "단원 명단" }));
 async function open(name: string) {
   await userEvent.click(await roster().findByRole("button", { name: new RegExp(`^${name}`) }));
   return (await screen.findByRole("heading", { name })).closest("article")!;

@@ -74,7 +74,7 @@ export function MemberRegistration({ session, children }: { session: MemberSessi
       </div>
       {can(session, "MANAGE_ALLOWLIST") && <div>
         <h3 id="pending-title">사전 등록된 단원</h3>
-        <p className={styles.hint}>아직 로그인하지 않은 사람입니다. 로그인하면 이 목록에서 사라지고 단원 명단에 나타납니다. 여기서 삭제해도 이미 승인된 단원은 그대로입니다.</p>
+        <p className={styles.hint}>아직 로그인하지 않은 사람입니다. 로그인한 뒤 이 화면을 다시 열면 이 목록에서 사라지고 단원 명단에 나타납니다. 여기서 삭제해도 이미 승인된 단원은 그대로입니다.</p>
         <ul className={styles.pendingList} aria-labelledby="pending-title">
           {can(session, "MANAGE_SITE_ADMINS") && <PendingList key={`admin-${revision}`} admin load={getOperatorPreapprovals} remove={removeOperatorPreapproval} />}
           <PendingList key={`member-${revision}`} load={getAllowlist} remove={removeAllowlist} />

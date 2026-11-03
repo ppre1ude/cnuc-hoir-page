@@ -93,7 +93,7 @@ export function MemberAccountManager() {
     "계정 설정 링크를 발급하지 못했습니다. 계정 상태를 확인해 주세요.");
   const revoke = (id: number, reason: string) => act(() => revokeMember(id, reason), "포털 이용을 중단하지 못했습니다. 계정 상태를 확인해 주세요.");
   const reopen = (id: number) => act(() => cancelRejection(id), "반려를 취소하지 못했습니다. 계정 상태를 확인해 주세요.");
-  // 승인한 행의 정보 수정을 바로 펼쳐, 목록에서 다시 찾지 않고 그 자리에서 직책까지 이어서 줍니다.
+  // 승인한 행의 단원 정보 수정을 바로 펼쳐, 목록에서 다시 찾지 않고 그 자리에서 직책까지 이어서 줍니다.
   const approve = (id: number, type: "ACTIVE" | "OB") => act(async () => { await approveApplication(id, type); setOpened(id); },
     "승인하지 못했습니다. 이미 처리된 신청일 수 있으니 목록을 새로 확인해 주세요.");
   const reject = (id: number, reason: string) => act(() => rejectApplication(id, reason), "반려하지 못했습니다. 계정 상태를 확인해 주세요.");
@@ -148,7 +148,7 @@ export function MemberAccountManager() {
             </Select>
           </div>
           {!data && !error && <SkeletonRows count={6} label="단원 명단을 불러오는 중입니다." />}
-          <ul className={styles.rosterList} aria-label="단원 목록">
+          <ul className={styles.rosterList} aria-label="단원 명단">
             {shown.map((item) => <li key={item.id}>
               <button type="button" id={rosterRowId(item.id)} className={styles.rosterRow} aria-current={selected === item.id ? "true" : undefined} onClick={() => setSelected(item.id)}>
                 <strong>{item.name}</strong>

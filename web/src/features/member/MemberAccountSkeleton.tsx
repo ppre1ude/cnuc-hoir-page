@@ -8,7 +8,7 @@ export function MemberAccountSkeleton() {
   return <div className={styles.page}>
     <div className={styles.skeletonHeader}><Skeleton width="var(--space-20)" height="calc(var(--text-title) * 1.2)" /></div>
     <Skeleton className={styles.skeletonHeading} width="20%" height={sectionHeight} />
-    <Skeleton className={styles.callout} height="calc(var(--text-label) * 1.7 * 3)" />
+    <Skeleton className={styles.callout} height="calc(var(--text-label) * 1.7 * 4)" />
     <div className={styles.registerGrid}>
       <div className={styles.form}>
         {[0, 1, 2].map((index) => <div key={index} className={styles.form}>
