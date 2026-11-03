@@ -74,7 +74,7 @@ test("권한이 없는 기능은 가리고 조회 권한만 있으면 목록만 
   await open("신청자");
   expect(screen.queryByRole("button", { name: /승인$/ })).not.toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /접근 해제/ })).not.toBeInTheDocument();
-  expect(screen.queryByRole("heading", { name: "미리 승인" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "사전 등록" })).not.toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /저장/ })).not.toBeInTheDocument();
 });
 

@@ -42,15 +42,16 @@ export function MemberRegistration({ session, children }: { session: MemberSessi
       setAdmin(false);
       setRevision((value) => value + 1);
     } catch (caught) {
-      setError(caught instanceof ApiRequestError ? caught.message : "미리 승인하지 못했습니다.");
+      setError(caught instanceof ApiRequestError ? caught.message : "사전 등록하지 못했습니다.");
     } finally { setBusy(false); }
   }
 
   return <section aria-labelledby="register-title">
-    <h2 id="register-title">미리 승인</h2>
-    <div className={styles.callout}>
-      <p>새 단원의 Gmail 주소를 여기에 등록해 두면, 그 사람이 구글 계정으로 처음 로그인할 때 가입 승인을 거치지 않고 바로 단원이 됩니다. 등록하지 않은 사람이 로그인하면 가입 승인 페이지에 올라오니 거기서 승인하면 됩니다. Gmail이 아닌 주소는 자동 승인이 되지 않으니 아래 1회용 링크로 초대해 주세요.</p>
-    </div>
+    <h2 id="register-title">사전 등록</h2>
+    <aside className={styles.callout}>
+      <p><strong>사전 등록이 뭔가요?</strong></p>
+      <p>명단에 있는 새 단원의 Gmail을 미리 등록해 두는 일입니다. 등록된 사람은 구글 계정으로 처음 로그인할 때 승인 없이 바로 단원이 됩니다. 등록하지 않은 사람이 로그인하면 가입 승인에 올라오고, Gmail이 아닌 주소는 아래 1회용 링크로 초대해 주세요.</p>
+    </aside>
     <div className={styles.registerGrid}>
       <div>
         {can(session, "MANAGE_ALLOWLIST") && <form className={styles.form} onSubmit={add}>
@@ -66,14 +67,14 @@ export function MemberRegistration({ session, children }: { session: MemberSessi
             <option value="ACTIVE">활동 단원</option><option value="OB">OB</option>
           </Select>
           {can(session, "MANAGE_SITE_ADMINS") && <label className={styles.check}><Input type="checkbox" checked={admin} onChange={(event) => setAdmin(event.target.checked)} /> 사이트 관리자 권한도 부여</label>}
-          <Button variant="primary" type="submit" disabled={busy}>미리 승인</Button>
+          <Button variant="primary" type="submit" disabled={busy}>사전 등록</Button>
         </form>}
         {error && <Feedback tone="error">{error}</Feedback>}
         {can(session, "APPROVE_APPLICATIONS") && children}
       </div>
       {can(session, "MANAGE_ALLOWLIST") && <div>
-        <h3 id="pending-title">미리 승인한 이메일</h3>
-        <p className={styles.hint}>아직 로그인하지 않은 사람입니다. 로그인하면 이 목록에서 사라지고 계정 목록에 나타납니다. 여기서 삭제해도 이미 승인된 계정은 그대로입니다.</p>
+        <h3 id="pending-title">사전 등록된 단원</h3>
+        <p className={styles.hint}>아직 로그인하지 않은 사람입니다. 로그인하면 이 목록에서 사라지고 단원 명단에 나타납니다. 여기서 삭제해도 이미 승인된 단원은 그대로입니다.</p>
         <ul className={styles.pendingList} aria-labelledby="pending-title">
           {can(session, "MANAGE_SITE_ADMINS") && <PendingList key={`admin-${revision}`} admin load={getOperatorPreapprovals} remove={removeOperatorPreapproval} />}
           <PendingList key={`member-${revision}`} load={getAllowlist} remove={removeAllowlist} />
@@ -100,7 +101,7 @@ function PendingList({ admin = false, load, remove }: {
         setData(null);
         setPage(Math.max(0, Math.ceil(value.total / value.size) - 1));
       } else setData(value);
-    }).catch(() => { if (alive) setError("미리 승인한 이메일을 불러오지 못했습니다."); });
+    }).catch(() => { if (alive) setError("사전 등록된 단원을 불러오지 못했습니다."); });
     return () => { alive = false; };
   }, [load, page, revision]);
 
@@ -118,7 +119,7 @@ function PendingList({ admin = false, load, remove }: {
   // 사이트 관리자 목록과 단원 목록이 한 ul 안에 이어지므로, 줄 사이의 안내와 페이지 넘김도 li로 둡니다.
   return <>
     {/* 사이트 관리자 줄과 한 목록에 이어지므로, 단원 쪽이 비었다는 것만 말합니다. */}
-    {!admin && data?.items.length === 0 && <li className={styles.pendingNote}>미리 승인한 단원 이메일이 없습니다.</li>}
+    {!admin && data?.items.length === 0 && <li className={styles.pendingNote}>사전 등록된 단원이 없습니다.</li>}
     {data?.items.map((item) => <li className={styles.pendingRow} key={item.id}>
       <div>
         <strong>{item.name || item.email}</strong>
@@ -129,7 +130,7 @@ function PendingList({ admin = false, load, remove }: {
       <Button variant="danger" size="small" type="button" disabled={busy} aria-label={`${item.email} 삭제`}
         onClick={() => removeItem(item.id)}>삭제</Button>
     </li>)}
-    {data && data.total > data.size && <li><nav className={styles.pagination} aria-label={admin ? "사이트 관리자 미리 승인 페이지" : "단원 미리 승인 페이지"}>
+    {data && data.total > data.size && <li><nav className={styles.pagination} aria-label={admin ? "사이트 관리자 사전 등록 페이지" : "단원 사전 등록 페이지"}>
       <Button variant="secondary" type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>이전</Button>
       <span>{page + 1} / {Math.ceil(data.total / data.size)}</span>
       <Button variant="secondary" type="button" disabled={(page + 1) * data.size >= data.total} onClick={() => setPage(page + 1)}>다음</Button>
