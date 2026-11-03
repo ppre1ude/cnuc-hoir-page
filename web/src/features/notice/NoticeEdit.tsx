@@ -30,9 +30,9 @@ export function NoticeEdit({ noticeId }: { noticeId: number }) {
     return () => { alive = false; };
   }, [noticeId, retry]);
 
+  // 다시 받는 동안 이전 투표와 폼을 그대로 둡니다. 스켈레톤으로 바꾸면 폼이 내려가 쓰던 내용과 저장 안내가 사라집니다.
   useEffect(() => {
     let alive = true;
-    setPollState("loading");
     getAdminNoticePoll(noticeId).then((value) => { if (alive) { setPoll(value); setPollState("ready"); } }).catch((caught: unknown) => {
       if (!alive) return;
       if (caught instanceof ApiRequestError && caught.status === 404) { setPoll(null); setPollState("ready"); }

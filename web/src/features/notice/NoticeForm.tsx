@@ -80,7 +80,7 @@ export function NoticeForm(props: Props) {
     }
   }
 
-  const choose = (published: boolean | null) => () => { publishRef.current = published; };
+  // 버튼마다 제자리 화살표 함수로 적습니다. 함수를 돌려주는 함수를 렌더 중에 부르면 ref 접근 규칙에 걸립니다.
   function unpublish(event: MouseEvent<HTMLButtonElement>) {
     if (!window.confirm(unpublishPrompt)) { event.preventDefault(); return; }
     publishRef.current = false;
@@ -109,15 +109,15 @@ export function NoticeForm(props: Props) {
       {error && <Feedback tone="error">{error}</Feedback>}
       <div className={styles.actions}>
         {!editing && <>
-          <Button variant="secondary" type="submit" disabled={disabled} onClick={choose(false)}>초안으로 저장</Button>
-          <Button variant="primary" type="submit" disabled={disabled} onClick={choose(true)}>게시하기</Button>
+          <Button variant="secondary" type="submit" disabled={disabled} onClick={() => { publishRef.current = false; }}>초안으로 저장</Button>
+          <Button variant="primary" type="submit" disabled={disabled} onClick={() => { publishRef.current = true; }}>게시하기</Button>
         </>}
         {editing && !props.notice.published && <>
-          <Button variant="secondary" type="submit" disabled={disabled} onClick={choose(null)}>저장</Button>
-          <Button variant="primary" type="submit" disabled={disabled} onClick={choose(true)}>게시하기</Button>
+          <Button variant="secondary" type="submit" disabled={disabled} onClick={() => { publishRef.current = null; }}>저장</Button>
+          <Button variant="primary" type="submit" disabled={disabled} onClick={() => { publishRef.current = true; }}>게시하기</Button>
         </>}
         {editing && props.notice.published && <>
-          <Button variant="primary" type="submit" disabled={disabled} onClick={choose(null)}>저장</Button>
+          <Button variant="primary" type="submit" disabled={disabled} onClick={() => { publishRef.current = null; }}>저장</Button>
           <Button variant="secondary" type="submit" disabled={disabled} onClick={unpublish}>초안으로 내리기</Button>
         </>}
       </div>
