@@ -99,7 +99,7 @@ test("사라진 뒤 도착한 응답은 상태를 건드리지 않습니다")   
 ```
 
 - [ ] **Step 2: 실패 확인** Run: `npx vitest run src/features/member/ApprovalReminder.test.tsx` Expected: FAIL, 모듈 없음
-- [ ] **Step 3: 공통 스타일** `ui.module.css`에 `.banner` 묶음을 두고(`.checkInBanner`의 네 규칙을 그대로 옮기되 `margin-bottom`은 빼고), 760px 미디어 블록에 `.banner > a { width: 100%; }`를 더한다. `EventCalendar.module.css`의 `.checkInBanner`는 `composes: banner from "../../components/ui/ui.module.css"; margin-bottom: var(--space-6);`만 남기고 `p`, `strong`, `span`, 모바일 `> a` 규칙을 지운다(모바일 `margin-bottom: var(--space-5)`는 유지).
+- [ ] **Step 3: 공통 스타일** `ui.module.css`에 `.banner` 묶음을 두고(`.checkInBanner`의 네 규칙을 그대로 옮기되 `margin-bottom`은 빼고), 850px 미디어 블록(출석 띠가 원래 쓰던 분기점)에 `.banner > a { width: 100%; }`를 더한다. `EventCalendar.module.css`의 `.checkInBanner`는 `composes: banner from "../../components/ui/ui.module.css"; margin-bottom: var(--space-6);`만 남기고 `p`, `strong`, `span`, 모바일 `> a` 규칙을 지운다(모바일 `margin-bottom: var(--space-5)`는 유지).
 - [ ] **Step 4: `getApplications`에 둘째 인자 추가** 시그니처는 Interfaces대로. 다른 호출자는 바뀌지 않는다.
 - [ ] **Step 5: 컴포넌트 구현** `ApprovalReminder.tsx`(`"use client"`):
   - `const HIDDEN = [/^\/admin\/applications$/, /^\/events\/\d+\/check-in$/, /^\/admin\/events\/\d+\/attendance$/]`

@@ -90,13 +90,15 @@ test("1분 주기 요청은 기억을 건너뜁니다", async () => {
   expect(getApplications).toHaveBeenLastCalledWith(0, { cache: "reload" });
 });
 
-test("사라진 뒤 도착한 응답은 상태를 건드리지 않습니다", async () => {
-  let resolve!: (value: ReturnType<typeof page>) => void;
-  vi.mocked(getApplications).mockReturnValue(new Promise((done) => { resolve = done; }));
-  const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
-  const { unmount } = renderWithSession(<ApprovalReminder />, approver);
-  unmount();
-  await act(async () => { resolve(page(3)); });
-  expect(errors).not.toHaveBeenCalled();
-  errors.mockRestore();
+test("느린 응답보다 늦게 시작한 요청이 먼저 끝나면 늦은 응답은 버립니다", async () => {
+  let resolveSlow!: (value: ReturnType<typeof page>) => void;
+  vi.mocked(getApplications)
+    .mockReturnValueOnce(new Promise((done) => { resolveSlow = done; }))
+    .mockResolvedValueOnce(page(1));
+  renderWithSession(<ApprovalReminder />, approver);
+  const [listener] = vi.mocked(onWriteCompleted).mock.calls[0];
+  await act(async () => { listener(); });
+  expect(await screen.findByText("가입 승인을 기다리는 단원이 1명 있어요.")).toBeInTheDocument();
+  await act(async () => { resolveSlow(page(3)); });
+  expect(screen.getByText("가입 승인을 기다리는 단원이 1명 있어요.")).toBeInTheDocument();
 });

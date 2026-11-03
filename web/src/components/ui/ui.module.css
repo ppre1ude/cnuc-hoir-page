@@ -80,7 +80,6 @@
   .pageHeader { align-items: flex-start; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-6); }
   .logo { width: var(--logo-width, 188px); }
   .surface { padding: var(--space-5); }
-  .banner > a { width: 100%; }
 }
 .textLink { color: var(--color-primary); }
 .screen { composes: readingPage; display: grid; justify-items: start; gap: var(--space-4); }
@@ -89,3 +88,5 @@
 /* 연결이 끊겼을 때 화면 아래에 띄우는 알림. 건너뛰기 링크(50)보다 아래, 상단 메뉴(20)보다 위에 둡니다. */
 .offline { position: fixed; inset: auto 0 0; z-index: 40; display: flex; justify-content: center; padding: var(--space-3) var(--page-gutter); pointer-events: none; }
 .offline > p { margin: 0; pointer-events: auto; }
+/* 출석 띠가 원래 쓰던 분기점입니다. 홈 그리드가 한 열이 되는 폭부터 띠의 버튼도 한 줄을 차지합니다. */
+@media (max-width: 850px) { .banner > a { width: 100%; } }

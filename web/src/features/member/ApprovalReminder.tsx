@@ -25,9 +25,14 @@ export function ApprovalReminder() {
   useEffect(() => {
     if (!allowed || hidden) return;
     let alive = true;
-    // 실패하면 조용히 넘어가고 다음 계기(경로 이동, 쓰기 완료, 1분 주기)에 다시 받습니다.
-    const load = (fresh = false) => getApplications(0, fresh ? { cache: "reload" } : undefined)
-      .then((result) => { if (alive) setCount(result.total); }).catch(() => undefined);
+    // 요청마다 번호를 매겨, 느린 주기 요청이 승인 직후 받은 새 숫자를 옛 숫자로 되돌리지 않게 합니다.
+    let latest = 0;
+    // 실패하면 마지막 숫자를 그대로 두고 다음 계기(경로 이동, 쓰기 완료, 1분 주기)에 다시 받습니다.
+    const load = (fresh = false) => {
+      const request = ++latest;
+      return getApplications(0, fresh ? { cache: "reload" } : undefined)
+        .then((result) => { if (alive && request === latest) setCount(result.total); }).catch(() => undefined);
+    };
     void load();
     const stopWrite = onWriteCompleted(() => { void load(); });
     const stopPoll = pollWhileVisible(() => load(true), 60_000);
