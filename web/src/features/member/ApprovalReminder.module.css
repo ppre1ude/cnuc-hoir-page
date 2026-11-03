@@ -1,0 +1,6 @@
+/* 헤더와 같은 폭으로 메뉴 바로 아래에 놓입니다. 본문이 자기 위 여백(--page-top)을 가지므로 아래 여백을 음수로 두어 띠와 제목 사이를 --space-4로 맞춥니다. */
+.reminder {
+  composes: banner from "../../components/ui/ui.module.css";
+  width: min(calc(100% - var(--page-gutter) * 2), var(--layout-wide));
+  margin: var(--page-top) auto calc(var(--space-4) - var(--page-top));
+}
