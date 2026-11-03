@@ -16,7 +16,7 @@ import { rosterRowId, useListDetailFocus } from "./useListDetailFocus";
 
 // 상태는 이름 옆 배지로 보입니다. 누군가를 기다리는 계정은 노랑, 막힌 계정은 빨강, 쓰고 있는 계정은 조용한 회색입니다.
 const statusLabel: Record<MemberItem["status"], string> = { INVITED: "초대 대기", EMAIL_PENDING: "이메일 확인 대기",
-  APPROVAL_PENDING: "승인 대기", APPROVED: "사용 중", REJECTED: "가입 반려", REVOKED: "접근 해제" };
+  APPROVAL_PENDING: "승인 대기", APPROVED: "사용 중", REJECTED: "가입 반려", REVOKED: "이용 중단" };
 const statusTone = (status: MemberItem["status"]) =>
   status === "APPROVED" ? "neutral" : status === "REJECTED" || status === "REVOKED" ? "negative" : "attention";
 
@@ -32,12 +32,13 @@ export function MemberAccountManager() {
   const [query, setQuery] = useState("");
   const [part, setPart] = useState<Part | "">("");
   const [selected, setSelected] = useState<number | null>(null);
-  const focus = useListDetailFocus(selected);
+  const detail = useRef<HTMLDivElement>(null);
+  const focus = useListDetailFocus(selected, detail);
 
   useEffect(() => {
     let alive = true;
     getMembers().then((result) => { if (alive) setData(result); })
-      .catch(() => { if (alive) setError("단원 계정을 불러오지 못했습니다."); });
+      .catch(() => { if (alive) setError("단원 명단을 불러오지 못했습니다."); });
     return () => { alive = false; };
   }, [refresh]);
 
@@ -90,9 +91,9 @@ export function MemberAccountManager() {
   }
   const renew = (id: number) => act(async () => setIssued(await reissueAccountSetup(id)),
     "계정 설정 링크를 발급하지 못했습니다. 계정 상태를 확인해 주세요.");
-  const revoke = (id: number, reason: string) => act(() => revokeMember(id, reason), "접근을 해제하지 못했습니다. 계정 상태를 확인해 주세요.");
+  const revoke = (id: number, reason: string) => act(() => revokeMember(id, reason), "포털 이용을 중단하지 못했습니다. 계정 상태를 확인해 주세요.");
   const reopen = (id: number) => act(() => cancelRejection(id), "반려를 취소하지 못했습니다. 계정 상태를 확인해 주세요.");
-  // 승인한 행의 정보 수정을 바로 펼쳐, 목록에서 다시 찾지 않고 그 자리에서 직책까지 이어서 줍니다.
+  // 승인한 행의 단원 정보 수정을 바로 펼쳐, 목록에서 다시 찾지 않고 그 자리에서 직책까지 이어서 줍니다.
   const approve = (id: number, type: "ACTIVE" | "OB") => act(async () => { await approveApplication(id, type); setOpened(id); },
     "승인하지 못했습니다. 이미 처리된 신청일 수 있으니 목록을 새로 확인해 주세요.");
   const reject = (id: number, reason: string) => act(() => rejectApplication(id, reason), "반려하지 못했습니다. 계정 상태를 확인해 주세요.");
@@ -107,7 +108,7 @@ export function MemberAccountManager() {
   useEffect(() => { if (link) linkTitle.current?.focus({ preventScroll: true }); }, [link]);
 
   return <section className={styles.page}>
-    <PageHeader title="단원 계정" />
+    <PageHeader title="단원 정보 관리" />
     {(can(session, "MANAGE_ALLOWLIST") || can(session, "APPROVE_APPLICATIONS")) && <MemberRegistration session={session}>
       <details className={styles.more}>
         <summary>Gmail이 아닌 경우: 1회용 링크로 초대</summary>
@@ -135,7 +136,7 @@ export function MemberAccountManager() {
         onClick={() => navigator.clipboard.writeText(link).catch(() => setError("복사하지 못했습니다. 링크를 직접 선택해 주세요."))}>링크 복사</Button></div>
     </section>}</div>
     <section aria-labelledby="members-title" className={styles.memberSection}>
-      <h2 id="members-title">계정 목록</h2>
+      <h2 id="members-title">단원 명단</h2>
       {!data && error && <Button variant="secondary" type="button" onClick={() => { setError(""); setRefresh((value) => value + 1); }}>다시 시도</Button>}
       <div className={styles.workspace} data-view={current ? "detail" : "list"}>
         <div className={styles.roster}>
@@ -146,8 +147,8 @@ export function MemberAccountManager() {
               {parts.map((value) => <option key={value} value={value}>{partLabel[value]}</option>)}
             </Select>
           </div>
-          {!data && !error && <SkeletonRows count={6} label="계정 목록을 불러오는 중입니다." />}
-          <ul className={styles.rosterList} aria-label="단원 목록">
+          {!data && !error && <SkeletonRows count={6} label="단원 명단을 불러오는 중입니다." />}
+          <ul className={styles.rosterList} aria-label="단원 명단">
             {shown.map((item) => <li key={item.id}>
               <button type="button" id={rosterRowId(item.id)} className={styles.rosterRow} aria-current={selected === item.id ? "true" : undefined} onClick={() => setSelected(item.id)}>
                 <strong>{item.name}</strong>
@@ -156,10 +157,10 @@ export function MemberAccountManager() {
               </button>
             </li>)}
           </ul>
-          {data?.items.length === 0 && <p>등록된 계정이 없습니다.</p>}
+          {data?.items.length === 0 && <p>등록된 단원이 없습니다.</p>}
           {data && data.items.length > 0 && shown.length === 0 && <p>조건에 맞는 단원이 없습니다.</p>}
         </div>
-        <div className={styles.detail} ref={focus.detail} tabIndex={-1}>
+        <div className={styles.detail} ref={detail} tabIndex={-1}>
           <Button variant="secondary" size="small" type="button" className={styles.toList} onClick={() => { focus.leave(selected); setSelected(null); }}>목록으로</Button>
           {current ? <MemberDetail key={current.id} item={current} busy={busy} session={session} opened={opened === current.id} onChanged={() => {
             setRefresh((value) => value + 1);
@@ -187,7 +188,7 @@ function MemberDetail({ item, busy, session, opened, onChanged, onRenew, onRevok
   onApprove: (type: "ACTIVE" | "OB") => void; onReject: (reason: string) => void;
 }) {
   const [reason, setReason] = useState("");
-  // 사이트 관리자·단장·부단장 계정의 접근 해제는 사이트 관리자만 할 수 있습니다.
+  // 사이트 관리자, 단장, 부단장 계정의 포털 이용 중단은 사이트 관리자만 할 수 있습니다.
   const leadership = item.admin || item.roles.some((role) => role.role === "PRESIDENT" || role.role === "VICE_PRESIDENT");
   return <article>
     <div className={styles.rowHeader}>
@@ -213,12 +214,13 @@ function MemberDetail({ item, busy, session, opened, onChanged, onRenew, onRevok
     </div>}
     {can(session, "REVOKE_ACCESS") && (!leadership || can(session, "MANAGE_SITE_ADMINS")) && (item.status === "APPROVED" || item.status === "INVITED")
       && item.id !== session.id && <details className={styles.more}>
-      <summary aria-label={`${item.name} 접근 해제`}>접근 해제</summary>
+      <summary aria-label={`${item.name} 포털 이용 중단`}>포털 이용 중단</summary>
       <div className={styles.fieldGroup}>
-        <label htmlFor={`revoke-${item.id}`}>{item.name} 접근 해제 이유</label>
+        <p className={styles.hint}>이용을 중단한 단원은 다시 초대해야 포털을 쓸 수 있습니다.</p>
+        <label htmlFor={`revoke-${item.id}`}>{item.name} 포털 이용 중단 이유</label>
         <Input id={`revoke-${item.id}`} value={reason} maxLength={500} onChange={(event) => setReason(event.target.value)} />
         <div className={styles.actions}><Button variant="danger" type="button" disabled={busy || !reason.trim()}
-          onClick={() => onRevoke(reason.trim())}>{item.name} 접근 해제</Button></div>
+          onClick={() => onRevoke(reason.trim())}>{item.name} 포털 이용 중단</Button></div>
       </div>
     </details>}
   </article>;

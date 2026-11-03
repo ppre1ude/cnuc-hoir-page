@@ -28,6 +28,15 @@ export function onPermissionDenied(listener: () => void): () => void {
   return () => { permissionDeniedListeners.delete(listener); };
 }
 
+const writeCompletedListeners = new Set<() => void>();
+
+// 쓰기 요청이 끝나면(실패 포함) 알립니다. 가입 승인 알림 띠처럼 내가 바꾼 결과를 바로 다시 받아야 하는 화면이 씁니다.
+// 로그인·로그아웃(/auth/) 뒤에는 알리지 않습니다. 로그아웃 직후 다시 요청하면 401을 받아 로그인 화면으로 보내 버립니다.
+export function onWriteCompleted(listener: () => void): () => void {
+  writeCompletedListeners.add(listener);
+  return () => { writeCompletedListeners.delete(listener); };
+}
+
 // GET 응답을 1분 동안 기억합니다. 뒤로 가기나 탭 이동으로 같은 화면을 다시 그릴 때 스켈레톤 없이 바로 보이고,
 // 같은 요청이 동시에 나가면 한 번만 보냅니다. 쓰기 요청이 끝나면(실패 포함) 전부 비워 내가 바꾼 내용은 바로 다시 받습니다.
 // init.cache는 fetch와 같은 뜻입니다. "reload"는 기억을 건너뛰고 새로 받아 두고, "no-store"는 기억하지 않습니다.
@@ -51,7 +60,11 @@ export function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
     remembered.set(path, { at: Date.now(), promise });
     promise.catch(() => { if (remembered.get(path)?.promise === promise) remembered.delete(path); });
   } else if (method !== "GET") {
-    promise.then(clearRequestCache, clearRequestCache);
+    const settled = () => {
+      clearRequestCache();
+      if (!path.startsWith("/auth/")) writeCompletedListeners.forEach((listener) => listener());
+    };
+    promise.then(settled, settled);
   }
   return promise;
 }

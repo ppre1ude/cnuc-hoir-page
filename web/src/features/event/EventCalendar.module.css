@@ -5,10 +5,7 @@
 .eventPageCard { composes: surface from "../../components/ui/ui.module.css"; }
 .hero { padding-bottom: var(--space-6); border-bottom: 1px solid var(--color-line); }
 /* 출석 창이 열린 동안에만 달력 위에 놓입니다. 현장에서 사이트를 열자마자 눈에 띄어야 합니다. */
-.checkInBanner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-5); margin-bottom: var(--space-6); padding: var(--space-5); border: 1px solid var(--color-primary); border-radius: var(--radius-control); background: var(--color-selected); }
-.checkInBanner p { margin: 0; min-width: 0; overflow-wrap: anywhere; }
-.checkInBanner strong { display: block; font-size: var(--text-section); font-weight: var(--weight-heading); letter-spacing: var(--tracking-heading); }
-.checkInBanner span { display: block; margin-top: var(--space-1); color: var(--color-muted); font-size: var(--text-label); }
+.checkInBanner { composes: banner from "../../components/ui/ui.module.css"; margin-bottom: var(--space-6); }
 /* 달력이 주인공입니다. 왼쪽 두 줄을 차지하고, 오른쪽에 이달의 일정과 상세가 쌓이고, 아래 줄에 공지와 내 출석이 나란히 놓입니다. */
 .grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(330px, 1fr); grid-template-areas: "calendar list" "calendar detail" "notices attendance"; gap: var(--space-6); }
 .card { composes: surface from "../../components/ui/ui.module.css"; }
@@ -135,7 +132,6 @@
   .grid { display: flex; flex-direction: column; gap: var(--space-5); }
   .card { width: 100%; }
   .checkInBanner { margin-bottom: var(--space-5); }
-  .checkInBanner > a { width: 100%; }
   .eventList { max-height: none; }
   .calendarTable td { height: auto; }
   .day { min-height: var(--control-large); height: auto; align-items: center; padding: var(--space-2) 0; }

@@ -25,7 +25,7 @@ function pending(id: number, name: string): MemberItem {
   return { ...member(id, name), status: "APPROVAL_PENDING", memberType: null, part: "ALTO", cohort: 2 };
 }
 // 목록은 이름과 파트만 보이고, 누른 사람의 정보가 옆 칸에 나옵니다. 상세 칸의 article을 돌려줍니다.
-const roster = () => within(screen.getByRole("list", { name: "단원 목록" }));
+const roster = () => within(screen.getByRole("list", { name: "단원 명단" }));
 async function open(name: string) {
   await userEvent.click(await roster().findByRole("button", { name: new RegExp(`^${name}`) }));
   return (await screen.findByRole("heading", { name })).closest("article")!;
@@ -43,9 +43,9 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
-test("운영진이 단원 계정을 만들면 1회용 링크를 표시합니다", async () => {
+test("운영진이 단원을 1회용 링크로 초대하면 링크를 표시합니다", async () => {
   renderWithSession(<MemberAccountManager />, operator);
-  await screen.findByText("등록된 계정이 없습니다.");
+  await screen.findByText("등록된 단원이 없습니다.");
   await userEvent.type(screen.getByLabelText("이름"), "새 단원");
   await userEvent.type(within(screen.getByRole("form", { name: "1회용 링크로 초대" })).getByLabelText("구글 계정 이메일"), "member@example.org");
   await userEvent.click(screen.getByRole("button", { name: "1회용 링크 발급" }));
@@ -56,14 +56,14 @@ test("운영진이 단원 계정을 만들면 1회용 링크를 표시합니다"
   expect(screen.getByRole("heading", { name: "발급된 링크" })).toHaveFocus();
 });
 
-test("상세 칸의 접근 해제에 그 단원 이름을 붙입니다", async () => {
+test("상세 칸의 포털 이용 중단에 그 단원 이름을 붙입니다", async () => {
   vi.mocked(getMembers).mockResolvedValue({ items: [member(3, "이서연"), member(4, "박민준")], page: 0, size: 20, total: 2 });
   renderWithSession(<MemberAccountManager />, operator);
   await open("이서연");
-  expect(screen.getByLabelText("이서연 접근 해제")).toHaveTextContent("접근 해제");
+  expect(screen.getByLabelText("이서연 포털 이용 중단")).toHaveTextContent("포털 이용 중단");
   await open("박민준");
-  expect(screen.getByLabelText("박민준 접근 해제")).toHaveTextContent("접근 해제");
-  expect(screen.queryByLabelText("이서연 접근 해제")).not.toBeInTheDocument();
+  expect(screen.getByLabelText("박민준 포털 이용 중단")).toHaveTextContent("포털 이용 중단");
+  expect(screen.queryByLabelText("이서연 포털 이용 중단")).not.toBeInTheDocument();
 });
 
 test("권한이 없는 기능은 가리고 조회 권한만 있으면 목록만 보여 줍니다", async () => {
@@ -73,8 +73,8 @@ test("권한이 없는 기능은 가리고 조회 권한만 있으면 목록만 
   expect(roster().getByText("승인 대기")).toBeInTheDocument();
   await open("신청자");
   expect(screen.queryByRole("button", { name: /승인$/ })).not.toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: /접근 해제/ })).not.toBeInTheDocument();
-  expect(screen.queryByRole("heading", { name: "미리 승인" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /포털 이용 중단/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "사전 등록" })).not.toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /저장/ })).not.toBeInTheDocument();
 });
 
@@ -134,13 +134,13 @@ test("승인 대기 계정은 행에서 바로 승인하고, 같은 자리에서
   expect(fact("파트")).toHaveTextContent("알토");
   expect(fact("단원 구분")).toHaveTextContent("미지정");
   expect(within(row).queryByLabelText("신청자 추가할 직책")).not.toBeInTheDocument();
-  expect(within(row).getByText("정보 수정").closest("details")).not.toHaveAttribute("open");
+  expect(within(row).getByText("단원 정보 수정").closest("details")).not.toHaveAttribute("open");
   await userEvent.click(within(row).getByRole("button", { name: "신청자 승인" }));
   expect(approveApplication).toHaveBeenCalledWith(5, "ACTIVE");
   expect(await within(row).findByText("사용 중")).toBeInTheDocument();
   expect(fact("단원 구분")).toHaveTextContent("활동 단원");
   expect(within(row).getByRole("status")).toHaveTextContent("승인했습니다");
-  expect(within(row).getByText("정보 수정").closest("details")).toHaveAttribute("open");
+  expect(within(row).getByText("단원 정보 수정").closest("details")).toHaveAttribute("open");
   expect(within(row).getByLabelText("신청자 추가할 직책")).toBeInTheDocument();
   expect(within(row).queryByRole("button", { name: "신청자 승인" })).not.toBeInTheDocument();
 });
@@ -168,7 +168,7 @@ test("직책 관리 권한이 없는 운영진에게는 승인 사실만 안내�
   await userEvent.click(within(row).getByRole("button", { name: "신청자 승인" }));
   expect(await within(row).findByText("사용 중")).toBeInTheDocument();
   expect(within(row).getByRole("status")).toHaveTextContent(/^승인했습니다.$/);
-  expect(within(row).queryByText("정보 수정")).not.toBeInTheDocument();
+  expect(within(row).queryByText("단원 정보 수정")).not.toBeInTheDocument();
 });
 
 test("승인 대기 계정을 이유를 적어 반려하면 행 상태가 가입 반려로 바뀝니다", async () => {
@@ -220,4 +220,19 @@ test("파트를 고르면 그 파트 단원만 남고, 없으면 그렇다고 �
   expect(roster().getByRole("button", { name: /^박민준/ })).toBeInTheDocument();
   await userEvent.selectOptions(screen.getByLabelText("파트로 거르기"), "BASS");
   expect(screen.getByText("조건에 맞는 단원이 없습니다.")).toBeInTheDocument();
+});
+
+test("제목은 단원 정보 관리이고 목록 절은 단원 명단입니다", async () => {
+  renderWithSession(<MemberAccountManager />, operator);
+  expect(screen.getByRole("heading", { name: "단원 정보 관리", level: 1 })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "단원 명단", level: 2 })).toBeInTheDocument();
+  expect(await screen.findByText("등록된 단원이 없습니다.")).toBeInTheDocument();
+});
+
+test("이용 중단한 단원에게는 이용 중단 상태와 다시 초대 버튼이 보입니다", async () => {
+  vi.mocked(getMembers).mockResolvedValue({ items: [{ ...member(3, "김하늘"), status: "REVOKED", googleLinked: false }], page: 0, size: 20, total: 1 });
+  renderWithSession(<MemberAccountManager />, operator);
+  const detail = await open("김하늘");
+  expect(within(detail).getByText("이용 중단")).toBeInTheDocument();
+  expect(within(detail).getByRole("button", { name: "김하늘 다시 초대" })).toBeInTheDocument();
 });

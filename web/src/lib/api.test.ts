@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from "vitest";
-import { ApiRequestError, apiRequest, clearRequestCache, forgetCsrfToken, onPermissionDenied } from "./api";
+import { ApiRequestError, apiRequest, clearRequestCache, forgetCsrfToken, onPermissionDenied, onWriteCompleted } from "./api";
 
 afterEach(() => { vi.unstubAllGlobals(); clearRequestCache(); forgetCsrfToken(); });
 
@@ -65,6 +65,28 @@ test("권한 부족 403은 이동하지 않고 등록된 함수에 알립니다"
   unsubscribe();
   await expect(apiRequest("/admin/notices")).rejects.toMatchObject({ code: "PERMISSION_REQUIRED" });
   expect(listener).toHaveBeenCalledTimes(1);
+});
+
+test("쓰기 요청이 끝나면 구독자에게 알리고, 인증 쓰기는 알리지 않습니다", async () => {
+  const responses = [
+    { ok: true, status: 204 },
+    { ok: false, status: 500, json: async () => ({ code: "REQUEST_FAILED", message: "오류" }) },
+    { ok: true, status: 204 },
+    { ok: true, status: 204 },
+  ];
+  vi.stubGlobal("fetch", vi.fn().mockImplementation(async (url: string) =>
+    url.includes("/auth/csrf") ? { ok: true, json: async () => ({ token: "csrf" }) } : responses.shift()));
+  const listener = vi.fn();
+  const unsubscribe = onWriteCompleted(listener);
+  await apiRequest("/admin/x", { method: "POST" });
+  expect(listener).toHaveBeenCalledTimes(1);
+  await expect(apiRequest("/admin/x", { method: "POST" })).rejects.toBeInstanceOf(ApiRequestError);
+  expect(listener).toHaveBeenCalledTimes(2);
+  await apiRequest("/auth/logout", { method: "POST" });
+  expect(listener).toHaveBeenCalledTimes(2);
+  unsubscribe();
+  await apiRequest("/admin/x", { method: "POST" });
+  expect(listener).toHaveBeenCalledTimes(2);
 });
 
 test("코드와 메시지가 없는 서버 오류 본문에도 안내 문구를 붙입니다", async () => {
