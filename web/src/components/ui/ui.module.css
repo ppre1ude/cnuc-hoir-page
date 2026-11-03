@@ -66,7 +66,7 @@
 /* 지금 해야 할 일을 알리는 띠입니다. 홈의 출석 띠와 운영진의 가입 승인 알림이 함께 씁니다. 왼쪽에 굵은 한 줄, 오른쪽에 버튼 하나입니다. */
 .banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-5); padding: var(--space-5); border: 1px solid var(--color-primary); border-radius: var(--radius-control); background: var(--color-selected); }
 .banner p { margin: 0; min-width: 0; overflow-wrap: anywhere; }
-.banner strong { display: block; font-size: var(--text-section); font-weight: var(--weight-heading); letter-spacing: var(--tracking-heading); }
+.banner strong { display: block; font-size: var(--text-section); font-weight: var(--weight-heading); letter-spacing: var(--tracking-heading); word-break: keep-all; }
 .banner span { display: block; margin-top: var(--space-1); color: var(--color-muted); font-size: var(--text-label); }
 .logo { display: block; width: var(--logo-width, 210px); height: auto; }
 .mark { width: var(--logo-width, 168px); }
