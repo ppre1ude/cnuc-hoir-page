@@ -9,6 +9,16 @@ import { useSession } from "../auth/SessionProvider";
 import { partLabel, parts } from "../member/roles";
 import { createEventsBatch, scheduleKindLabel, scheduleKinds, seoulDateKey, type EventInput, type ScheduleKind } from "./events";
 import styles from "./EventEditor.module.css";
+import { openPicker } from "./eventTime";
+
+// 마지막에 등록한 시각을 이 브라우저에 기억해 둡니다. 연습 시각은 거의 같아서 다음에 열면 그대로 쓰면 됩니다.
+const timesKey = "event-batch-times";
+function rememberedTimes(): { start: string; end: string } {
+  try { return { start: "", end: "", ...JSON.parse(localStorage.getItem(timesKey) ?? "{}") }; } catch { return { start: "", end: "" }; }
+}
+function rememberTimes(start: string, end: string) {
+  try { localStorage.setItem(timesKey, JSON.stringify({ start, end })); } catch { /* 저장소가 막힌 브라우저에서는 기억하지 않습니다. */ }
+}
 
 function monthDays(month: string) {
   const [year, number] = month.split("-").map(Number);
@@ -43,8 +53,8 @@ export function EventBatchCreator({ onCreated }: Props) {
   const [part, setPart] = useState<Part | null>(partChoices[0] ?? null);
   const [title, setTitle] = useState(() => defaultTitle(kindChoices[0] ?? "EVENT", partChoices[0] ?? null));
   const [description, setDescription] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
+  const [startTime, setStartTime] = useState(() => rememberedTimes().start);
+  const [endTime, setEndTime] = useState(() => rememberedTimes().end);
   const [obEligible, setObEligible] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -79,6 +89,7 @@ export function EventBatchCreator({ onCreated }: Props) {
         kind, part: kind === "PART_REHEARSAL" ? part : null, obEligible, publicVisible: false,
       }));
       await createEventsBatch(items);
+      rememberTimes(startTime, endTime);
       setSaved(`${items.length}개 일정을 등록했습니다.`);
       setDates([]);
       onCreated(month);
@@ -122,8 +133,8 @@ export function EventBatchCreator({ onCreated }: Props) {
           </Select></label>}
           <label className={styles.wide}>제목<Input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={200} required /></label>
           <label className={styles.wide}>내용 (선택)<Textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={10000} rows={3} /></label>
-          <label>공통 시작 시각 (한국 시간)<Input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} required /></label>
-          <label>공통 종료 시각 (한국 시간)<Input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} required /></label>
+          <label>공통 시작 시각 (한국 시간)<Input type="time" value={startTime} step={300} onClick={(event) => openPicker(event.currentTarget)} onChange={(event) => setStartTime(event.target.value)} required /></label>
+          <label>공통 종료 시각 (한국 시간)<Input type="time" value={endTime} step={300} onClick={(event) => openPicker(event.currentTarget)} onChange={(event) => setEndTime(event.target.value)} required /></label>
         </div>
         <label className={styles.check}><Input type="checkbox" checked={obEligible} onChange={(event) => setObEligible(event.target.checked)} /> OB도 참여 대상</label>
         {error && <Feedback tone="error">{error}</Feedback>}

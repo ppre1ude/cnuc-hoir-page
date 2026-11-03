@@ -15,24 +15,13 @@ import calendarStyles from "./EventCalendar.module.css";
 import { EventBatchCreator } from "./EventBatchCreator";
 import { AdminEventRsvps } from "./AdminEventRsvps";
 import { eventKind } from "./EventKind";
+import { localInput, openPicker, utcInput } from "./eventTime";
 
 // 목록과 상세에 쓰는 "9월 20일 (일)" 모양입니다.
 function seoulDayLabel(value: string) {
   return new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric", weekday: "short" }).format(new Date(value));
 }
 
-function localInput(value: string) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
-  }).formatToParts(new Date(value));
-  const part = (name: string) => parts.find((item) => item.type === name)?.value ?? "";
-  return `${part("year")}-${part("month")}-${part("day")}T${part("hour")}:${part("minute")}`;
-}
-
-function utcInput(value: string) {
-  const date = new Date(`${value}:00+09:00`);
-  return Number.isNaN(date.getTime()) ? null : date.toISOString();
-}
 
 
 export function EventEditor() {
@@ -196,6 +185,7 @@ export function EventEditor() {
         </div>
         {/* 여러 날에 걸친 일정은 끝나는 날짜도 적습니다. */}
         <p className={styles.when}>{seoulDayLabel(selected.startAt)} {seoulTime(selected.startAt)} ~ {seoulDayLabel(selected.endAt) !== seoulDayLabel(selected.startAt) && `${seoulDayLabel(selected.endAt)} `}{seoulTime(selected.endAt)}</p>
+        {selected.createdBy && <p className={styles.when}>등록한 사람: {selected.createdBy}</p>}
         <p><Link href={`/admin/events/${selected.id}/attendance`}>이 일정 출석 관리</Link></p>
         {error && <Feedback tone="error">{error}</Feedback>}
         <form onSubmit={save} className={styles.form}>
@@ -209,8 +199,8 @@ export function EventEditor() {
             {partChoices.map((item) => <option key={item} value={item}>{partLabel[item]}</option>)}</Select></>}
           <label htmlFor="event-title">제목</label><Input id="event-title" value={title} onChange={(change) => setTitle(change.target.value)} maxLength={200} required />
           <label htmlFor="event-description">내용 (선택)</label><Textarea id="event-description" value={description} onChange={(change) => setDescription(change.target.value)} maxLength={10000} rows={7} />
-          <label htmlFor="event-start">시작 시각 (한국 시간)</label><Input id="event-start" type="datetime-local" value={startAt} onChange={(change) => setStartAt(change.target.value)} required />
-          <label htmlFor="event-end">종료 시각 (한국 시간)</label><Input id="event-end" type="datetime-local" value={endAt} onChange={(change) => setEndAt(change.target.value)} required />
+          <label htmlFor="event-start">시작 시각 (한국 시간)</label><Input id="event-start" type="datetime-local" value={startAt} step={300} onClick={(change) => openPicker(change.currentTarget)} onChange={(change) => setStartAt(change.target.value)} required />
+          <label htmlFor="event-end">종료 시각 (한국 시간)</label><Input id="event-end" type="datetime-local" value={endAt} step={300} onClick={(change) => openPicker(change.currentTarget)} onChange={(change) => setEndAt(change.target.value)} required />
           <label className={styles.check}><Input type="checkbox" checked={obEligible} onChange={(change) => setObEligible(change.target.checked)} /> OB도 참여 대상</label>
           <label className={styles.check}><Input type="checkbox" checked={publicVisible} onChange={(change) => setPublicVisible(change.target.checked)} /> 향후 공개 아카이브 대상</label>
           <p className={styles.hint}>공개 대상으로 표시해도 현재는 외부에 일정을 노출하지 않습니다.</p>

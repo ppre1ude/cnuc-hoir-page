@@ -27,6 +27,8 @@ export type ChoirEvent = {
   updatedAt: string;
   // 값이 있으면 취소된 일정입니다. 지우지 않고 달력에 취소됨으로 남깁니다.
   cancelledAt: string | null;
+  // 등록한 단원 이름입니다. 등록자 기록 전에 만든 일정은 null입니다.
+  createdBy?: string | null;
 };
 
 export type EventInput = Pick<ChoirEvent, "title" | "description" | "startAt" | "endAt" | "kind" | "part" | "obEligible" | "publicVisible">;

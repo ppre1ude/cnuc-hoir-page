@@ -20,6 +20,7 @@ describe("운영진 월간 일정 등록", () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date("2026-09-30T00:00:00Z"));
     createEventsBatch.mockReset().mockResolvedValue([]);
+    localStorage.clear();
   });
   afterEach(() => { cleanup(); vi.useRealTimers(); });
 
@@ -98,4 +99,27 @@ describe("운영진 월간 일정 등록", () => {
     expect(screen.getByLabelText("제목")).toHaveValue("테너 보충 연습");
     expect(screen.queryByLabelText("파트")).not.toBeInTheDocument();
   });
+
+  it("시각 칸을 누르면 바로 선택기가 열리고, 분은 5분 단위이며, 종료 시각은 따로 고른다", () => {
+    const showPicker = vi.fn();
+    HTMLInputElement.prototype.showPicker = showPicker;
+    renderWithSession(<EventBatchCreator onCreated={vi.fn()} />, vicePresident);
+    const start = screen.getByLabelText("공통 시작 시각 (한국 시간)");
+    const end = screen.getByLabelText("공통 종료 시각 (한국 시간)");
+    fireEvent.click(start);
+    expect(showPicker).toHaveBeenCalledTimes(1);
+    expect(start).toHaveAttribute("step", "300");
+    expect(end).toHaveAttribute("step", "300");
+    fireEvent.change(start, { target: { value: "19:00" } });
+    expect(end).toHaveValue("");
+  });
+
+  it("마지막에 등록한 시각을 기억해 다음에 열 때 채워 둔다", () => {
+    localStorage.setItem("event-batch-times", JSON.stringify({ start: "19:30", end: "21:30" }));
+    renderWithSession(<EventBatchCreator onCreated={vi.fn()} />, vicePresident);
+    expect(screen.getByLabelText("공통 시작 시각 (한국 시간)")).toHaveValue("19:30");
+    expect(screen.getByLabelText("공통 종료 시각 (한국 시간)")).toHaveValue("21:30");
+    localStorage.removeItem("event-batch-times");
+  });
+
 });
