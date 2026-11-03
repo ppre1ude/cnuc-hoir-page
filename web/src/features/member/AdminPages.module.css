@@ -37,7 +37,7 @@
 /* 승인 상자: 단원 구분은 눌러 고르는 두 버튼이고 승인은 그 오른쪽입니다. 반려는 가는 선 아래 작은 빨간 버튼으로 접어 둡니다. */
 .decision { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
 .decision .fieldLabel { flex-basis: 100%; }
-.choice { display: flex; gap: var(--space-2); }
+.choice { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .choice button { min-width: 6rem; }
 .decision > button:last-child { margin-left: auto; }
 .reject { padding-top: var(--space-3); border-top: 1px solid var(--color-highlight); }
@@ -141,3 +141,6 @@
   .workspace[data-view="detail"] .roster, .workspace[data-view="list"] .detail { display: none; }
   .toList { display: inline-flex; }
 }
+/* 공지 작성: 투표 버튼 묶음과 칸, 되살린 임시 저장 안내 줄. */
+.pollChoice { display: grid; gap: var(--space-2); margin-top: var(--space-3); }
+.restored { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-bottom: var(--space-4); }
