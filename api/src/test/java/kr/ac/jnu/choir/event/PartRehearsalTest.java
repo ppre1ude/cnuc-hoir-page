@@ -328,4 +328,10 @@ class PartRehearsalTest {
         assertThat(write(sopranoLead, put(correct), correction).getStatus()).isEqualTo(403);
         assertThat(write(admin, put(correct), correction).getStatus()).isEqualTo(204);
     }
+    // 누가 만든 일정인지 운영진이 알 수 있게, 등록한 단원 이름을 응답에 함께 줍니다.
+    @Test void 일정을_등록한_단원_이름을_응답에_준다() throws Exception {
+        Member admin = siteAdmin();
+        long id = create(admin, input(unique("등록자 확인"), "EVENT", null, false));
+        assertThat(read(admin, "/api/v1/events/" + id).getContentAsString()).contains("\"createdBy\":\"단원\"");
+    }
 }

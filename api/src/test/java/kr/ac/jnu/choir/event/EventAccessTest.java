@@ -27,7 +27,7 @@ class EventAccessTest {
 
     private static Event event(EventKind kind, Part part) {
         return new Event("일정", "", Instant.parse("2026-10-27T10:30:00Z"), Instant.parse("2026-10-27T12:30:00Z"),
-                kind, part, false, false, Clock.systemUTC());
+                kind, part, false, false, null, Clock.systemUTC());
     }
 
     static final EventAccess ADMIN = access(true, MemberType.ACTIVE, null);

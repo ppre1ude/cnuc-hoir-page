@@ -177,4 +177,21 @@ describe("운영진 일정 편집", () => {
       expect(screen.getByText("목록에서 일정을 선택하세요.")).toBeInTheDocument();
     });
   });
+
+  it("고른 일정에 등록한 사람을 보이고, 시각 칸을 누르면 선택기가 열리며 종료 시각은 따로 둔다", async () => {
+    getEvents.mockResolvedValue([{ ...septemberEvent, createdBy: "김하늘" }]);
+    renderWithSession(<EventEditor />, sessionFixture({ admin: true }));
+    fireEvent.click(await screen.findByRole("button", { name: /정기 연습/ }));
+    expect(await screen.findByText("등록한 사람: 김하늘")).toBeInTheDocument();
+    const showPicker = vi.fn();
+    HTMLInputElement.prototype.showPicker = showPicker;
+    const start = screen.getByLabelText("시작 시각 (한국 시간)");
+    expect(start).toHaveValue("2026-09-20T19:00");
+    fireEvent.click(start);
+    expect(showPicker).toHaveBeenCalledTimes(1);
+    fireEvent.change(start, { target: { value: "2026-09-20T18:30" } });
+    expect(screen.getByLabelText("종료 시각 (한국 시간)")).toHaveValue("2026-09-20T21:00");
+    expect(start).toHaveAttribute("step", "300");
+  });
+
 });
