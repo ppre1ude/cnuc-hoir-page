@@ -130,7 +130,7 @@ export function NoticeEditor() {
     {error && <Feedback tone="error">{error}</Feedback>}
     {saved && <Feedback tone="success">공지를 저장했습니다.</Feedback>}
     {listError && <><Feedback tone="error">{listError}</Feedback><Button variant="secondary" type="button" onClick={() => { setListError(""); setData(null); setRetry(retry + 1); }}>다시 시도</Button></>}
-    {/* 계정 목록과 같은 틀입니다. 왼쪽 좁은 칸에 공지 목록과 새 공지 버튼, 오른쪽에 작성 또는 수정 폼. */}
+    {/* 단원 명단과 같은 틀입니다. 왼쪽 좁은 칸에 공지 목록과 새 공지 버튼, 오른쪽에 작성 또는 수정 폼. */}
     <div className={styles.workspace}><div className={styles.roster}>
       <Button variant="secondary" type="button" className={styles.newItem} onClick={() => startNew(readDraft())}>새 공지</Button>
       {!visibleData && !listError && <SkeletonRows count={4} label="공지 목록을 불러오는 중입니다." />}

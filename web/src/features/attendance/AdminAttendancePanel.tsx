@@ -35,7 +35,8 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
   const [members, setMembers] = useState<AdminAttendance[] | null>(null);
   const [reasons, setReasons] = useState<Record<number, string>>({});
   const [selected, setSelected] = useState<number | null>(null);
-  const focus = useListDetailFocus(selected);
+  const detail = useRef<HTMLDivElement>(null);
+  const focus = useListDetailFocus(selected, detail);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   // 정정은 단원별로 잠가, 한 명을 저장하는 동안에도 다음 단원을 이어서 정정할 수 있게 합니다.
@@ -198,7 +199,7 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
         <Button variant="secondary" type="button" onClick={reloadList}>목록 다시 불러오기</Button></div>
       {members === null && !message && <SkeletonRows count={3} label="출석 기록을 불러오는 중입니다." />}
       {members?.length === 0 && <p>출석 대상 단원이 없습니다.</p>}
-      {/* 계정 목록과 같은 꼴입니다. 왼쪽에 이름과 상태만 적은 목록, 오른쪽에 고른 단원의 기록과 정정 칸을 둡니다. */}
+      {/* 단원 명단과 같은 꼴입니다. 왼쪽에 이름과 상태만 적은 목록, 오른쪽에 고른 단원의 기록과 정정 칸을 둡니다. */}
       {members && members.length > 0 && <div className={styles.workspace} data-view={current ? "detail" : "list"}>
         <div className={styles.roster}><ul className={styles.rosterList} aria-label="단원 목록">
           {members.map((member) => <li key={member.memberId}>
@@ -208,7 +209,7 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
             </button>
           </li>)}
         </ul></div>
-        <div className={styles.detail} ref={focus.detail} tabIndex={-1}>
+        <div className={styles.detail} ref={detail} tabIndex={-1}>
           <Button variant="secondary" size="small" type="button" className={styles.toList} onClick={() => { focus.leave(selected); setSelected(null); }}>목록으로</Button>
           {current ? <article>
             <div className={styles.rowHeader}>

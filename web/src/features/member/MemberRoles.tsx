@@ -79,7 +79,7 @@ export function MemberRoles({ item, session, open, onChanged }:
 
   // 한 화면에 단원마다 같은 입력과 버튼이 반복되므로, 화면 읽기 프로그램에는 이름을 붙여 구분합니다.
   return <details className={styles.more} open={open}>
-    <summary aria-label={`${item.name} 정보 수정`}>정보 수정</summary>
+    <summary aria-label={`${item.name} 단원 정보 수정`}>단원 정보 수정</summary>
     <div className={styles.roles}>
       <form className={styles.inlineForm} onSubmit={saveProfile}>
         {approved && <>

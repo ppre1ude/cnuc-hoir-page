@@ -168,7 +168,7 @@ export function EventEditor() {
     <EventBatchCreator onCreated={refreshList} />
     <section className={styles.section} aria-labelledby="list-title">
       <h2 id="list-title">등록된 일정</h2>
-      {/* 계정 목록과 같은 틀입니다. 왼쪽 좁은 칸에 월과 일정 목록, 오른쪽에 고른 일정의 수정 폼과 응답 집계를 둡니다. */}
+      {/* 단원 명단과 같은 틀입니다. 왼쪽 좁은 칸에 월과 일정 목록, 오른쪽에 고른 일정의 수정 폼과 응답 집계를 둡니다. */}
       <div className={styles.workspace} data-view={selected ? "detail" : "list"}>
         <div className={styles.roster}>
           <label htmlFor="list-month">조회 월</label>

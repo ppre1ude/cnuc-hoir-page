@@ -30,7 +30,7 @@ export function DesignSystemPreview() {
       <h2>버튼</h2>
       <div className={styles.actions}>
         <Button variant="primary">저장</Button><Button>닫기</Button>
-        <Button variant="danger">접근 해제</Button><Button variant="ghost">다시 시도</Button>
+        <Button variant="danger">포털 이용 중단</Button><Button variant="ghost">다시 시도</Button>
         <Button variant="primary" disabled>저장 중</Button>
       </div>
       <div className={styles.actions}>
@@ -42,7 +42,7 @@ export function DesignSystemPreview() {
       <div className={styles.actions}>
         <Button aria-pressed={attending} onClick={() => setAttending(true)}>참석</Button>
         <Button aria-pressed={!attending} onClick={() => setAttending(false)}>불참</Button>
-        <StatusBadge tone="positive">승인</StatusBadge><StatusBadge>미응답</StatusBadge><StatusBadge tone="attention">승인 대기</StatusBadge><StatusBadge tone="negative">접근 해제</StatusBadge>
+        <StatusBadge tone="positive">승인</StatusBadge><StatusBadge>미응답</StatusBadge><StatusBadge tone="attention">승인 대기</StatusBadge><StatusBadge tone="negative">이용 중단</StatusBadge>
       </div>
     </section>
     <section className={styles.section}>

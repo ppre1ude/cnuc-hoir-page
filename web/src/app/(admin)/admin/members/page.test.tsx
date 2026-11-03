@@ -6,7 +6,7 @@ import { renderWithSession, sessionFixture } from "../../../../test/session";
 vi.mock("../../../../features/member/MemberAccountManager", () => ({ MemberAccountManager: () => <p>본문</p> }));
 afterEach(cleanup);
 
-test("단원 계정은 단원 조회 권한이 있어야 보입니다", () => {
+test("단원 정보 관리는 단원 조회 권한이 있어야 보입니다", () => {
   renderWithSession(<MembersPage />, sessionFixture({ permissions: ["MANAGE_EVENTS", "VIEW_MINUTES"] }));
   expect(screen.getByText("이 기능을 쓸 권한이 없습니다.")).toBeInTheDocument();
   expect(screen.queryByText("본문")).not.toBeInTheDocument();
