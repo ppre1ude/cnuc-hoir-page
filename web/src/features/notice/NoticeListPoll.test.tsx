@@ -7,6 +7,7 @@ import type { PollView } from "./notices";
 
 const api = vi.hoisted(() => ({ getNotices: vi.fn(), getNotice: vi.fn(), getNoticePoll: vi.fn(), voteNoticePoll: vi.fn() }));
 vi.mock("./notices", () => api);
+vi.mock("next/navigation", () => import("../../test/navigation"));
 
 const poll: PollView = { question: "연습에 참석하시나요?", firstOption: "참석", secondOption: "불참",
   closesAt: "2099-01-01T00:00:00Z", closed: false, firstCount: 0, secondCount: 0, myChoice: null };
