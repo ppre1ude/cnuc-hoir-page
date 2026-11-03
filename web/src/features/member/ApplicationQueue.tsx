@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Textarea, Feedback, PageHeader, SkeletonRows } from "../../components/ui";
+import { Button, Textarea, Feedback, PageHeader, Pagination, SkeletonRows } from "../../components/ui";
 
 import { useEffect, useState } from "react";
 import { ApiRequestError } from "../../lib/api";
@@ -77,11 +77,7 @@ export function ApplicationQueue() {
               </button>
             </li>)}
           </ul>
-          {data && data.total > data.size && <nav className={styles.pagination} aria-label="신청 목록 페이지">
-            <Button variant="secondary" type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>이전</Button>
-            <span>{page + 1} / {Math.ceil(data.total / data.size)}</span>
-            <Button variant="secondary" type="button" disabled={(page + 1) * data.size >= data.total} onClick={() => setPage(page + 1)}>다음</Button>
-          </nav>}
+          {data && data.total > data.size && <Pagination label="신청 목록 페이지" page={page} size={data.size} total={data.total} onChange={setPage} />}
         </div>
         <div className={styles.detail}>
           <Button variant="secondary" size="small" type="button" className={styles.toList} onClick={() => setSelected(null)}>목록으로</Button>

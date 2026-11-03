@@ -37,7 +37,7 @@
 /* 승인 상자: 단원 구분은 눌러 고르는 두 버튼이고 승인은 그 오른쪽입니다. 반려는 가는 선 아래 작은 빨간 버튼으로 접어 둡니다. */
 .decision { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
 .decision .fieldLabel { flex-basis: 100%; }
-.choice { display: flex; gap: var(--space-2); }
+.choice { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .choice button { min-width: 6rem; }
 .decision > button:last-child { margin-left: auto; }
 .reject { padding-top: var(--space-3); border-top: 1px solid var(--color-highlight); }
@@ -66,7 +66,6 @@
 .pendingRow span { color: var(--color-muted); font-size: var(--text-small); overflow-wrap: anywhere; }
 .pendingNote { padding: var(--space-4) 0; color: var(--color-muted); font-size: var(--text-label); }
 
-.pagination { display: flex; align-items: center; justify-content: center; gap: var(--space-3); margin-top: var(--space-6); font-size: var(--text-label); }
 .back { display: inline-flex; align-items: center; min-height: var(--control-medium); margin-bottom: var(--space-4); color: var(--color-primary); font-size: var(--text-label); font-weight: var(--weight-label); text-decoration: none; }
 .back:hover { text-decoration: underline; }
 .code { display: inline-block; margin-top: var(--space-2); color: var(--color-primary); font-size: clamp(1.5rem, 5vw, 2.375rem); letter-spacing: .14em; }
@@ -142,3 +141,6 @@
   .workspace[data-view="detail"] .roster, .workspace[data-view="list"] .detail { display: none; }
   .toList { display: inline-flex; }
 }
+/* 공지 작성: 투표 버튼 묶음과 칸, 되살린 임시 저장 안내 줄. */
+.pollChoice { display: grid; gap: var(--space-2); margin-top: var(--space-3); }
+.restored { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-bottom: var(--space-4); }

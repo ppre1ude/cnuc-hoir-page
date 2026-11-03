@@ -2,11 +2,13 @@ import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NoticeList } from "./NoticeList";
 import { renderWithSession } from "../../test/session";
+import { nav } from "../../test/navigation";
 
 const getNotices = vi.fn();
 const getNotice = vi.fn();
 vi.mock("./notices", () => ({ getNotices: (page: number) => getNotices(page), getNotice: (id: number) => getNotice(id) }));
 vi.mock("./NoticePoll", () => ({ NoticePoll: () => <div>공지 투표</div> }));
+vi.mock("next/navigation", () => import("../../test/navigation"));
 
 describe("공지 목록", () => {
   afterEach(cleanup);
@@ -14,6 +16,8 @@ describe("공지 목록", () => {
     getNotices.mockReset();
     getNotice.mockReset();
     window.history.replaceState(null, "", "/notices");
+    nav.reset();
+    Element.prototype.scrollIntoView = vi.fn();
   });
 
   it("제목 바로 아래 본문을 펼치고 닫으면 제목으로 초점을 돌린다", async () => {
@@ -44,24 +48,9 @@ describe("공지 목록", () => {
     expect(link).toHaveAttribute("target", "_blank");
   });
 
-  it("빠르게 다른 공지를 선택해도 늦게 도착한 본문이 현재 선택을 덮지 않는다", async () => {
-    let resolveFirst!: (value: unknown) => void;
-    const first = { id: 1, title: "첫 공지", body: "오래된 본문", author: "운영진" };
-    const second = { id: 2, title: "둘째 공지", body: "현재 본문", author: "운영진" };
-    getNotices.mockResolvedValue({ items: [first, second], page: 0, size: 20, total: 2 });
-    getNotice.mockImplementation((id: number) => id === 1 ? new Promise((resolve) => { resolveFirst = resolve; }) : Promise.resolve(second));
-    renderWithSession(<NoticeList />);
-    fireEvent.click(await screen.findByRole("button", { name: "첫 공지" }));
-    await waitFor(() => expect(getNotice).toHaveBeenCalledWith(1));
-    fireEvent.click(screen.getByRole("button", { name: "둘째 공지" }));
-    await screen.findByText("현재 본문");
-    resolveFirst(first);
-    await waitFor(() => expect(screen.queryByText("오래된 본문")).not.toBeInTheDocument());
-    expect(screen.getByText("현재 본문")).toBeInTheDocument();
-  });
-
   it("대시보드에서 연결한 공지를 첫 페이지 목록 밖에서도 연다", async () => {
     window.history.replaceState(null, "", "/notices?notice=30");
+    nav.search = "notice=30";
     getNotices.mockResolvedValue({ items: [], page: 0, size: 20, total: 0 });
     getNotice.mockResolvedValue({ id: 30, title: "연결한 공지", body: "연결한 본문" });
     renderWithSession(<NoticeList initialNoticeId={30} />);
@@ -100,5 +89,44 @@ describe("공지 목록", () => {
     fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
     expect(await screen.findByText("둘째 페이지")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+});
+
+describe("공지 목록 쪽 넘김과 바로 펼침", () => {
+  afterEach(cleanup);
+  beforeEach(() => {
+    getNotices.mockReset();
+    getNotice.mockReset();
+    nav.reset();
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+  const row = (id: number, title: string) => ({ id, title, body: `${title} 본문`, author: "운영진", publishedAt: "2026-09-02T00:00:00Z" });
+
+  it("목록에 있는 공지는 상세 요청 없이 바로 펼친다", async () => {
+    getNotices.mockResolvedValue({ items: [row(3, "참여 조사")], page: 0, size: 20, total: 1 });
+    renderWithSession(<NoticeList />);
+    fireEvent.click(await screen.findByRole("button", { name: "참여 조사" }));
+    expect(await screen.findByText("참여 조사 본문")).toBeInTheDocument();
+    expect(getNotice).not.toHaveBeenCalled();
+  });
+
+  it("범위 밖 쪽으로 들어오면 마지막 쪽으로 보정한다", async () => {
+    nav.search = "page=9";
+    getNotices.mockImplementation((page: number) => Promise.resolve(page === 1
+      ? { items: [row(1, "둘째 쪽 공지")], page, size: 1, total: 2 }
+      : { items: [], page, size: 1, total: 2 }));
+    renderWithSession(<NoticeList />);
+    expect(await screen.findByRole("heading", { name: "둘째 쪽 공지" })).toBeInTheDocument();
+    expect(nav.replaced.at(-1)).toBe("/notices?page=2");
+  });
+
+  it("쪽을 바꾸면 주소에 남기고 본문 영역으로 초점을 옮긴다", async () => {
+    getNotices.mockImplementation((page: number) => Promise.resolve({ items: [row(10 - page, `${page + 1}쪽 공지`)], page, size: 1, total: 3 }));
+    renderWithSession(<NoticeList />);
+    await screen.findByRole("heading", { name: "1쪽 공지" });
+    fireEvent.click(screen.getByRole("button", { name: "3쪽" }));
+    expect(await screen.findByRole("heading", { name: "3쪽 공지" })).toBeInTheDocument();
+    expect(nav.replaced.at(-1)).toBe("/notices?page=3");
+    expect(document.activeElement).toBe(document.getElementById("member-content"));
   });
 });

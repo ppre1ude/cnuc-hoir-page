@@ -1,8 +1,9 @@
 "use client";
 
-import { Button, Feedback, Linkify, PageHeader, SkeletonRows } from "../../components/ui";
+import { Button, Feedback, Linkify, PageHeader, Pagination, SkeletonRows } from "../../components/ui";
 
 import { useCallback, useEffect, useState } from "react";
+import { usePageParam } from "../../lib/pageParam";
 import { getNotice, getNotices, type Notice, type NoticePage, type PollView } from "./notices";
 import { NoticePoll } from "./NoticePoll";
 import { NoticePollPreview } from "./NoticePollPreview";
@@ -13,9 +14,10 @@ function dateTime(value: string) {
 }
 
 export function NoticeList({ initialNoticeId = null }: { initialNoticeId?: number | null }) {
-  const [page, setPage] = useState(0);
+  const [page, setPage] = usePageParam();
   const [data, setData] = useState<NoticePage | null>(null);
-  const [selected, setSelected] = useState<Notice | null>(null);
+  // 현재 쪽에 없는 공지(?notice=로 바로 연 지난 공지)만 상세 API로 받아 여기에 둡니다.
+  const [standalone, setStandalone] = useState<Notice | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(initialNoticeId);
   const [detailRetry, setDetailRetry] = useState(0);
   const [listError, setListError] = useState("");
@@ -30,25 +32,33 @@ export function NoticeList({ initialNoticeId = null }: { initialNoticeId?: numbe
   useEffect(() => {
     let alive = true;
     getNotices(page).then((result) => {
-      if (alive) {
-        setData(result);
-        setListError("");
-      }
+      if (!alive) return;
+      // 범위 밖 쪽(손으로 적은 번호, 공지가 줄어든 뒤의 새로고침)은 마지막 쪽으로 보정하고 주소도 고칩니다.
+      const last = Math.max(0, Math.ceil(result.total / result.size) - 1);
+      if (page > last) { setPage(last); return; }
+      setData(result);
+      setListError("");
     }).catch(() => { if (alive) setListError("공지 목록을 불러오지 못했습니다."); });
     return () => { alive = false; };
-  }, [page, retry]);
+  }, [page, retry, setPage]);
 
+  const visibleData = !listError && data?.page === page ? data : null;
+  const listed = visibleData?.items.find((notice) => notice.id === selectedId) ?? null;
+  const isListed = listed !== null;
+  const listSettled = visibleData !== null || listError !== "";
+
+  // 목록 안의 공지는 받아 둔 본문을 바로 펼치므로, 목록이 온 뒤 거기에 없는 공지만 따로 받습니다.
   useEffect(() => {
-    if (selectedId === null) return;
+    if (selectedId === null || isListed || !listSettled) return;
     let alive = true;
     getNotice(selectedId).then((notice) => {
-      if (alive) { setSelected(notice); setDetailError(""); }
+      if (alive) { setStandalone(notice); setDetailError(""); }
     }).catch(() => { if (alive) setDetailError("공지를 불러오지 못했습니다."); });
     return () => { alive = false; };
-  }, [selectedId, detailRetry]);
+  }, [selectedId, detailRetry, isListed, listSettled]);
 
   function open(id: number | null) {
-    setSelected(null);
+    setStandalone(null);
     setDetailError("");
     setSelectedId(id === selectedId ? null : id);
   }
@@ -58,9 +68,16 @@ export function NoticeList({ initialNoticeId = null }: { initialNoticeId?: numbe
     open(null);
   }
 
-  const visibleData = !listError && data?.page === page ? data : null;
-  const visibleNotice = selected?.id === selectedId ? selected : null;
-  const isInList = visibleData?.items.some((notice) => notice.id === selectedId);
+  // 이전과 다음이 목록 맨 아래에 있어 그대로 두면 새 쪽의 끝에 서게 됩니다. 본문 영역 머리로 옮기고 초점도 둡니다.
+  function changePage(next: number) {
+    open(null);
+    setPage(next);
+    const main = document.getElementById("member-content");
+    main?.focus();
+    main?.scrollIntoView?.({ block: "start" });
+  }
+
+  const visibleNotice = listed ?? (standalone?.id === selectedId ? standalone : null);
   function detail() {
     return <section aria-label="공지 본문" className={styles.detail}>
       {detailError ? <><Feedback tone="error">{detailError}</Feedback><Button variant="secondary" onClick={() => { setDetailError(""); setDetailRetry((value) => value + 1); }}>다시 시도</Button></>
@@ -74,7 +91,7 @@ export function NoticeList({ initialNoticeId = null }: { initialNoticeId?: numbe
     <PageHeader title="공지" />
     {listError && <><Feedback tone="error">{listError}</Feedback><Button variant="secondary" type="button" onClick={() => { setListError(""); setData(null); setRetry(retry + 1); }}>다시 시도</Button></>}
     {visibleData?.items.length === 0 && <p>게시된 공지가 없습니다.</p>}
-    {visibleData && selectedId !== null && !isInList && <article className={styles.standalone}>
+    {visibleData && selectedId !== null && !isListed && <article className={styles.standalone}>
       <h2>{visibleNotice?.title ?? "선택한 공지"}</h2>
       {detail()}
     </article>}
@@ -92,10 +109,6 @@ export function NoticeList({ initialNoticeId = null }: { initialNoticeId?: numbe
         {selectedId === notice.id && detail()}
       </div>
     </article>)}</div>
-    {visibleData && visibleData.total > visibleData.size && <nav aria-label="공지 목록 페이지" className={styles.pagination}>
-      <Button variant="secondary" type="button" disabled={page === 0} onClick={() => { open(null); setPage(page - 1); }}>이전</Button>
-      <span aria-label={`${Math.ceil(visibleData.total / visibleData.size)}페이지 중 ${page + 1}페이지`}>{page + 1} / {Math.ceil(visibleData.total / visibleData.size)}</span>
-      <Button variant="secondary" type="button" disabled={(page + 1) * visibleData.size >= visibleData.total} onClick={() => { open(null); setPage(page + 1); }}>다음</Button>
-    </nav>}
+    {visibleData && <Pagination label="공지 목록 페이지" page={page} size={visibleData.size} total={visibleData.total} onChange={changePage} />}
   </main>;
 }

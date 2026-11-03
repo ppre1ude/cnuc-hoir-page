@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Input, Select, Feedback, StatusBadge } from "../../components/ui";
+import { Button, Input, Select, Feedback, Pagination, StatusBadge } from "../../components/ui";
 
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { ApiRequestError } from "../../lib/api";
@@ -130,11 +130,7 @@ function PendingList({ admin = false, load, remove }: {
       <Button variant="danger" size="small" type="button" disabled={busy} aria-label={`${item.email} 삭제`}
         onClick={() => removeItem(item.id)}>삭제</Button>
     </li>)}
-    {data && data.total > data.size && <li><nav className={styles.pagination} aria-label={admin ? "사이트 관리자 사전 등록 페이지" : "단원 사전 등록 페이지"}>
-      <Button variant="secondary" type="button" disabled={page === 0} onClick={() => setPage(page - 1)}>이전</Button>
-      <span>{page + 1} / {Math.ceil(data.total / data.size)}</span>
-      <Button variant="secondary" type="button" disabled={(page + 1) * data.size >= data.total} onClick={() => setPage(page + 1)}>다음</Button>
-    </nav></li>}
+    {data && data.total > data.size && <li><Pagination label={admin ? "사이트 관리자 사전 등록 페이지" : "단원 사전 등록 페이지"} page={page} size={data.size} total={data.total} onChange={setPage} /></li>}
     {error && <li className={styles.pendingNote}><Feedback tone="error">{error}</Feedback></li>}
   </>;
 }

@@ -50,6 +50,10 @@ export function getAdminNotices(page = 0): Promise<NoticePage> {
   return apiRequest<NoticePage>(`/admin/notices?page=${page}&size=20`);
 }
 
+export function getAdminNotice(id: number): Promise<Notice> {
+  return apiRequest<Notice>(`/admin/notices/${id}`);
+}
+
 export function createNotice(input: NoticeInput): Promise<Notice> {
   return apiRequest<Notice>("/admin/notices", {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),

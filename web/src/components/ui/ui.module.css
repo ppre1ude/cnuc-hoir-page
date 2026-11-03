@@ -90,3 +90,12 @@
 .offline > p { margin: 0; pointer-events: auto; }
 /* 출석 띠가 원래 쓰던 분기점입니다. 홈 그리드가 한 열이 되는 폭부터 띠의 버튼도 한 줄을 차지합니다. */
 @media (max-width: 850px) { .banner > a { width: 100%; } }
+/* 쪽 넘김. 이전과 다음은 번호 묶음과 --space-4, 번호 사이는 --space-2입니다. 현재 쪽은 초록 채움과 aria-current로 구분합니다. */
+.pagination { display: flex; align-items: center; justify-content: center; gap: var(--space-4); margin-top: var(--space-8); font-size: var(--text-label); }
+.pages { display: flex; gap: var(--space-2); }
+.pages > button { min-width: var(--control-medium); padding-inline: var(--space-2); }
+.pageSummary { display: none; }
+@media (max-width: 760px) {
+  .pages { display: none; }
+  .pageSummary { display: inline; }
+}
