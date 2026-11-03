@@ -42,12 +42,29 @@ test("권한이 없으면 요청도 보내지 않고 그리지 않습니다", ()
 });
 
 test.each(["/admin/applications", "/events/12/check-in", "/admin/events/12/attendance"])(
-  "%s에서는 숨기고 요청도 보내지 않습니다", (pathname) => {
+  "%s에서는 숨기지만 숫자는 받아 둡니다", async (pathname) => {
     nav.pathname = pathname;
     const { container } = renderWithSession(<ApprovalReminder />, approver);
-    expect(getApplications).not.toHaveBeenCalled();
+    await waitFor(() => expect(getApplications).toHaveBeenCalledTimes(1));
+    await act(async () => undefined);
     expect(container).toBeEmptyDOMElement();
   });
+
+test("숨긴 화면에서 승인한 뒤 돌아오면 옛 숫자 없이 바로 새 숫자입니다", async () => {
+  nav.pathname = "/admin/applications";
+  vi.mocked(getApplications)
+    .mockResolvedValueOnce(page(3))
+    .mockResolvedValueOnce(page(1))
+    .mockReturnValueOnce(new Promise(() => undefined));
+  const { container, rerender } = renderWithSession(<ApprovalReminder />, approver);
+  await waitFor(() => expect(getApplications).toHaveBeenCalledTimes(1));
+  const [listener] = vi.mocked(onWriteCompleted).mock.calls[0];
+  await act(async () => { listener(); });
+  expect(container).toBeEmptyDOMElement();
+  nav.pathname = "/dashboard";
+  rerender(<ApprovalReminder />);
+  expect(screen.getByText("가입 승인을 기다리는 단원이 1명 있어요.")).toBeInTheDocument();
+});
 
 test("일정 상세에서는 보입니다", async () => {
   nav.pathname = "/events/12";

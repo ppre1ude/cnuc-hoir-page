@@ -22,8 +22,9 @@ export function ApprovalReminder() {
   const hidden = HIDDEN.some((pattern) => pattern.test(pathname));
   const [count, setCount] = useState(0);
 
+  // 숨기는 화면에서도 숫자는 계속 받아 둡니다. 가입 승인 화면에서 승인한 뒤 홈으로 오면 옛 숫자가 비치지 않습니다.
   useEffect(() => {
-    if (!allowed || hidden) return;
+    if (!allowed) return;
     let alive = true;
     // 요청마다 번호를 매겨, 느린 주기 요청이 승인 직후 받은 새 숫자를 옛 숫자로 되돌리지 않게 합니다.
     let latest = 0;
@@ -37,7 +38,7 @@ export function ApprovalReminder() {
     const stopWrite = onWriteCompleted(() => { void load(); });
     const stopPoll = pollWhileVisible(() => load(true), 60_000);
     return () => { alive = false; stopWrite(); stopPoll(); };
-  }, [allowed, hidden, pathname]);
+  }, [allowed, pathname]);
 
   if (!allowed || hidden || count === 0) return null;
   return <section aria-label="가입 승인 알림" className={styles.reminder}>
