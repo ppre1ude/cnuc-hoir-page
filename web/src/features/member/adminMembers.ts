@@ -13,8 +13,9 @@ export type ApplicationItem = {
 
 export type ApplicationPage = { items: ApplicationItem[]; page: number; size: number; total: number };
 
-export function getApplications(page = 0): Promise<ApplicationPage> {
-  return apiRequest<ApplicationPage>(`/admin/applications?status=APPROVAL_PENDING&page=${page}&size=20`);
+// init은 가입 승인 알림 띠가 1분마다 기억을 건너뛰고 새로 받을 때 { cache: "reload" }로 넘깁니다.
+export function getApplications(page = 0, init?: Pick<RequestInit, "cache">): Promise<ApplicationPage> {
+  return apiRequest<ApplicationPage>(`/admin/applications?status=APPROVAL_PENDING&page=${page}&size=20`, init);
 }
 
 export function approveApplication(id: number, memberType: "ACTIVE" | "OB"): Promise<void> {
