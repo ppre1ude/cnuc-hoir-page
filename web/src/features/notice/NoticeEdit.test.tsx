@@ -101,3 +101,12 @@ test("돌아가기 링크는 들어온 쪽을 유지합니다", async () => {
   expect(await screen.findByRole("link", { name: "← 공지 관리로" })).toHaveAttribute("href", "/admin/notices?page=3");
   await waitFor(() => expect(getAdminNotice).toHaveBeenCalledWith(5));
 });
+
+test("투표 정보를 못 받으면 투표를 붙이는 묶음을 숨기고 다시 시도를 보입니다", async () => {
+  vi.mocked(getAdminNoticePoll).mockRejectedValue(new ApiRequestError(500, "REQUEST_FAILED", "오류"));
+  renderWithSession(<NoticeEdit noticeId={5} />, staff);
+  expect(await screen.findByRole("alert")).toHaveTextContent("투표 정보를 불러오지 못했습니다.");
+  expect(screen.getByRole("button", { name: "다시 시도" })).toBeInTheDocument();
+  expect(screen.queryByRole("group", { name: "투표" })).not.toBeInTheDocument();
+  expect(screen.getByLabelText("제목")).toBeInTheDocument();
+});

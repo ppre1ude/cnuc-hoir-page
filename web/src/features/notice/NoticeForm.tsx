@@ -14,7 +14,7 @@ import styles from "../member/AdminPages.module.css";
 
 type Props =
   | { mode: "new" }
-  | { mode: "edit"; notice: Notice; poll: AdminPollView | null; returnTo: string; onSaved: (notice: Notice) => void };
+  | { mode: "edit"; notice: Notice; poll: AdminPollView | null; pollUnknown?: boolean; returnTo: string; onSaved: (notice: Notice) => void };
 
 // 투표 칸을 서버가 받는 꼴로 바꿉니다. 마감 시각은 한국 시간으로 적은 값입니다.
 function pollOf(form: Draft): PollInput | undefined | "missing" | "invalid" {
@@ -105,7 +105,8 @@ export function NoticeForm(props: Props) {
       <label htmlFor="notice-body">본문</label>
       <Textarea id="notice-body" value={form.body} onChange={(event) => update({ body: event.target.value })} maxLength={10000} rows={10} required />
       <p className={styles.hint}>주소를 적으면 단원 화면에서 링크가 됩니다.</p>
-      {editing && props.poll ? <NoticePollResults view={props.poll} /> : <NoticePollChoice value={form} onChange={update} />}
+      {/* 투표를 못 받았을 때는 있는지 모르는 투표를 또 붙이지 않게 묶음을 숨깁니다. */}
+      {editing && props.poll ? <NoticePollResults view={props.poll} /> : editing && props.pollUnknown ? null : <NoticePollChoice value={form} onChange={update} />}
       {error && <Feedback tone="error">{error}</Feedback>}
       <div className={styles.actions}>
         {!editing && <>

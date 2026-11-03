@@ -53,7 +53,7 @@ export function NoticeEdit({ noticeId }: { noticeId: number }) {
   return <>
     {pollState === "failed" && <section className={styles.page}><Feedback tone="error">투표 정보를 불러오지 못했습니다.
       <Button variant="secondary" type="button" onClick={() => setPollRetry((value) => value + 1)}>다시 시도</Button></Feedback></section>}
-    <NoticeForm key={notice.id} mode="edit" notice={notice} poll={poll} returnTo={returnTo}
+    <NoticeForm key={notice.id} mode="edit" notice={notice} poll={poll} pollUnknown={pollState === "failed"} returnTo={returnTo}
       onSaved={(saved) => { setNotice(saved); setPollRetry((value) => value + 1); }} />
   </>;
 }
