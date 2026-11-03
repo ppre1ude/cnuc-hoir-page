@@ -202,8 +202,6 @@ export function EventEditor() {
           <label htmlFor="event-start">시작 시각 (한국 시간)</label><Input id="event-start" type="datetime-local" value={startAt} step={300} onClick={(change) => openPicker(change.currentTarget)} onChange={(change) => setStartAt(change.target.value)} required />
           <label htmlFor="event-end">종료 시각 (한국 시간)</label><Input id="event-end" type="datetime-local" value={endAt} step={300} onClick={(change) => openPicker(change.currentTarget)} onChange={(change) => setEndAt(change.target.value)} required />
           <label className={styles.check}><Input type="checkbox" checked={obEligible} onChange={(change) => setObEligible(change.target.checked)} /> OB도 참여 대상</label>
-          <label className={styles.check}><Input type="checkbox" checked={publicVisible} onChange={(change) => setPublicVisible(change.target.checked)} /> 향후 공개 아카이브 대상</label>
-          <p className={styles.hint}>공개 대상으로 표시해도 현재는 외부에 일정을 노출하지 않습니다.</p>
           <div className={styles.actions}>{editable && <Button variant="primary" type="submit" disabled={busy || !title.trim()}>{busy ? "저장 중..." : "저장"}</Button>}
             <Button variant="secondary" type="button" onClick={clear}>닫기</Button></div>
         </form>
