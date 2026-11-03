@@ -63,18 +63,20 @@ public class EventController {
     // 운영진이 아니면 일정을 읽기 전에 거부합니다. 운영진은 종류·파트별 권한을 다시 확인합니다.
     @PostMapping("/admin/events")
     public ResponseEntity<EventItem> create(HttpServletRequest request, @Valid @RequestBody EventInput body) {
-        EventAccess access = accesses.of(sessions.require(request, Permission.MANAGE_EVENTS));
+        Member actor = sessions.require(request, Permission.MANAGE_EVENTS);
+        EventAccess access = accesses.of(actor);
         requireManage(access.canManage(body.kind(), body.part()));
         return ResponseEntity.status(HttpStatus.CREATED).body(item(events.create(body.title(), body.description(),
-                body.startAt(), body.endAt(), body.kind(), body.part(), body.obEligible(), body.publicVisible())));
+                body.startAt(), body.endAt(), body.kind(), body.part(), body.obEligible(), body.publicVisible(), actor)));
     }
 
     // 한 항목이라도 권한이 없으면 아무것도 저장하지 않습니다.
     @PostMapping("/admin/events/batch")
     public ResponseEntity<List<EventItem>> createBatch(HttpServletRequest request, @Valid @RequestBody EventBatchInput body) {
-        EventAccess access = accesses.of(sessions.require(request, Permission.MANAGE_EVENTS));
+        Member actor = sessions.require(request, Permission.MANAGE_EVENTS);
+        EventAccess access = accesses.of(actor);
         requireManage(body.events().stream().allMatch(item -> access.canManage(item.kind(), item.part())));
-        return ResponseEntity.status(HttpStatus.CREATED).body(events.createBatch(body.events()).stream().map(this::item).toList());
+        return ResponseEntity.status(HttpStatus.CREATED).body(events.createBatch(body.events(), actor).stream().map(this::item).toList());
     }
 
     @GetMapping("/events/rsvps/me")
@@ -142,7 +144,8 @@ public class EventController {
     private EventItem item(Event event) {
         return new EventItem(event.getId(), event.getTitle(), event.getDescription(), event.getStartAt(),
                 event.getEndAt(), event.getKind(), event.getPart(), event.isObEligible(), event.isPublicVisible(),
-                event.getCreatedAt(), event.getUpdatedAt(), event.getCancelledAt());
+                event.getCreatedAt(), event.getUpdatedAt(), event.getCancelledAt(),
+                event.getCreatedBy() == null ? null : event.getCreatedBy().getName());
     }
 
     public record EventInput(@NotBlank @Size(max = 200) String title,
@@ -152,5 +155,5 @@ public class EventController {
     public record RsvpInput(@NotNull EventRsvpService.Choice choice) {}
     public record EventItem(Long id, String title, String description, Instant startAt, Instant endAt,
             EventKind kind, Part part, boolean obEligible, boolean publicVisible, Instant createdAt, Instant updatedAt,
-            Instant cancelledAt) {}
+            Instant cancelledAt, String createdBy /* 등록한 단원 이름, 기록 전 일정은 null */) {}
 }

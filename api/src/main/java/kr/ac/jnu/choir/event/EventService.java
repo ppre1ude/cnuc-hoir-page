@@ -9,6 +9,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.HashSet;
 import kr.ac.jnu.choir.common.ApiException;
+import kr.ac.jnu.choir.member.Member;
 import kr.ac.jnu.choir.member.Part;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -47,14 +48,14 @@ public class EventService {
 
     @Transactional
     public Event create(String title, String description, Instant startAt, Instant endAt, EventKind kind, Part part,
-            boolean obEligible, boolean publicVisible) {
+            boolean obEligible, boolean publicVisible, Member createdBy) {
         validInterval(startAt, endAt);
         validKind(kind, part);
-        return events.save(new Event(title, description, startAt, endAt, kind, part, obEligible, publicVisible, clock));
+        return events.save(new Event(title, description, startAt, endAt, kind, part, obEligible, publicVisible, createdBy, clock));
     }
 
     @Transactional
-    public List<Event> createBatch(List<EventController.EventInput> input) {
+    public List<Event> createBatch(List<EventController.EventInput> input, Member createdBy) {
         if (input == null || input.isEmpty() || input.size() > 31) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EVENT_BATCH", "한 번에 1~31개 일정을 등록할 수 있습니다.");
         }
@@ -79,7 +80,7 @@ public class EventService {
                             + "에 시작하는 같은 제목의 일정이 이미 있습니다. 그 날짜를 빼고 다시 등록해 주세요.");
                 });
         return events.saveAll(input.stream().map(item -> new Event(item.title(), item.description(),
-                item.startAt(), item.endAt(), item.kind(), item.part(), item.obEligible(), item.publicVisible(), clock)).toList());
+                item.startAt(), item.endAt(), item.kind(), item.part(), item.obEligible(), item.publicVisible(), createdBy, clock)).toList());
     }
 
     private static String duplicateKey(String title, Instant startAt) {
