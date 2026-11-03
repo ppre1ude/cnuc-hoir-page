@@ -54,6 +54,7 @@ test("돌아온 결과 안내를 한 번 보이고 주소에서 지웁니다", a
   await waitFor(() => expect(nav.replaced.at(-1)).toBe("/admin/notices?page=2"));
   expect(screen.getByText("공지를 게시했습니다.")).toBeInTheDocument();
   expect(await screen.findByRole("link", { name: /연주회 안내/ })).toBeInTheDocument();
+  expect(getAdminNotices).toHaveBeenCalledTimes(1);
 });
 
 test("빈 목록과 실패를 안내합니다", async () => {

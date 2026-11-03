@@ -87,11 +87,12 @@ test("투표가 없으면 투표 묶음으로 붙일 수 있고 저장에 함께
   expect(await screen.findByText("저장했습니다.")).toBeInTheDocument();
 });
 
-test("공지가 없으면 안내와 공지 관리 링크를 보입니다", async () => {
+test("공지가 없으면 안내와 들어온 쪽으로 가는 공지 관리 링크를 보입니다", async () => {
+  nav.search = "page=3";
   vi.mocked(getAdminNotice).mockRejectedValue(new ApiRequestError(404, "NOTICE_NOT_FOUND", "공지를 찾을 수 없습니다."));
   renderWithSession(<NoticeEdit noticeId={5} />, staff);
   expect(await screen.findByRole("alert")).toHaveTextContent("공지를 찾을 수 없습니다.");
-  expect(screen.getByRole("link", { name: "공지 관리로" })).toHaveAttribute("href", "/admin/notices");
+  expect(screen.getByRole("link", { name: "공지 관리로" })).toHaveAttribute("href", "/admin/notices?page=3");
 });
 
 test("돌아가기 링크는 들어온 쪽을 유지합니다", async () => {

@@ -2,10 +2,13 @@ import { afterEach, expect, test, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { usePageParam } from "./pageParam";
 
-const nav = vi.hoisted(() => ({ search: "", replace: vi.fn() }));
+const nav = vi.hoisted(() => {
+  const replace = vi.fn();
+  return { search: "", replace, router: { replace } };
+});
 vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(nav.search),
-  useRouter: () => ({ replace: nav.replace }),
+  useRouter: () => nav.router,
   usePathname: () => "/notices",
 }));
 
@@ -29,4 +32,25 @@ test("쪽을 바꾸면 주소에 1부터 센 번호를 남기고 1쪽은 지우�
   const bare = renderHook(() => usePageParam());
   act(() => bare.result.current[1](0));
   expect(nav.replace).toHaveBeenLastCalledWith("/notices", { scroll: false });
+});
+
+test("잘못된 쪽 번호는 주소에서 지우고, 맞는 번호는 건드리지 않습니다", () => {
+  nav.search = "page=abc&notice=9";
+  renderHook(() => usePageParam());
+  expect(nav.replace).toHaveBeenLastCalledWith("/notices?notice=9", { scroll: false });
+  vi.clearAllMocks();
+  nav.search = "page=3";
+  renderHook(() => usePageParam());
+  expect(nav.replace).not.toHaveBeenCalled();
+});
+
+test("주소가 바뀌어도 setPage는 같은 함수라 effect를 다시 돌리지 않습니다", () => {
+  nav.search = "done=published";
+  const { result, rerender } = renderHook(() => usePageParam());
+  const setPage = result.current[1];
+  nav.search = "";
+  rerender();
+  expect(result.current[1]).toBe(setPage);
+  act(() => result.current[1](1));
+  expect(nav.replace).toHaveBeenLastCalledWith("/notices?page=2", { scroll: false });
 });

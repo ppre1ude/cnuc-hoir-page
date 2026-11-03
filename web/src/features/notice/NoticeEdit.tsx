@@ -43,7 +43,7 @@ export function NoticeEdit({ noticeId }: { noticeId: number }) {
 
   if (error === "missing") return <section className={styles.page}>
     <Feedback tone="error">공지를 찾을 수 없습니다.</Feedback>
-    <div className={styles.actions}><ActionLink variant="secondary" href="/admin/notices">공지 관리로</ActionLink></div>
+    <div className={styles.actions}><ActionLink variant="secondary" href={returnTo}>공지 관리로</ActionLink></div>
   </section>;
   if (error === "failed") return <section className={styles.page}>
     <Feedback tone="error">공지를 불러오지 못했습니다.</Feedback>
