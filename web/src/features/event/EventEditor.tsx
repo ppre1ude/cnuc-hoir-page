@@ -199,8 +199,8 @@ export function EventEditor() {
             {partChoices.map((item) => <option key={item} value={item}>{partLabel[item]}</option>)}</Select></>}
           <label htmlFor="event-title">제목</label><Input id="event-title" value={title} onChange={(change) => setTitle(change.target.value)} maxLength={200} required />
           <label htmlFor="event-description">내용 (선택)</label><Textarea id="event-description" value={description} onChange={(change) => setDescription(change.target.value)} maxLength={10000} rows={7} />
-          <label htmlFor="event-start">시작 시각 (한국 시간)</label><Input id="event-start" type="datetime-local" value={startAt} step={300} onClick={(change) => openPicker(change.currentTarget)} onChange={(change) => setStartAt(change.target.value)} required />
-          <label htmlFor="event-end">종료 시각 (한국 시간)</label><Input id="event-end" type="datetime-local" value={endAt} step={300} onClick={(change) => openPicker(change.currentTarget)} onChange={(change) => setEndAt(change.target.value)} required />
+          <label htmlFor="event-start">시작 시각 (한국 시간)</label><Input id="event-start" type="datetime-local" value={startAt} min="2000-01-01T00:00" step={300} onClick={(change) => openPicker(change.currentTarget)} onChange={(change) => setStartAt(change.target.value)} required />
+          <label htmlFor="event-end">종료 시각 (한국 시간)</label><Input id="event-end" type="datetime-local" value={endAt} min="2000-01-01T00:00" step={300} onClick={(change) => openPicker(change.currentTarget)} onChange={(change) => setEndAt(change.target.value)} required />
           <label className={styles.check}><Input type="checkbox" checked={obEligible} onChange={(change) => setObEligible(change.target.checked)} /> OB도 참여 대상</label>
           <div className={styles.actions}>{editable && <Button variant="primary" type="submit" disabled={busy || !title.trim()}>{busy ? "저장 중..." : "저장"}</Button>}
             <Button variant="secondary" type="button" onClick={clear}>닫기</Button></div>

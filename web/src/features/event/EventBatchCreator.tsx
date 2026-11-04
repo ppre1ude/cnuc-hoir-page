@@ -133,8 +133,8 @@ export function EventBatchCreator({ onCreated }: Props) {
           </Select></label>}
           <label className={styles.wide}>제목<Input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={200} required /></label>
           <label className={styles.wide}>내용 (선택)<Textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={10000} rows={3} /></label>
-          <label>공통 시작 시각 (한국 시간)<Input type="time" value={startTime} step={300} onClick={(event) => openPicker(event.currentTarget)} onChange={(event) => setStartTime(event.target.value)} required /></label>
-          <label>공통 종료 시각 (한국 시간)<Input type="time" value={endTime} step={300} onClick={(event) => openPicker(event.currentTarget)} onChange={(event) => setEndTime(event.target.value)} required /></label>
+          <label>공통 시작 시각 (한국 시간)<Input type="time" value={startTime} min="00:00" step={300} onClick={(event) => openPicker(event.currentTarget)} onChange={(event) => setStartTime(event.target.value)} required /></label>
+          <label>공통 종료 시각 (한국 시간)<Input type="time" value={endTime} min="00:00" step={300} onClick={(event) => openPicker(event.currentTarget)} onChange={(event) => setEndTime(event.target.value)} required /></label>
         </div>
         <label className={styles.check}><Input type="checkbox" checked={obEligible} onChange={(event) => setObEligible(event.target.checked)} /> OB도 참여 대상</label>
         {error && <Feedback tone="error">{error}</Feedback>}

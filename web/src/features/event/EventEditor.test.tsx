@@ -192,6 +192,7 @@ describe("운영진 일정 편집", () => {
     fireEvent.change(start, { target: { value: "2026-09-20T18:30" } });
     expect(screen.getByLabelText("종료 시각 (한국 시간)")).toHaveValue("2026-09-20T21:00");
     expect(start).toHaveAttribute("step", "300");
+    expect(start).toHaveAttribute("min", "2000-01-01T00:00");
   });
 
 });

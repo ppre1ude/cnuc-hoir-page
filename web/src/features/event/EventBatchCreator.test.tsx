@@ -108,8 +108,11 @@ describe("운영진 월간 일정 등록", () => {
     const end = screen.getByLabelText("공통 종료 시각 (한국 시간)");
     fireEvent.click(start);
     expect(showPicker).toHaveBeenCalledTimes(1);
+    // 5분 간격의 기준점을 자정으로 못 박습니다. min이 없으면 크롬 선택기가 빈 칸을 지금 시각에서 시작해 29, 34처럼 어긋난 분을 보여 줍니다.
     expect(start).toHaveAttribute("step", "300");
+    expect(start).toHaveAttribute("min", "00:00");
     expect(end).toHaveAttribute("step", "300");
+    expect(end).toHaveAttribute("min", "00:00");
     fireEvent.change(start, { target: { value: "19:00" } });
     expect(end).toHaveValue("");
   });
