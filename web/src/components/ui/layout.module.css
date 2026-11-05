@@ -1,0 +1,60 @@
+/* 화면 조립 틀. 값은 전부 tokens.css의 변수이며, 페이지와 패널 안에서 같은 모양을 냅니다. */
+.section + .section { margin-top: var(--space-8); }
+.panel .section + .section { margin-top: var(--space-6); padding-top: var(--space-6); border-top: 1px solid var(--color-line); }
+.sectionHead { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); }
+.sectionTitle { margin: 0; font-size: var(--text-section); font-weight: var(--weight-heading); letter-spacing: var(--tracking-heading); line-height: 1.3; overflow-wrap: anywhere; }
+.sectionActions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-left: auto; }
+
+.panel { composes: surface from "./ui.module.css"; }
+
+.list { border-top: 2px solid var(--color-ink); }
+ul.list { margin: 0; padding: 0; list-style: none; }
+.panel .list { border-top: 0; }
+.row { padding: var(--space-5) 0; border-bottom: 1px solid var(--color-line); }
+.panel .row:first-child { padding-top: 0; }
+.panel .row:last-child { padding-bottom: 0; border-bottom: 0; }
+
+/* 선택 행: 줄 전체가 링크나 버튼입니다. 고른 행은 왼쪽 초록 선과 옅은 배경으로 표시합니다. */
+.selectRow {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; column-gap: var(--space-3);
+  width: 100%; min-height: var(--control-medium); padding: var(--space-3) var(--space-2);
+  border: 0; border-bottom: 1px solid var(--color-line); border-left: 3px solid transparent;
+  background: transparent; color: var(--color-ink); font: inherit; text-align: left; text-decoration: none; cursor: pointer;
+}
+.selectRow:hover { background: var(--color-subtle); }
+.selectRow[aria-current="true"], .selectRow[aria-pressed="true"] { border-left-color: var(--color-primary); background: var(--color-selected); }
+.selectRow strong { font-weight: var(--weight-label); overflow-wrap: anywhere; }
+.selectRow span { color: var(--color-muted); font-size: var(--text-small); }
+.selectRow small { grid-column: 1 / -1; font-size: var(--text-small); }
+.selectRow [data-tone="attention"] { color: var(--color-attention); }
+.selectRow [data-tone="negative"] { color: var(--color-danger); }
+
+.form { display: flex; flex-direction: column; gap: var(--space-4); }
+.form > button[type="submit"] { align-self: flex-start; margin-top: var(--space-3); }
+.inlineForm { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.inlineForm label { font-size: var(--text-small); font-weight: var(--weight-label); }
+.inlineForm select, .inlineForm input { width: auto; min-width: 120px; }
+
+.field { display: grid; gap: var(--space-2); }
+.field > label { font-size: var(--text-label); font-weight: var(--weight-label); }
+.hint { margin: 0; color: var(--color-muted); font-size: var(--text-small); line-height: 1.6; }
+
+/* 이름과 값의 표. 이름 칸은 옅은 바탕, 값 칸은 흰 바탕입니다. */
+.facts { display: grid; grid-template-columns: 7rem minmax(0, 1fr); margin: 0; border: 1px solid var(--color-line); border-radius: var(--radius-panel); overflow: hidden; }
+.facts > div { display: contents; }
+.facts dt, .facts dd { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--color-line); }
+.facts > div:first-child > :is(dt, dd) { border-top: 0; }
+.facts dt { background: var(--color-subtle); color: var(--color-muted); font-size: var(--text-small); font-weight: var(--weight-label); line-height: 1.6; }
+.facts dd { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); margin: 0; font-size: var(--text-label); line-height: 1.6; overflow-wrap: anywhere; }
+
+.back { display: inline-flex; align-items: center; min-height: var(--control-medium); margin-bottom: var(--space-4); color: var(--color-primary); font-size: var(--text-label); font-weight: var(--weight-label); text-decoration: none; }
+.back:hover { text-decoration: underline; }
+
+.callout { padding: var(--space-4) var(--space-5); border: 1px solid var(--color-highlight); border-radius: var(--radius-control); background: var(--color-subtle); }
+.callout p { margin: 0; font-size: var(--text-label); line-height: 1.7; }
+
+@media (max-width: 760px) {
+  .sectionHead { flex-wrap: wrap; }
+  .facts { grid-template-columns: minmax(0, 1fr); }
+  .facts dd { border-top: 0; }
+}

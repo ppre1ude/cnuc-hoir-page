@@ -113,3 +113,5 @@ export function Pagination({ page, size, total, onChange, label }:
     <Button type="button" disabled={page + 1 >= pages} onClick={() => onChange(page + 1)}>다음</Button>
   </nav>;
 }
+
+export * from "./layout";
