@@ -1,19 +1,11 @@
-.page { composes: page from "../../components/ui/ui.module.css"; }
 
 /* 일정 등록과 등록된 일정은 단원 정보 관리 페이지와 같은 틀입니다. 왼쪽 좁은 칸, 오른쪽 넓은 칸. */
-.section { margin-top: var(--space-8); }
-.section h2 { margin: 0 0 var(--space-4); font-size: var(--text-section); letter-spacing: var(--tracking-heading); }
-.lead { margin: 0 0 var(--space-5); color: var(--color-muted); font-size: var(--text-label); line-height: 1.6; }
 .workspace { composes: workspace from "../member/AdminPages.module.css"; }
 .roster { composes: roster from "../member/AdminPages.module.css"; }
-.rosterList { composes: rosterList from "../member/AdminPages.module.css"; margin-top: var(--space-4); }
-.rosterRow { composes: rosterRow from "../member/AdminPages.module.css"; }
-.rosterRow small { color: var(--color-muted); }
 .detail { composes: detail from "../member/AdminPages.module.css"; }
 .placeholder { composes: placeholder from "../member/AdminPages.module.css"; }
 .toList { composes: toList from "../member/AdminPages.module.css"; }
-.roster > label, .picker > label { display: block; margin-bottom: var(--space-1); font-size: var(--text-label); font-weight: var(--weight-label); }
-.roster > p { margin: var(--space-4) 0 0; color: var(--color-muted); font-size: var(--text-label); }
+.picker > label { display: block; margin-bottom: var(--space-1); font-size: var(--text-label); font-weight: var(--weight-label); }
 
 /* 왼쪽 달력. 날짜 칸은 작고 촘촘하게, 고른 날은 초록으로 채웁니다. */
 .weekdays, .days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
@@ -31,20 +23,9 @@
 .fieldGrid .wide { grid-column: 1 / -1; }
 .fieldGrid input, .fieldGrid select, .fieldGrid textarea { display: block; margin-top: var(--space-2); font-weight: var(--weight-body); }
 
-.detailHeader { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
-.detailHeader h3 { margin: 0; font-size: var(--text-section); letter-spacing: var(--tracking-heading); overflow-wrap: anywhere; }
-.when { margin: var(--space-1) 0 var(--space-4); color: var(--color-muted); font-size: var(--text-label); }
 
-.form { display: flex; flex-direction: column; gap: var(--space-2); }
-.form label { font-size: var(--text-label); font-weight: var(--weight-label); }
-.form input:not([type="checkbox"]), .form textarea { margin-bottom: var(--space-2); }
 .check { display: flex; align-items: center; gap: var(--space-2); min-height: var(--control-medium); font-size: var(--text-label); }
-.form .check { font-weight: var(--weight-body); }
-.hint { margin: 0; color: var(--color-muted); font-size: var(--text-small); }
-.actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
 
-.rsvpSummary { margin-top: var(--space-6); padding-top: var(--space-6); border-top: 1px solid var(--color-line); }
-.rsvpSummary h3 { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin: 0 0 var(--space-3); font-size: var(--text-body); }
 .rsvpCounts { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); color: var(--color-primary); font-weight: var(--weight-label); }
 .rsvpMembers { max-height: 300px; margin: 0; padding: 0; overflow-y: auto; list-style: none; }
 .rsvpMembers li { display: flex; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) 0; border-top: 1px solid var(--color-line); }
@@ -55,5 +36,3 @@
   .fieldGrid { grid-template-columns: minmax(0, 1fr); }
 }
 
-.skeletonHeader { composes: pageHeader from "../../components/ui/ui.module.css"; }
-.skeletonHeading { margin-bottom: var(--space-4); }

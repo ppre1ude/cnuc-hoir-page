@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Feedback, SkeletonRows } from "../../components/ui";
+import { Button, Feedback, Section, SkeletonRows } from "../../components/ui";
 
 import { useEffect, useState } from "react";
 import { getAdminEventRsvps, type AdminEventRsvps as Rsvps } from "./events";
@@ -20,10 +20,9 @@ export function AdminEventRsvps({ eventId }: { eventId: number }) {
     return () => { alive = false; };
   }, [eventId, retry]);
 
-  return <div className={styles.rsvpSummary}>
-    <h3>참석 응답 <Button variant="secondary" type="button" disabled={!data && !error} onClick={() => {
+  return <Section level={3} title="참석 응답" actions={<Button variant="secondary" size="small" type="button" disabled={!data && !error} onClick={() => {
       setData(null); setError(""); setRetry((value) => value + 1);
-    }}>새로고침</Button></h3>
+    }}>새로고침</Button>}>
     {error && <Feedback tone="error">{error} <Button variant="secondary" type="button" onClick={() => { setError(""); setRetry((value) => value + 1); }}>다시 시도</Button></Feedback>}
     {!data && !error && <SkeletonRows count={3} label="응답을 불러오는 중입니다." />}
     {data && <>
@@ -33,5 +32,5 @@ export function AdminEventRsvps({ eventId }: { eventId: number }) {
           <strong>{member.choice === "ATTENDING" ? "참석" : member.choice === "ABSENT" ? "불참" : "미응답"}</strong></li>)}
       </ul>
     </>}
-  </div>;
+  </Section>;
 }
