@@ -1,15 +1,14 @@
 "use client";
 
-import { Button, Feedback, PageHeader, StatusBadge } from "../../components/ui";
+import { ActionLink, BackLink, Button, Facts, Feedback, Linkify, PageHeader, Panel, Section, StatusBadge } from "../../components/ui";
+import ui from "../../components/ui/ui.module.css";
 import { pollWhileVisible } from "../../lib/poll";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { canManageRoster } from "../auth/session";
 import { useSession } from "../auth/SessionProvider";
-import { getEvent, getMyEventRsvp, type ChoirEvent, type EventRsvpChoice } from "./events";
-import { EventDetail } from "./EventDetail";
+import { eventAudienceLabel, eventEndLabel, getEvent, getMyEventRsvp, isEventTarget, seoulDateTime, type ChoirEvent, type EventRsvpChoice } from "./events";
 import { EventPageSkeleton } from "./EventPageSkeleton";
 import { EventRsvp } from "./EventRsvp";
 import { attendanceTone, getEventAttendance, memberAttendanceLabel, type AttendanceState } from "../attendance/attendance";
@@ -62,20 +61,32 @@ export function EventPage() {
     <span role="status" className={styles.srOnly}>일정을 불러오는 중입니다.</span><EventPageSkeleton />
   </main>;
 
-  return <main id="member-content" tabIndex={-1} className={styles.eventPage}>
-    <Link className={styles.backLink} href="/dashboard">← 홈</Link>
+  return <main id="member-content" tabIndex={-1} className={ui.readingPage}>
+    <BackLink href="/dashboard">← 홈</BackLink>
     <PageHeader title={event?.title ?? "일정"} />
     {error && <Feedback tone="error">{error} <Button variant="secondary" onClick={() => { setError(""); setRetry((value) => value + 1); }}>다시 시도</Button></Feedback>}
     {!validId ? <p>일정 주소를 확인해 주세요.</p> :
-      event && <div className={styles.eventPageCard}><EventDetail event={event} memberType={session.memberType} part={session.part}
-        checkInOpen={attendance?.checkInOpen ?? false} showTitle={false} />
-        {rsvpLoaded && <EventRsvp key={`${event.id}-${event.startAt}`} event={event} memberType={session.memberType} part={session.part} choice={rsvpChoice} onSaved={setRsvpChoice} />}
+      event && <Panel>
+        <Facts items={[
+          { label: "일시", value: <span className={event.cancelledAt ? styles.cancelled : undefined}>
+            <time dateTime={event.startAt}>{seoulDateTime(event.startAt)}</time><span aria-hidden="true"> ~ </span><time dateTime={event.endAt}>{eventEndLabel(event)}</time>
+          </span> },
+          { label: "대상", value: <StatusBadge tone={event.obEligible ? "positive" : "neutral"}>{eventAudienceLabel(event, session.memberType)}</StatusBadge> },
+          ...(event.cancelledAt ? [{ label: "상태", value: <StatusBadge tone="neutral">취소된 일정입니다</StatusBadge> }] : []),
+        ]} />
+        {event.description && <p className={styles.description}><Linkify text={event.description} /></p>}
+        {rsvpLoaded && <EventRsvp layout="section" key={`${event.id}-${event.startAt}`} event={event} memberType={session.memberType} part={session.part} choice={rsvpChoice} onSaved={setRsvpChoice} />}
         {rsvpError && <Feedback tone="error">{rsvpError} <Button variant="secondary" type="button" onClick={() => {
           setRsvpError(""); setRsvpRetry((value) => value + 1);
         }}>다시 시도</Button></Feedback>}
         {/* 취소된 일정은 남은 출석 기록이 있을 때만 보여 줍니다. */}
-        {!(event.cancelledAt && attendance?.status === "NOT_ELIGIBLE") && <div className={styles.eventAttendance}><strong>내 출석</strong>{attendance ? <StatusBadge tone={attendanceTone(attendance.status)}>{memberAttendanceLabel(attendance)}</StatusBadge> : !attendanceError && <span role="status">확인 중</span>}</div>}
-        {attendanceError && <Feedback tone="error">{attendanceError}</Feedback>}
-        {canManageRoster(session, event) && <p><Link href={`/admin/events/${event.id}/attendance`}>운영진 출석 관리</Link></p>}</div>}
+        {!(event.cancelledAt && attendance?.status === "NOT_ELIGIBLE") && <Section title="내 출석"
+          badge={attendance ? <StatusBadge tone={attendanceTone(attendance.status)}>{memberAttendanceLabel(attendance)}</StatusBadge> : !attendanceError && <span role="status">확인 중</span>}
+          actions={canManageRoster(session, event) && <ActionLink variant="secondary" size="small" href={`/admin/events/${event.id}/attendance`}>운영진 출석 관리</ActionLink>}>
+          {attendanceError && <Feedback tone="error">{attendanceError}</Feedback>}
+          {attendance?.checkInOpen && isEventTarget(event, { memberType: session.memberType, part: session.part }) &&
+            <ActionLink variant="primary" href={`/events/${event.id}/check-in`}>현장 출석하기</ActionLink>}
+        </Section>}
+      </Panel>}
   </main>;
 }

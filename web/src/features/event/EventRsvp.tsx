@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Feedback, StatusBadge } from "../../components/ui";
+import { Button, Feedback, Section, StatusBadge } from "../../components/ui";
 
 import { useEffect, useOptimistic, useState, useTransition } from "react";
 import { ApiRequestError } from "../../lib/api";
@@ -14,11 +14,13 @@ type Props = {
   part?: Part | null;
   choice: EventRsvpChoice | null;
   onSaved: (choice: EventRsvpChoice) => void;
+  // "section"은 일정 상세의 섹션(제목 줄에 배지), "row"는 홈 달력 카드의 한 줄 묶음입니다.
+  layout?: "row" | "section";
 };
 
 const labels = { ATTENDING: "참석", ABSENT: "불참" } as const;
 
-export function EventRsvp({ event, memberType, part = null, choice, onSaved }: Props) {
+export function EventRsvp({ event, memberType, part = null, choice, onSaved, layout = "row" }: Props) {
   const [busy, startSaving] = useTransition();
   // 누른 즉시 이 값으로 배지를 바꾸고, 저장이 끝나면 부모가 준 choice로 돌아갑니다. 실패해도 이전 값으로 돌아갑니다.
   const [shown, showChoice] = useOptimistic(choice);
@@ -59,15 +61,20 @@ export function EventRsvp({ event, memberType, part = null, choice, onSaved }: P
 
   // 저장 중에 disabled를 걸면 누른 버튼에서 초점이 빠지므로 aria-disabled로 알리고 respond에서 막습니다.
   if (!eligible || event.cancelledAt) return null;
-  return <div className={styles.rsvp} role="group" aria-label="참석 응답" aria-busy={busy}>
-    <strong>참석 응답</strong>
+  const badges = <>
     <StatusBadge tone={shown ? "positive" : "neutral"}>{shown ? labels[shown] : "미응답"}</StatusBadge>
     {closed && <StatusBadge>응답 마감</StatusBadge>}
-    {!closed && <div className={styles.rsvpButtons}>
-      {(["ATTENDING", "ABSENT"] as const).map((item) => <Button variant="secondary" type="button" key={item}
-        aria-pressed={shown === item} aria-disabled={busy || undefined} onClick={() => respond(item)}>{labels[item]}</Button>)}
-    </div>}
+  </>;
+  const buttons = !closed && <div className={styles.rsvpButtons} {...(layout === "section" ? { role: "group", "aria-label": "참석 응답", "aria-busy": busy } : {})}>
+    {(["ATTENDING", "ABSENT"] as const).map((item) => <Button variant="secondary" type="button" key={item}
+      aria-pressed={shown === item} aria-disabled={busy || undefined} onClick={() => respond(item)}>{labels[item]}</Button>)}
+  </div>;
+  const notes = <>
     {error && <Feedback tone="error">{error}</Feedback>}
     <span className={styles.srOnly} role="status">{savedMessage}</span>
+  </>;
+  if (layout === "section") return <Section title="참석 응답" badge={badges}>{buttons}{notes}</Section>;
+  return <div className={styles.rsvp} role="group" aria-label="참석 응답" aria-busy={busy}>
+    <strong>참석 응답</strong>{badges}{buttons}{notes}
   </div>;
 }

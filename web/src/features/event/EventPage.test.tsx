@@ -6,19 +6,39 @@ import * as attendance from "../attendance/attendance";
 import { renderWithSession, sessionFixture } from "../../test/session";
 
 vi.mock("next/navigation", () => ({ useParams: () => ({ id: "3" }) }));
-vi.mock("./events", async (importOriginal) => ({ ...await importOriginal<typeof events>(), getEvent: vi.fn() }));
+vi.mock("./events", async (importOriginal) => ({ ...await importOriginal<typeof events>(), getEvent: vi.fn(), getMyEventRsvp: vi.fn() }));
 vi.mock("../attendance/attendance", async (importOriginal) => ({
   ...await importOriginal<typeof attendance>(), getEventAttendance: vi.fn(),
 }));
 
 const member = sessionFixture({ id: 2 });
+const fixture: events.ChoirEvent = { id: 3, title: "연습", description: "설명", cancelledAt: null, startAt: "2026-09-27T09:00:00Z",
+  endAt: "2026-09-27T12:00:00Z", kind: "EVENT", part: null, obEligible: false, publicVisible: false,
+  createdAt: "2026-09-01T00:00:00Z", updatedAt: "2026-09-01T00:00:00Z" };
 
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   vi.setSystemTime(new Date("2026-09-27T08:00:00Z"));
-  vi.mocked(events.getEvent).mockResolvedValue({ id: 3, title: "연습", description: "설명", cancelledAt: null, startAt: "2026-09-27T09:00:00Z",
-    endAt: "2026-09-27T12:00:00Z", kind: "EVENT", part: null, obEligible: false, publicVisible: false,
-    createdAt: "2026-09-01T00:00:00Z", updatedAt: "2026-09-01T00:00:00Z" });
+  vi.mocked(events.getEvent).mockResolvedValue(fixture);
+  vi.mocked(events.getMyEventRsvp).mockResolvedValue({ eventId: 3, choice: null });
+});
+
+test("일정 상세는 일시와 대상을 사실 표로, 참석 응답과 내 출석을 섹션으로 보여 줍니다", async () => {
+  vi.mocked(attendance.getEventAttendance).mockResolvedValue({ eventId: 3, eventTitle: "연습", startAt: fixture.startAt, status: "NOT_OPEN", checkInOpen: false });
+  renderWithSession(<EventPage />, member);
+  expect(await screen.findByText("일시", { selector: "dt" })).toBeInTheDocument();
+  expect(screen.getByText("대상", { selector: "dt" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 2, name: "참석 응답" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 2, name: "내 출석" })).toBeInTheDocument();
+});
+
+test("취소된 일정은 사실 표에 상태를 적고 참석 응답을 두지 않습니다", async () => {
+  vi.mocked(events.getEvent).mockResolvedValue({ ...fixture, cancelledAt: "2026-09-20T00:00:00Z" });
+  vi.mocked(attendance.getEventAttendance).mockResolvedValue({ eventId: 3, eventTitle: "연습", startAt: fixture.startAt, status: "NOT_OPEN", checkInOpen: false });
+  renderWithSession(<EventPage />, member);
+  const term = await screen.findByText("상태", { selector: "dt" });
+  expect(term.nextElementSibling).toHaveTextContent("취소된 일정입니다");
+  expect(screen.queryByRole("heading", { name: "참석 응답" })).toBeNull();
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); vi.useRealTimers(); });
 
