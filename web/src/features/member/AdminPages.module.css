@@ -46,7 +46,7 @@
 .reject summary::before { content: ""; width: .4em; height: .4em; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: translateY(-.1em) rotate(-45deg); transition: transform var(--motion-fast); }
 .reject[open] summary::before { transform: translateY(-.15em) rotate(45deg); }
 .reject summary:hover, .reject[open] summary { background: var(--color-danger-background); border-color: var(--color-danger); }
-.reject .fieldGroup { margin-top: var(--space-3); }
+.reject .rejectBody { display: grid; gap: var(--space-3); margin-top: var(--space-3); }
 .more { margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--color-line); }
 .more summary { padding: var(--space-3) 0; color: var(--color-primary); font-size: var(--text-label); font-weight: var(--weight-label); cursor: pointer; }
 .more .hint { margin-bottom: var(--space-4); }
@@ -116,7 +116,8 @@
 /* 목록 맨 위의 "새 공지" 같은 새로 만들기 버튼은 목록 폭을 꽉 채웁니다. */
 .newItem { width: 100%; margin-bottom: var(--space-3); }
 .roster > p:not([class]) { margin: var(--space-4) 0 0; }
-.detail { composes: surface from "../../components/ui/ui.module.css"; }
+/* 두 칸 배치의 상세 칸입니다. 카드 모양은 안의 Panel이 맡습니다. */
+.detail { min-width: 0; }
 .detail article > p:not([class]) { margin: var(--space-2) 0 0; color: var(--color-muted); font-size: var(--text-label); overflow-wrap: anywhere; }
 .detail .fieldGroup { max-width: 560px; }
 .placeholder { margin: 0; padding: var(--space-10) var(--space-6); color: var(--color-muted); font-size: var(--text-label); text-align: center; }

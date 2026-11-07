@@ -18,6 +18,14 @@ afterEach(() => { cleanup(); vi.clearAllMocks(); });
 const roster = async () => within(await screen.findByRole("list", { name: "신청자 목록" }));
 const fact = (detail: HTMLElement, label: string) => within(detail).getByText(label, { selector: "dt" }).nextElementSibling;
 
+test("신청자 상세는 사실 표와 라벨이 이어진 반려 이유 입력을 보여 줍니다", async () => {
+  render(<ApplicationQueue />);
+  await screen.findByText("member@example.org");
+  expect(screen.getByText("이메일", { selector: "dt" }).nextElementSibling).toHaveTextContent("member@example.org");
+  expect(screen.getByLabelText("반려 이유")).toHaveAttribute("id", "reason-2");
+  expect(screen.getByRole("heading", { level: 2, name: "신청자" })).toBeInTheDocument();
+});
+
 test("마지막 페이지의 마지막 신청을 처리하면 첫 페이지를 다시 불러옵니다", async () => {
   const firstPage = Array.from({ length: 20 }, (_, index) => ({
     id: index + 2, name: `${index + 1}번 신청자`, email: `member${index + 1}@example.org`,
@@ -95,7 +103,7 @@ test("목록에는 이름과 파트, 기수만 보이고, 처음 신청자가 �
   expect(first).toHaveTextContent("소프라노 5기");
   expect(first).toHaveAttribute("aria-current", "true");
   expect((await roster()).getByRole("button", { name: /^Kim/ })).toHaveTextContent("정보 미입력");
-  const detail = screen.getByRole("heading", { name: "홍길동" }).closest("article")!;
+  const detail = screen.getByRole("heading", { name: "홍길동" }).closest("section")!;
   expect(fact(detail, "파트")).toHaveTextContent("소프라노");
   expect(fact(detail, "기수")).toHaveTextContent("5기");
   expect(fact(detail, "신청일")).toHaveTextContent("2026. 9. 27.");
@@ -104,7 +112,7 @@ test("목록에는 이름과 파트, 기수만 보이고, 처음 신청자가 �
   // 반려는 접혀 있고 승인만 바로 보입니다.
   expect(screen.getByLabelText("홍길동 가입 신청 반려").closest("details")).not.toHaveAttribute("open");
   await userEvent.click((await roster()).getByRole("button", { name: /^Kim/ }));
-  const kim = (await screen.findByRole("heading", { name: "Kim" })).closest("article")!;
+  const kim = (await screen.findByRole("heading", { name: "Kim" })).closest("section")!;
   expect(screen.queryByRole("heading", { name: "홍길동" })).not.toBeInTheDocument();
   expect(fact(kim, "파트")).toHaveTextContent("미입력");
   expect(fact(kim, "기수")).toHaveTextContent("미입력");
@@ -127,7 +135,7 @@ test("API가 아직 파트와 기수를 보내지 않아도 정보 미입력으�
   vi.mocked(getApplications).mockResolvedValue({ items: [legacy], page: 0, size: 20, total: 1 });
   render(<ApplicationQueue />);
   expect(await (await roster()).findByRole("button", { name: /^Lee/ })).toHaveTextContent("정보 미입력");
-  const detail = screen.getByRole("heading", { name: "Lee" }).closest("article")!;
+  const detail = screen.getByRole("heading", { name: "Lee" }).closest("section")!;
   expect(fact(detail, "기수")).toHaveTextContent("미입력");
 });
 
