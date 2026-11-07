@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Button, Input, Select, Feedback, StatusBadge } from "../../components/ui";
+import { Button, Facts, Feedback, Form, Input, Select, StatusBadge } from "../../components/ui";
+import ui from "../../components/ui/ui.module.css";
 import { ApiRequestError } from "../../lib/api";
 import { can, type Department, type MemberSession, type Part, type Role, type Unit } from "../auth/session";
 import { assignMemberRole, removeMemberRole, setSiteAdmin, updateMemberProfile, type MemberItem } from "./adminMembers";
@@ -12,13 +13,13 @@ export const memberTypeLabel = { ACTIVE: "활동 단원", OB: "OB" } as const;
 
 // 구분·파트·기수·직책을 항목 이름 칸과 값 칸으로 나눈 표로 보여, 어느 값이 무엇인지 헷갈리지 않게 합니다.
 export function MemberFacts({ item }: { item: MemberItem }) {
-  return <dl className={styles.facts}>
-    <div><dt>단원 구분</dt><dd>{item.memberType ? memberTypeLabel[item.memberType] : "미지정"}</dd></div>
-    <div><dt>파트</dt><dd>{item.part ? partLabel[item.part] : "미지정"}</dd></div>
-    <div><dt>기수</dt><dd>{item.cohort === null ? "미지정" : `${item.cohort}기`}</dd></div>
-    <div><dt>직책</dt><dd>{item.roles.length === 0 ? "없음"
-      : item.roles.map((assigned) => <StatusBadge key={assigned.id} tone="positive">{describeRole(assigned)}</StatusBadge>)}</dd></div>
-  </dl>;
+  return <Facts items={[
+    { label: "단원 구분", value: item.memberType ? memberTypeLabel[item.memberType] : "미지정" },
+    { label: "파트", value: item.part ? partLabel[item.part] : "미지정" },
+    { label: "기수", value: item.cohort === null ? "미지정" : `${item.cohort}기` },
+    { label: "직책", value: item.roles.length === 0 ? "없음"
+      : item.roles.map((assigned) => <StatusBadge key={assigned.id} tone="positive">{describeRole(assigned)}</StatusBadge>) },
+  ]} />;
 }
 
 // 직책 폼이 안 보이는 이유를 그 자리에서 알립니다. 승인과 단원 구분이 먼저라는 걸 화면이 말해 줘야 합니다.
@@ -81,7 +82,7 @@ export function MemberRoles({ item, session, open, onChanged }:
   return <details className={styles.more} open={open}>
     <summary aria-label={`${item.name} 단원 정보 수정`}>단원 정보 수정</summary>
     <div className={styles.roles}>
-      <form className={styles.inlineForm} onSubmit={saveProfile}>
+      <Form layout="inline" onSubmit={saveProfile}>
         {approved && <>
           <label htmlFor={`member-type-${item.id}`}>단원 구분</label>
           <Select id={`member-type-${item.id}`} aria-label={`${item.name} 단원 구분`} value={memberType} onChange={(event) => setMemberType(event.target.value as "ACTIVE" | "OB" | "")}>
@@ -96,12 +97,12 @@ export function MemberRoles({ item, session, open, onChanged }:
         <label htmlFor={`cohort-${item.id}`}>기수</label>
         <Input id={`cohort-${item.id}`} aria-label={`${item.name} 기수`} type="number" min={1} value={cohort} onChange={(event) => setCohort(event.target.value)} />
         <Button variant="secondary" type="submit" disabled={busy} aria-label={`${item.name} 정보 저장`}>저장</Button>
-      </form>
+      </Form>
       {item.roles.length > 0 && <div className={styles.roleList}>
         {item.roles.map((assigned) => (leadership || (assigned.role !== "PRESIDENT" && assigned.role !== "VICE_PRESIDENT")) && <Button key={assigned.id} variant="secondary" type="button" disabled={busy}
           aria-label={`${item.name} ${describeRole(assigned)} 해제`} onClick={() => void run(() => removeMemberRole(item.id, assigned.id), "직책을 해제하지 못했습니다.")}>{describeRole(assigned)} 해제</Button>)}
       </div>}
-      {eligible ? <form className={styles.inlineForm} onSubmit={add}>
+      {eligible ? <Form layout="inline" onSubmit={add}>
         <label htmlFor={`role-${item.id}`}>추가할 직책</label>
         <Select id={`role-${item.id}`} aria-label={`${item.name} 추가할 직책`} value={role} onChange={(event) => setRole(event.target.value as Role | "")}>
           <option value="">선택</option>
@@ -126,7 +127,7 @@ export function MemberRoles({ item, session, open, onChanged }:
           </Select>
         </>}
         <Button variant="secondary" type="submit" disabled={busy || !role} aria-label={`${item.name} 직책 추가`}>직책 추가</Button>
-      </form> : <p className={styles.hint}>{blocker}</p>}
+      </Form> : <p className={ui.muted}>{blocker}</p>}
       {leadership && eligible && item.id !== session.id && <Button variant={item.admin ? "danger" : "secondary"} type="button" disabled={busy}
         aria-label={`${item.name} ${item.admin ? "사이트 관리자 해제" : "사이트 관리자 지정"}`}
         onClick={() => void run(() => setSiteAdmin(item.id, !item.admin), "사이트 관리자 권한을 바꾸지 못했습니다.")}>
