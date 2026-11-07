@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { Button, Facts, Field, Input, List, RowButton, Section, StatusBadge } from ".";
+import { Button, Facts, Field, Input, List, Row, RowButton, Section, StatusBadge } from ".";
 
 afterEach(cleanup);
 
@@ -36,6 +36,16 @@ test("Section은 level 3이면 h3를 그리고 배지와 동작을 제목 줄에
 test("Section에 id를 주면 section이 그 제목으로 이름을 얻습니다", () => {
   render(<Section id="my-attendance" title="내 출석">내용</Section>);
   expect(screen.getByRole("region", { name: "내 출석" })).toBeInTheDocument();
+});
+
+test("Section은 titleProps로 제목에 초점 속성을 줄 수 있습니다", () => {
+  render(<Section title="발급된 링크" titleProps={{ tabIndex: -1 }}>내용</Section>);
+  expect(screen.getByRole("heading", { name: "발급된 링크" })).toHaveAttribute("tabindex", "-1");
+});
+
+test("Row는 as=li로 목록 항목이 됩니다", () => {
+  render(<List as="ul"><Row as="li">하나</Row></List>);
+  expect(screen.getByRole("listitem")).toHaveTextContent("하나");
 });
 
 test("Facts는 이름과 값을 dt, dd로 그립니다", () => {

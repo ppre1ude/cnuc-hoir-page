@@ -9,14 +9,16 @@ const join = (...classes: (string | undefined)[]) => classes.filter(Boolean).joi
 type SectionProps = {
   title: ReactNode; badge?: ReactNode; actions?: ReactNode; description?: ReactNode;
   level?: 2 | 3; id?: string; className?: string; children?: ReactNode;
+  // 제목에 ref나 tabIndex처럼 초점을 옮길 때 필요한 속성을 줍니다.
+  titleProps?: ComponentProps<"h2">;
 };
 
 // 소제목 한 덩어리. 제목 옆에 상태 배지, 오른쪽 끝에 동작, 아래에 설명 한 줄.
-export function Section({ title, badge, actions, description, level = 2, id, className, children }: SectionProps) {
+export function Section({ title, badge, actions, description, level = 2, id, className, children, titleProps }: SectionProps) {
   const Heading = level === 3 ? "h3" : "h2";
   return <section className={join(styles.section, className)} aria-labelledby={id}>
     <div className={styles.sectionHead}>
-      <Heading id={id} className={styles.sectionTitle}>{title}</Heading>
+      <Heading {...titleProps} id={id ?? titleProps?.id} className={join(styles.sectionTitle, titleProps?.className)}>{title}</Heading>
       {badge}
       {actions && <div className={styles.sectionActions}>{actions}</div>}
     </div>
@@ -34,8 +36,8 @@ export function List({ as: Tag = "div", className, ...props }: HTMLAttributes<HT
   return <Tag className={join(styles.list, className)} {...props} />;
 }
 
-export function Row({ className, ...props }: ComponentProps<"div">) {
-  return <div className={join(styles.row, className)} {...props} />;
+export function Row({ as: Tag = "div", className, ...props }: HTMLAttributes<HTMLElement> & { as?: "div" | "li" }) {
+  return <Tag className={join(styles.row, className)} {...props} />;
 }
 
 export function RowLink({ className, ...props }: ComponentProps<typeof Link>) {
@@ -76,6 +78,7 @@ export function BackLink({ className, ...props }: ComponentProps<typeof Link>) {
   return <Link className={join(styles.back, className)} {...props} />;
 }
 
-export function Callout({ className, ...props }: ComponentProps<"div">) {
-  return <div className={join(styles.callout, className)} {...props} />;
+// 본문 곁에 두는 안내 상자라 aside로 그립니다.
+export function Callout({ className, ...props }: ComponentProps<"aside">) {
+  return <aside className={join(styles.callout, className)} {...props} />;
 }
