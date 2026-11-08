@@ -36,7 +36,7 @@ export function List({ as: Tag = "div", className, ...props }: HTMLAttributes<HT
   return <Tag className={join(styles.list, className)} {...props} />;
 }
 
-export function Row({ as: Tag = "div", className, ...props }: HTMLAttributes<HTMLElement> & { as?: "div" | "li" }) {
+export function Row({ as: Tag = "div", className, ...props }: HTMLAttributes<HTMLElement> & { as?: "div" | "li" | "article" }) {
   return <Tag className={join(styles.row, className)} {...props} />;
 }
 

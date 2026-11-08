@@ -47,3 +47,10 @@ test("같은 제목의 연습을 서울 기준 날짜와 요일로 구분한다"
   expect(await screen.findByRole("link", { name: /09\.20 \(일\).*정기 연습.*출석 완료/ })).toHaveAttribute("href", "/events/6");
   expect(screen.getByRole("link", { name: /09\.13 \(일\).*정기 연습.*미출석/ })).toHaveAttribute("href", "/events/5");
 });
+
+test("출석 기록은 목록이고 각 줄은 일정 상세로 가는 링크다", async () => {
+  getMyAttendance.mockResolvedValue([{ eventId: 3, eventTitle: "정기 연습", startAt: "2026-09-20T09:00:00Z", status: "MISSED", checkInOpen: false }]);
+  render(<MyAttendancePage />);
+  expect(await screen.findByRole("list", { name: "일정별 출석 기록" })).toBeInTheDocument();
+  expect(screen.getAllByRole("link")[0]).toHaveAttribute("href", "/events/3");
+});

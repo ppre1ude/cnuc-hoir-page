@@ -12,6 +12,8 @@
 ul.list { margin: 0; padding: 0; list-style: none; }
 .panel .list { border-top: 0; }
 .row { padding: var(--space-5) 0; border-bottom: 1px solid var(--color-line); }
+/* 내용 행의 제목은 섹션 제목과 같은 크기입니다. 공지 목록처럼 제목 안에 펼침 버튼이 들어가기도 합니다. */
+.row > h2, .row > h3 { margin: 0; font-size: var(--text-section); font-weight: var(--weight-heading); letter-spacing: var(--tracking-heading); overflow-wrap: anywhere; }
 .panel .row:first-child { padding-top: 0; }
 .panel .row:last-child { padding-bottom: 0; border-bottom: 0; }
 
@@ -24,9 +26,10 @@ ul.list { margin: 0; padding: 0; list-style: none; }
 }
 .selectRow:hover { background: var(--color-subtle); }
 .selectRow[aria-current="true"], .selectRow[aria-pressed="true"] { border-left-color: var(--color-primary); background: var(--color-selected); }
-.selectRow strong { font-weight: var(--weight-label); overflow-wrap: anywhere; }
-.selectRow span { color: var(--color-muted); font-size: var(--text-small); }
-.selectRow small { grid-column: 1 / -1; font-size: var(--text-small); }
+/* 바로 아래 자식만 꾸밉니다. 왼쪽 굵은 글자는 이름, 오른쪽 span은 보조 정보, small은 두 칸에 걸친 상태 줄입니다. */
+.selectRow > strong { font-weight: var(--weight-label); overflow-wrap: anywhere; }
+.selectRow > span { color: var(--color-muted); font-size: var(--text-small); }
+.selectRow > small { grid-column: 1 / -1; font-size: var(--text-small); }
 .selectRow [data-tone="attention"] { color: var(--color-attention); }
 .selectRow [data-tone="negative"] { color: var(--color-danger); }
 
