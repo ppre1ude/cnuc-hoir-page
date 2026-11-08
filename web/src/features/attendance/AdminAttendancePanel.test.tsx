@@ -160,7 +160,7 @@ test("출석 명단은 이메일 없이 이름 옆에 파트와 기수를 보입
 
   expect(await screen.findByText("김소라 소프라노 5기")).toBeInTheDocument();
   expect(screen.getByText("이하늘")).toBeInTheDocument();
-  expect(screen.getByLabelText("단원 출석 기록")).not.toHaveTextContent("@");
+  expect(screen.getByLabelText("단원별 상태")).not.toHaveTextContent("@");
 });
 
 test("정정 이유를 적기 전에는 정정 버튼이 꺼져 있고, 적으면 그 단원만 정정합니다", async () => {
@@ -409,4 +409,16 @@ test("좁은 화면에서는 단원을 고르면 상세로, 목록으로 돌아�
     fireEvent.click(screen.getByRole("button", { name: "목록으로" }));
     expect(screen.getByRole("button", { name: /^김소라/ })).toHaveFocus();
   } finally { vi.unstubAllGlobals(); }
+});
+
+test("뒤로 가기 링크와 출석 창, 단원별 상태 섹션을 보여 줍니다", async () => {
+  vi.mocked(events.getEvent).mockResolvedValue({ id: 3, title: "연습", description: "설명", startAt: "2026-09-27T09:00:00Z",
+    endAt: "2026-09-27T12:00:00Z", kind: "EVENT", part: null, obEligible: false, publicVisible: false, createdAt: "2026-09-01T00:00:00Z",
+    updatedAt: "2026-09-01T00:00:00Z", cancelledAt: null });
+  vi.mocked(attendance.getCheckInSession).mockResolvedValue({ sessionId: null, expiresAt: null, open: false, code: null, opensAt: "2026-09-27T08:30:00Z" });
+  vi.mocked(attendance.getAdminAttendance).mockResolvedValue([]);
+  renderWithSession(<AdminAttendancePanel eventId={3} />, sessionFixture({ admin: true }));
+  expect(await screen.findByRole("link", { name: "← 일정 관리로 돌아가기" })).toHaveAttribute("href", "/admin/events");
+  expect(await screen.findByRole("heading", { level: 2, name: "출석 창" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 2, name: "단원별 상태" })).toBeInTheDocument();
 });
