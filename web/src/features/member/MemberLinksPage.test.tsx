@@ -18,10 +18,10 @@ afterEach(() => {
 
 test("연습 자료와 공식 채널을 나눠 보여 주고 모두 새 탭으로 엽니다", () => {
   render(<MemberLinksPage />);
-  const practice = within(screen.getByRole("heading", { name: "연습 자료" }).parentElement!);
+  const practice = within(screen.getByRole("heading", { name: "연습 자료" }).closest("section")!);
   expect(practice.getByRole("link", { name: /연습 일정 시트/ })).toHaveAttribute("href", "https://docs.google.com/spreadsheets/d/sheet-id/edit");
   expect(practice.getByRole("link", { name: /악보와 자료 드라이브/ })).toHaveAttribute("href", "https://drive.google.com/drive/folders/drive-id");
-  const channels = within(screen.getByRole("heading", { name: "공식 채널" }).parentElement!);
+  const channels = within(screen.getByRole("heading", { name: "공식 채널" }).closest("section")!);
   expect(channels.getByRole("link", { name: /인스타그램/ })).toHaveAttribute("href", choirChannels.instagram);
   expect(channels.getByRole("link", { name: /유튜브/ })).toHaveAttribute("href", choirChannels.youtube);
   for (const link of screen.getAllByRole("link")) {
