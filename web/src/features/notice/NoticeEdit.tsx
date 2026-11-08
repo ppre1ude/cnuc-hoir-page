@@ -9,6 +9,7 @@ import { getAdminNotice, getAdminNoticePoll, type AdminPollView, type Notice } f
 import { NoticeForm } from "./NoticeForm";
 import { NoticeFormSkeleton } from "./NoticeFormSkeleton";
 import styles from "../member/AdminPages.module.css";
+import ui from "../../components/ui/ui.module.css";
 
 // 공지 수정 화면의 불러오기 부분입니다. 공지와 투표를 받아 폼에 넘기고, 저장되면 바뀐 공지와 투표를 다시 받습니다.
 export function NoticeEdit({ noticeId }: { noticeId: number }) {
@@ -41,17 +42,17 @@ export function NoticeEdit({ noticeId }: { noticeId: number }) {
     return () => { alive = false; };
   }, [noticeId, pollRetry]);
 
-  if (error === "missing") return <section className={styles.page}>
+  if (error === "missing") return <section className={ui.page}>
     <Feedback tone="error">공지를 찾을 수 없습니다.</Feedback>
     <div className={styles.actions}><ActionLink variant="secondary" href={returnTo}>공지 관리로</ActionLink></div>
   </section>;
-  if (error === "failed") return <section className={styles.page}>
+  if (error === "failed") return <section className={ui.page}>
     <Feedback tone="error">공지를 불러오지 못했습니다.</Feedback>
     <div className={styles.actions}><Button variant="secondary" type="button" onClick={() => { setError(""); setRetry((value) => value + 1); }}>다시 시도</Button></div>
   </section>;
   if (!notice || pollState === "loading") return <NoticeFormSkeleton />;
   return <>
-    {pollState === "failed" && <section className={styles.page}><Feedback tone="error">투표 정보를 불러오지 못했습니다.
+    {pollState === "failed" && <section className={ui.page}><Feedback tone="error">투표 정보를 불러오지 못했습니다.
       <Button variant="secondary" type="button" onClick={() => setPollRetry((value) => value + 1)}>다시 시도</Button></Feedback></section>}
     <NoticeForm key={notice.id} mode="edit" notice={notice} poll={poll} pollUnknown={pollState === "failed"} returnTo={returnTo}
       onSaved={(saved) => { setNotice(saved); setPollRetry((value) => value + 1); }} />
