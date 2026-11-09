@@ -204,7 +204,7 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
           {members.map((member) => <li key={member.memberId}>
             <RowButton id={rosterRowId(member.memberId)} aria-current={selected === member.memberId ? "true" : undefined} onClick={() => setSelected(member.memberId)}>
               <strong>{rosterName(member)}</strong>
-              <StatusBadge tone={attendanceTone(member.status)}>{statusLabel(member)}</StatusBadge>
+              <span><StatusBadge tone={attendanceTone(member.status)}>{statusLabel(member)}</StatusBadge></span>
             </RowButton>
           </li>)}
         </List></div>

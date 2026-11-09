@@ -32,8 +32,9 @@ export function Panel({ className, ...props }: ComponentProps<"div">) {
   return <div className={join(styles.panel, className)} {...props} />;
 }
 
+// 점을 지운 ul은 Safari VoiceOver가 목록으로 읽지 않아 role="list"를 기본으로 둡니다.
 export function List({ as: Tag = "div", className, ...props }: HTMLAttributes<HTMLElement> & { as?: "ul" | "div" }) {
-  return <Tag className={join(styles.list, className)} {...props} />;
+  return <Tag role={Tag === "ul" ? "list" : undefined} className={join(styles.list, className)} {...props} />;
 }
 
 export function Row({ as: Tag = "div", className, ...props }: HTMLAttributes<HTMLElement> & { as?: "div" | "li" | "article" }) {
@@ -59,10 +60,12 @@ type FieldProps = {
 
 // 라벨, 입력, 도움말, 오류 한 묶음. 입력에 id와 설명 연결을 붙여 줍니다.
 export function Field({ id, label, hint, error, className, children }: FieldProps) {
-  const describedBy = [hint ? `${id}-hint` : undefined, error ? `${id}-error` : undefined].filter(Boolean).join(" ") || undefined;
+  // 자식이 이미 가진 설명 연결(경고 문구 등)은 지우지 않고 앞에 둡니다.
+  const describedBy = [children.props["aria-describedby"], hint ? `${id}-hint` : undefined, error ? `${id}-error` : undefined]
+    .filter(Boolean).join(" ") || undefined;
   return <div className={join(styles.field, className)}>
     <label htmlFor={id}>{label}</label>
-    {cloneElement(children, { id, "aria-describedby": describedBy, "aria-invalid": error ? "true" : undefined })}
+    {cloneElement(children, { id, "aria-describedby": describedBy, "aria-invalid": error ? "true" : children.props["aria-invalid"] })}
     {hint && <p id={`${id}-hint`} className={styles.hint}>{hint}</p>}
     {error && <Feedback tone="error" id={`${id}-error`}>{error}</Feedback>}
   </div>;

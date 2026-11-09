@@ -20,6 +20,18 @@ test("Field는 오류가 없으면 aria-invalid를 붙이지 않습니다", () =
   expect(input).toHaveAttribute("aria-describedby", "email-hint");
 });
 
+test("Field는 자식이 이미 가진 설명 연결을 지우지 않고 이어 붙입니다", () => {
+  render(<Field id="email" label="이메일" hint="학교 메일"><Input aria-describedby="email-warning" /></Field>);
+  expect(screen.getByLabelText("이메일")).toHaveAttribute("aria-describedby", "email-warning email-hint");
+});
+
+test("List as=ul은 점을 지워도 목록으로 읽히게 role=list를 둡니다", () => {
+  const { rerender } = render(<List as="ul" aria-label="목록"><li>하나</li></List>);
+  expect(screen.getByRole("list", { name: "목록" })).toHaveAttribute("role", "list");
+  rerender(<List as="ul" role="menu" aria-label="목록"><li>하나</li></List>);
+  expect(screen.getByLabelText("목록")).toHaveAttribute("role", "menu");
+});
+
 test("RowButton은 기본이 type=button입니다", () => {
   render(<form><List><RowButton>행</RowButton></List></form>);
   expect(screen.getByRole("button", { name: "행" })).toHaveAttribute("type", "button");
