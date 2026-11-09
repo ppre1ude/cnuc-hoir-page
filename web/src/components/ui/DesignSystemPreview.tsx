@@ -64,7 +64,7 @@ export function DesignSystemPreview() {
     </section>
     <section className={styles.section}>
       <h2>조립 틀</h2>
-      <BackLink href="/design-system">← 홈</BackLink>
+      <BackLink href="/">← 홈</BackLink>
       <Panel>
         <Section title="일정 정보" badge={<StatusBadge tone="positive">참석</StatusBadge>}
           actions={<Button size="small">수정</Button>} description="섹션 제목 옆에 상태 배지, 오른쪽 끝에 동작, 아래에 설명 한 줄을 둡니다.">
