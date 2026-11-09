@@ -13,13 +13,13 @@ export function AdminAttendanceSkeleton() {
     <p><Skeleton width="70%" /></p>
     <div className={styles.grid}>
       <Panel>
-        <Section title={<Skeleton width="30%" height={sectionHeight} />}>
+        <Section titleProps={{ "aria-hidden": true }} title={<Skeleton width="30%" height={sectionHeight} />}>
           <Skeleton width="50%" />
           <div className={styles.actions}><Skeleton width="var(--space-20)" height="var(--control-medium)" /></div>
         </Section>
       </Panel>
     </div>
-    <Section title={<Skeleton width="30%" height={sectionHeight} />}>
+    <Section titleProps={{ "aria-hidden": true }} title={<Skeleton width="30%" height={sectionHeight} />}>
       <div className={styles.workspace}>
         <SkeletonRows count={4} className={layout.list} />
         <div className={styles.detail}><Panel><Skeleton height="var(--space-20)" /></Panel></div>

@@ -1,5 +1,6 @@
 /* 화면 조립 틀. 값은 전부 tokens.css의 변수이며, 페이지와 패널 안에서 같은 모양을 냅니다. */
-.section + .section { margin-top: var(--space-8); }
+/* 앞에 무엇이 오든 첫 섹션이 아니면 32px 띄웁니다. 페이지 제목 아래 32px와는 여백이 겹쳐 한 번만 들어갑니다. */
+* + .section { margin-top: var(--space-8); }
 /* 패널 안에서는 섹션 앞에 무엇이 오든(사실 표, 문단, 다른 섹션) 구분선으로 나눕니다. */
 .panel > * + .section { margin-top: var(--space-6); padding-top: var(--space-6); border-top: 1px solid var(--color-line); }
 .sectionHead { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); }
@@ -54,7 +55,7 @@ ul.list { margin: 0; padding: 0; list-style: none; }
 .back { display: inline-flex; align-items: center; min-height: var(--control-medium); margin-bottom: var(--space-4); color: var(--color-primary); font-size: var(--text-label); font-weight: var(--weight-label); text-decoration: none; }
 .back:hover { text-decoration: underline; }
 
-.callout { padding: var(--space-4) var(--space-5); border: 1px solid var(--color-highlight); border-radius: var(--radius-control); background: var(--color-subtle); }
+.callout { margin: 0 0 var(--space-6); padding: var(--space-4) var(--space-5); border: 1px solid var(--color-highlight); border-radius: var(--radius-control); background: var(--color-subtle); }
 .callout p { margin: 0; font-size: var(--text-label); line-height: 1.7; }
 
 @media (max-width: 760px) {

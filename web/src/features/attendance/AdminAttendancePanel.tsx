@@ -177,7 +177,7 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
     {event && <p className={ui.muted}>출석 대상: <strong>{eventAudience(event)}</strong>. 출석 창을 닫거나 연습이 끝나면 출석하지 않은 대상 단원은 미출석으로 남습니다.</p>}
     {message && <Feedback tone="error">{message}</Feedback>}
     <div className={styles.grid}>{session && <Panel>
-      <Section title="출석 창">
+      <Section title="출석 창" id="check-in-window">
       <p>현재 창: {event?.cancelledAt ? "취소된 일정이라 출석 창을 열 수 없습니다. 이미 받은 기록은 그대로 볼 수 있습니다."
         : session.open ? `연습 끝 ${seoulDateTime(session.expiresAt!)}까지`
         : ended ? "연습이 끝나 출석 창을 열 수 없습니다. 늦게 온 단원은 아래에서 정정해 주세요."
@@ -195,7 +195,7 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
       </Section>
     </Panel>}
     </div>
-    <Section title="단원별 상태" id="member-status" actions={<Button variant="secondary" size="small" type="button" onClick={reloadList}>목록 다시 불러오기</Button>}>
+    <Section title="단원별 상태" id="member-status" actions={<Button variant="secondary" type="button" onClick={reloadList}>목록 다시 불러오기</Button>}>
       {members === null && !message && <SkeletonRows count={3} label="출석 기록을 불러오는 중입니다." />}
       {members?.length === 0 && <p className={ui.muted}>출석 대상 단원이 없습니다.</p>}
       {/* 단원 명단과 같은 꼴입니다. 왼쪽에 이름과 상태만 적은 목록, 오른쪽에 고른 단원의 기록과 정정 칸을 둡니다. */}

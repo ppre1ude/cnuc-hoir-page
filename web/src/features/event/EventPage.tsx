@@ -82,11 +82,14 @@ export function EventPage() {
         {/* 취소된 일정은 남은 출석 기록이 있을 때만 보여 줍니다. */}
         {!(event.cancelledAt && attendance?.status === "NOT_ELIGIBLE") && <Section title="내 출석"
           badge={attendance ? <StatusBadge tone={attendanceTone(attendance.status)}>{memberAttendanceLabel(attendance)}</StatusBadge> : !attendanceError && <span role="status">확인 중</span>}
-          actions={canManageRoster(session, event) && <ActionLink variant="secondary" size="small" href={`/admin/events/${event.id}/attendance`}>운영진 출석 관리</ActionLink>}>
+          actions={canManageRoster(session, event) && <ActionLink variant="secondary" href={`/admin/events/${event.id}/attendance`}>운영진 출석 관리</ActionLink>}>
           {attendanceError && <Feedback tone="error">{attendanceError}</Feedback>}
           {attendance?.checkInOpen && isEventTarget(event, { memberType: session.memberType, part: session.part }) &&
             <ActionLink variant="primary" href={`/events/${event.id}/check-in`}>현장 출석하기</ActionLink>}
         </Section>}
+        {/* 내 출석 섹션이 빠지는 취소 일정에서도 운영진은 남은 기록을 고치러 갈 수 있어야 합니다. */}
+        {event.cancelledAt && attendance?.status === "NOT_ELIGIBLE" && canManageRoster(session, event) &&
+          <div className={ui.actions}><ActionLink variant="secondary" href={`/admin/events/${event.id}/attendance`}>운영진 출석 관리</ActionLink></div>}
       </Panel>}
   </main>;
 }

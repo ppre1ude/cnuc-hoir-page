@@ -421,4 +421,7 @@ test("뒤로 가기 링크와 출석 창, 단원별 상태 섹션을 보여 줍�
   expect(await screen.findByRole("link", { name: "← 일정 관리로 돌아가기" })).toHaveAttribute("href", "/admin/events");
   expect(await screen.findByRole("heading", { level: 2, name: "출석 창" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { level: 2, name: "단원별 상태" })).toBeInTheDocument();
+  // 옮기기 전처럼 두 묶음 모두 이름 있는 영역이어야 보조 낭독의 랜드마크 이동으로 바로 닿습니다.
+  expect(screen.getByRole("region", { name: "출석 창" })).toBeInTheDocument();
+  expect(screen.getByRole("region", { name: "단원별 상태" })).toBeInTheDocument();
 });

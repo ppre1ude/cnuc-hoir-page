@@ -20,7 +20,7 @@ export function AdminEventRsvps({ eventId }: { eventId: number }) {
     return () => { alive = false; };
   }, [eventId, retry]);
 
-  return <Section level={3} title="참석 응답" actions={<Button variant="secondary" size="small" type="button" disabled={!data && !error} onClick={() => {
+  return <Section level={3} title="참석 응답" actions={<Button variant="secondary" type="button" disabled={!data && !error} onClick={() => {
       setData(null); setError(""); setRetry((value) => value + 1);
     }}>새로고침</Button>}>
     {error && <Feedback tone="error">{error} <Button variant="secondary" type="button" onClick={() => { setError(""); setRetry((value) => value + 1); }}>다시 시도</Button></Feedback>}

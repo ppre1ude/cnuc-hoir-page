@@ -9,7 +9,7 @@ const sectionHeight = "calc(var(--text-section) * 1.2)";
 export function EventEditorSkeleton() {
   return <div className={ui.page}>
     <div className={ui.pageHeader}><Skeleton width="var(--space-20)" height="calc(var(--text-title) * 1.2)" /></div>
-    <Section title={<Skeleton width="20%" height={sectionHeight} />}>
+    <Section titleProps={{ "aria-hidden": true }} title={<Skeleton width="20%" height={sectionHeight} />}>
       <div className={styles.workspace}>
         <div>
           <Skeleton height="var(--control-medium)" />
@@ -20,7 +20,7 @@ export function EventEditorSkeleton() {
         </div>
       </div>
     </Section>
-    <Section title={<Skeleton width="20%" height={sectionHeight} />}>
+    <Section titleProps={{ "aria-hidden": true }} title={<Skeleton width="20%" height={sectionHeight} />}>
       <div className={styles.workspace}>
         <SkeletonRows count={5} className={layout.list} />
         <div className={styles.detail}><Panel><Skeleton height="var(--space-20)" /></Panel></div>

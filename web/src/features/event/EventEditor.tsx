@@ -182,7 +182,7 @@ export function EventEditor() {
         <Section level={3} title={selected.title} badge={<>
           <span className={`${calendarStyles.kind} ${calendarStyles.kindBadge}`} data-kind={eventKind(selected)}>{eventKindText(selected)}</span>
           {selected.cancelledAt && <StatusBadge tone="neutral">취소됨</StatusBadge>}
-        </>} actions={<ActionLink variant="secondary" size="small" href={`/admin/events/${selected.id}/attendance`}>이 일정 출석 관리</ActionLink>}>
+        </>} actions={<ActionLink variant="secondary" href={`/admin/events/${selected.id}/attendance`}>이 일정 출석 관리</ActionLink>}>
         {/* 여러 날에 걸친 일정은 끝나는 날짜도 적습니다. */}
         <p className={ui.muted}>{seoulDayLabel(selected.startAt)} {seoulTime(selected.startAt)} ~ {seoulDayLabel(selected.endAt) !== seoulDayLabel(selected.startAt) && `${seoulDayLabel(selected.endAt)} `}{seoulTime(selected.endAt)}</p>
         {selected.createdBy && <p className={ui.muted}>등록한 사람: {selected.createdBy}</p>}

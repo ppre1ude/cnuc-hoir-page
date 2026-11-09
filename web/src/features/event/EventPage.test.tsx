@@ -75,6 +75,14 @@ test("행사 상세에서 열린 창의 출석 대상에게 참여 버튼을 보
   expect(await screen.findByRole("link", { name: "현장 출석하기" })).toHaveAttribute("href", "/events/3/check-in");
 });
 
+test("내 출석이 빠지는 취소 일정에서도 운영진 출석 관리 링크를 보여줍니다", async () => {
+  vi.mocked(events.getEvent).mockResolvedValue({ ...fixture, cancelledAt: "2026-09-20T00:00:00Z" });
+  vi.mocked(attendance.getEventAttendance).mockResolvedValue({ eventId: 3, eventTitle: "연습", startAt: fixture.startAt, status: "NOT_ELIGIBLE", checkInOpen: false });
+  renderWithSession(<EventPage />, sessionFixture({ permissions: ["MANAGE_EVENTS", "VIEW_MINUTES"] }));
+  expect(await screen.findByRole("link", { name: "운영진 출석 관리" })).toHaveAttribute("href", "/admin/events/3/attendance");
+  expect(screen.queryByRole("heading", { name: "내 출석" })).toBeNull();
+});
+
 test("일정 관리 권한이 있으면 운영진 출석 관리 링크를 보여줍니다", async () => {
   vi.mocked(attendance.getEventAttendance).mockResolvedValue({ eventId: 3, eventTitle: "연습", startAt: "2026-09-27T09:00:00Z", status: "NOT_OPEN", checkInOpen: false });
   renderWithSession(<EventPage />, sessionFixture({ permissions: ["MANAGE_EVENTS", "VIEW_MINUTES"] }));

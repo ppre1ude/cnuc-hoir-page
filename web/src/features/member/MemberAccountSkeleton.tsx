@@ -9,7 +9,7 @@ const sectionHeight = "calc(var(--text-section) * 1.2)";
 export function MemberAccountSkeleton() {
   return <div className={ui.page}>
     <div className={ui.pageHeader}><Skeleton width="var(--space-20)" height="calc(var(--text-title) * 1.2)" /></div>
-    <Section title={<Skeleton width="20%" height={sectionHeight} />}>
+    <Section titleProps={{ "aria-hidden": true }} title={<Skeleton width="20%" height={sectionHeight} />}>
       <Callout><Skeleton height="calc(var(--text-label) * 1.7 * 3)" /></Callout>
       <div className={styles.registerGrid}>
         <div className={layout.form}>
@@ -24,7 +24,7 @@ export function MemberAccountSkeleton() {
         </div>
       </div>
     </Section>
-    <Section title={<Skeleton width="20%" height={sectionHeight} />}>
+    <Section titleProps={{ "aria-hidden": true }} title={<Skeleton width="20%" height={sectionHeight} />}>
       <div className={styles.workspace}>
         <SkeletonRows count={6} className={layout.list} />
         <div className={styles.detail}><Panel><Skeleton height="var(--space-20)" /></Panel></div>
