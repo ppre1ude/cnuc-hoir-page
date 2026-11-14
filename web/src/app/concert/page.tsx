@@ -6,6 +6,7 @@ import { concert, isConcertUpcoming } from "@/features/concert/concert";
 import { choirChannels } from "@/features/onboarding/choirProfile";
 import { myeongjo } from "../fonts/myeongjo";
 import { paperlogy } from "../fonts/paperlogy";
+import { Recipient } from "./Recipient";
 import { ShareButton } from "./ShareButton";
 import styles from "./concert.module.css";
 
@@ -40,7 +41,7 @@ export default function ConcertPage() {
       <section className={styles.letter} aria-labelledby="concert-title">
         <p className={styles.host}><strong>전남대학교 합창단</strong>{concert.round}</p>
         <h1 className={styles.title} id="concert-title" aria-label={concert.title}>
-          <span className={styles.blank} aria-hidden="true" />{concert.title.replace(/^_+/, "")}
+          <Recipient className={styles.blank} caretClassName={styles.caret} />{concert.title.replace(/^_+/, "")}
         </h1>
         {!upcoming && <p className={styles.ended}>공연을 마쳤습니다. 함께해 주셔서 감사합니다.</p>}
         <dl className={styles.facts}>
@@ -67,8 +68,7 @@ export default function ConcertPage() {
         <div className={styles.seal} aria-hidden="true"><BrandLogo mark alt="" /></div>
       </section>
 
-      <section className={styles.sketch} aria-labelledby="concert-sketch">
-        <h2 id="concert-sketch">연습실 스케치</h2>
+      <section className={styles.sketch} aria-label="연습 사진">
         <div className={styles.wide}>
           <Image src="/images/concert/rehearsal-wide.jpg" alt="연습실에 모여 앉아 합창을 연습하는 단원들" width={1472} height={1102} sizes="(max-width: 760px) 100vw, 880px" priority />
         </div>
