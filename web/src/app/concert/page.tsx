@@ -14,7 +14,8 @@ import styles from "./concert.module.css";
 export const revalidate = 3600;
 
 const title = `${concert.round} <${concert.title}>`;
-const description = `${concert.dateLabel}, ${concert.venue}. ${concert.admission}`;
+// 카카오톡 카드는 설명을 36자쯤에서 자르므로 짧게 둡니다. 장소와 무료 입장은 공유 그림 안에 있습니다.
+const description = `${concert.tagline} ${concert.shortDate}`;
 
 export const metadata: Metadata = {
   title,
