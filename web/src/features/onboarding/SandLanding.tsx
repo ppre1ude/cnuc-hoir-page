@@ -4,6 +4,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import Image, { getImageProps } from "next/image";
 import Link from "next/link";
 import { ActionLink, BrandLogo } from "../../components/ui";
+import { concert } from "../concert/concert";
 import { stagePhoto } from "./activityPhotos";
 import { choirChannels } from "./choirProfile";
 import { historyByYear, publicNews } from "./newsItems";
@@ -37,7 +38,8 @@ const MARK = { src: "/images/choir-mark.png", width: 2775, height: 1845 }; // �
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
-export function SandLanding() {
+/** showConcert: 다가오는 연주회가 있을 때 첫 장면 위쪽에 안내 줄을 띄웁니다. 날짜 판단은 서버 페이지가 합니다. */
+export function SandLanding({ showConcert = false }: { showConcert?: boolean }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const markSrc = getImageProps({ src: MARK.src, alt: "", width: 540, height: Math.round(540 * MARK.height / MARK.width) }).props.src;
   const years = historyByYear(publicNews);
@@ -76,6 +78,11 @@ export function SandLanding() {
           <h1 className={styles.title} id="landing-title">합창으로 전하는<br /><strong>울림과 감동</strong>의 이야기</h1>
           <p className={styles.lead}>전남대학교 합창단은 교내 유일의 합창 동아리입니다.</p>
         </section>
+        {showConcert && (
+          <Link href="/concert" className={`${styles.scene} ${styles.concert}`} data-scene="0" data-active="">
+            <strong>{concert.round}</strong>{concert.shortDate}<span aria-hidden="true">→</span>
+          </Link>
+        )}
         <button className={`${styles.scene} ${styles.cue}`} data-scene="0" data-active="" data-sand="cue" type="button">
           넘겨 보기<i aria-hidden="true" />
         </button>
