@@ -5,7 +5,7 @@ import { typingSteps } from "@/features/concert/typing";
 
 // 제목의 빈칸에 편지를 받을 사람을 썼다 지웁니다. 빈칸 폭이 두 글자라서 이름은 두 글자만 넣습니다.
 const NAMES = ["가족", "친구", "연인", "동료", "당신"];
-const TYPE = 70, ERASE = 45, HOLD = 1200, REST = 300; // 한 타, 한 글자 지우기, 다 쓰고 머무는 시간, 다 지우고 쉬는 시간(ms)
+const TYPE = 95, ERASE = 55, HOLD = 1400, REST = 400; // 한 타, 한 글자 지우기, 다 쓰고 머무는 시간, 다 지우고 쉬는 시간(ms)
 
 /** 한 바퀴 동안 보일 글자와 그 글자가 머무는 시간입니다. */
 const FRAMES = NAMES.flatMap((name) => {
@@ -25,7 +25,7 @@ export function Recipient({ className, caretClassName }: { className?: string; c
       setText(FRAMES[i].text);
       timer = window.setTimeout(tick, FRAMES[i].wait);
       i = (i + 1) % FRAMES.length;
-    }, 400);
+    }, 600);
     return () => window.clearTimeout(timer);
   }, []);
 
