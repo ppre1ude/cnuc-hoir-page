@@ -73,6 +73,13 @@ describe("SandLanding", () => {
     expect(within(nav).getByRole("button", { name: "내 목소리 장면으로 이동" })).toHaveTextContent("01");
   });
 
+  it("다가오는 연주회가 있을 때만 첫 장면에 연주회 안내로 가는 줄이 보인다", () => {
+    const { rerender } = render(<SandLanding />);
+    expect(screen.queryByRole("link", { name: /정기연주회/ })).toBeNull();
+    rerender(<SandLanding showConcert />);
+    expect(screen.getByRole("link", { name: /정기연주회/ })).toHaveAttribute("href", "/concert");
+  });
+
   it("머리글에서 바로 지원서로 갈 수 있다", () => {
     const { container } = render(<SandLanding />);
     const apply = within(container.querySelector("header")!).getByRole("link", { name: /지원하기/ });
