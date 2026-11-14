@@ -1,6 +1,7 @@
 "use client";
 
-import { Button, Input, Select, Feedback, PageHeader, SkeletonRows, StatusBadge } from "../../components/ui";
+import { Button, Feedback, Field, Form, Input, List, PageHeader, Panel, RowButton, Section, Select, SkeletonRows, StatusBadge } from "../../components/ui";
+import ui from "../../components/ui/ui.module.css";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ApiRequestError } from "../../lib/api";
@@ -107,36 +108,36 @@ export function MemberAccountManager() {
   const linkTitle = useRef<HTMLHeadingElement>(null);
   useEffect(() => { if (link) linkTitle.current?.focus({ preventScroll: true }); }, [link]);
 
-  return <section className={styles.page}>
+  return <section className={ui.page}>
     <PageHeader title="단원 정보 관리" />
     {(can(session, "MANAGE_ALLOWLIST") || can(session, "APPROVE_APPLICATIONS")) && <MemberRegistration session={session}>
       <details className={styles.more}>
         <summary>Gmail이 아닌 경우: 1회용 링크로 초대</summary>
-        <p className={styles.hint}>Gmail이 아니라서 로그인해도 자동 승인되지 않는 주소에 씁니다. 계정을 먼저 만들고 1회용 링크를 발급하니, 24시간 안에 본인에게 직접 전달해 주세요.</p>
-        <form className={styles.form} aria-label="1회용 링크로 초대" onSubmit={create}>
-          <label htmlFor="invite-name">이름</label>
-          <Input id="invite-name" name="name" maxLength={100} required />
-          <label htmlFor="invite-email">구글 계정 이메일</label>
-          <Input id="invite-email" name="email" type="email" maxLength={254} required />
-          <label htmlFor="invite-type">단원 구분</label>
-          <Select id="invite-type" name="memberType" defaultValue="ACTIVE">
+        <div className={styles.detailsBody}>
+        <p className={ui.muted}>Gmail이 아니라서 로그인해도 자동 승인되지 않는 주소에 씁니다. 계정을 먼저 만들고 1회용 링크를 발급하니, 24시간 안에 본인에게 직접 전달해 주세요.</p>
+        <Form aria-label="1회용 링크로 초대" onSubmit={create}>
+          <Field id="invite-name" label="이름"><Input name="name" maxLength={100} required /></Field>
+          <Field id="invite-email" label="구글 계정 이메일"><Input name="email" type="email" maxLength={254} required /></Field>
+          <Field id="invite-type" label="단원 구분"><Select name="memberType" defaultValue="ACTIVE">
             <option value="ACTIVE">활동 단원</option><option value="OB">OB</option>
-          </Select>
+          </Select></Field>
           <Button variant="primary" type="submit" disabled={busy}>1회용 링크 발급</Button>
-        </form>
+        </Form>
+        </div>
       </details>
     </MemberRegistration>}
     <div ref={result}>{error && <Feedback tone="error">{error}</Feedback>}
-    {link && <section className={`${styles.panel} ${styles.issued}`} aria-labelledby="link-title">
-      <div className={styles.panelHeader}><h2 id="link-title" ref={linkTitle} tabIndex={-1}>발급된 링크</h2></div>
-      <p className={styles.hint}>이 링크는 한 번만 표시됩니다. 24시간 안에 해당 단원에게 비공개로 전달해 주세요.</p>
-      <label className={styles.fieldLabel} htmlFor="issued-link">구글 계정 연결 링크</label>
-      <Input id="issued-link" className={styles.linkInput} value={link} readOnly onFocus={(event) => event.currentTarget.select()} />
-      <div className={styles.actions}><Button variant="secondary" type="button"
-        onClick={() => navigator.clipboard.writeText(link).catch(() => setError("복사하지 못했습니다. 링크를 직접 선택해 주세요."))}>링크 복사</Button></div>
-    </section>}</div>
-    <section aria-labelledby="members-title" className={styles.memberSection}>
-      <h2 id="members-title">단원 명단</h2>
+    {link && <Panel className={styles.issued}>
+      <Section title="발급된 링크" id="link-title" titleProps={{ ref: linkTitle, tabIndex: -1 }}
+        description="이 링크는 한 번만 표시됩니다. 24시간 안에 해당 단원에게 비공개로 전달해 주세요.">
+        <Field id="issued-link" label="구글 계정 연결 링크">
+          <Input value={link} readOnly onFocus={(event) => event.currentTarget.select()} />
+        </Field>
+        <div className={styles.actions}><Button variant="secondary" type="button"
+          onClick={() => navigator.clipboard.writeText(link).catch(() => setError("복사하지 못했습니다. 링크를 직접 선택해 주세요."))}>링크 복사</Button></div>
+      </Section>
+    </Panel>}</div>
+    <Section title="단원 명단" id="members-title">
       {!data && error && <Button variant="secondary" type="button" onClick={() => { setError(""); setRefresh((value) => value + 1); }}>다시 시도</Button>}
       <div className={styles.workspace} data-view={current ? "detail" : "list"}>
         <div className={styles.roster}>
@@ -148,20 +149,21 @@ export function MemberAccountManager() {
             </Select>
           </div>
           {!data && !error && <SkeletonRows count={6} label="단원 명단을 불러오는 중입니다." />}
-          <ul className={styles.rosterList} aria-label="단원 명단">
+          <List as="ul" aria-label="단원 명단">
             {shown.map((item) => <li key={item.id}>
-              <button type="button" id={rosterRowId(item.id)} className={styles.rosterRow} aria-current={selected === item.id ? "true" : undefined} onClick={() => setSelected(item.id)}>
+              <RowButton id={rosterRowId(item.id)} aria-current={selected === item.id ? "true" : undefined} onClick={() => setSelected(item.id)}>
                 <strong>{item.name}</strong>
                 <span>{item.part ? partLabel[item.part] : "파트 미지정"}</span>
                 {item.status !== "APPROVED" && <small data-tone={statusTone(item.status)}>{statusLabel[item.status]}</small>}
-              </button>
+              </RowButton>
             </li>)}
-          </ul>
-          {data?.items.length === 0 && <p>등록된 단원이 없습니다.</p>}
-          {data && data.items.length > 0 && shown.length === 0 && <p>조건에 맞는 단원이 없습니다.</p>}
+          </List>
+          {data?.items.length === 0 && <p className={ui.muted}>등록된 단원이 없습니다.</p>}
+          {data && data.items.length > 0 && shown.length === 0 && <p className={ui.muted}>조건에 맞는 단원이 없습니다.</p>}
         </div>
         <div className={styles.detail} ref={detail} tabIndex={-1}>
           <Button variant="secondary" size="small" type="button" className={styles.toList} onClick={() => { focus.leave(selected); setSelected(null); }}>목록으로</Button>
+          <Panel>
           {current ? <MemberDetail key={current.id} item={current} busy={busy} session={session} opened={opened === current.id} onChanged={() => {
             setRefresh((value) => value + 1);
             // 자기 직책·파트가 바뀌면 권한과 메뉴가 달라지므로 세션도 다시 받습니다.
@@ -169,9 +171,10 @@ export function MemberAccountManager() {
           }} onRenew={() => renew(current.id)} onRevoke={(reason) => revoke(current.id, reason)}
             onReopen={() => reopen(current.id)} onApprove={(type) => approve(current.id, type)} onReject={(reason) => reject(current.id, reason)} />
             : <p className={styles.placeholder}>목록에서 단원을 선택하세요.</p>}
+          </Panel>
         </div>
       </div>
-    </section>
+    </Section>
   </section>;
 }
 
@@ -190,13 +193,11 @@ function MemberDetail({ item, busy, session, opened, onChanged, onRenew, onRevok
   const [reason, setReason] = useState("");
   // 사이트 관리자, 단장, 부단장 계정의 포털 이용 중단은 사이트 관리자만 할 수 있습니다.
   const leadership = item.admin || item.roles.some((role) => role.role === "PRESIDENT" || role.role === "VICE_PRESIDENT");
-  return <article>
-    <div className={styles.rowHeader}>
-      <h2>{item.name}</h2>
+  return <Section level={3} title={item.name} badge={<>
       <StatusBadge tone={statusTone(item.status)}>{statusLabel[item.status]}</StatusBadge>
       {item.admin && <StatusBadge>사이트 관리자</StatusBadge>}
-    </div>
-    {item.email && <p>{item.email}</p>}
+    </>}>
+    {item.email && <p className={ui.muted}>{item.email}</p>}
     <MemberFacts item={item} />
     {can(session, "APPROVE_APPLICATIONS") && item.status === "APPROVAL_PENDING"
       && <PendingApproval item={item} busy={busy} onApprove={onApprove} onReject={onReject} />}
@@ -215,15 +216,15 @@ function MemberDetail({ item, busy, session, opened, onChanged, onRenew, onRevok
     {can(session, "REVOKE_ACCESS") && (!leadership || can(session, "MANAGE_SITE_ADMINS")) && (item.status === "APPROVED" || item.status === "INVITED")
       && item.id !== session.id && <details className={styles.more}>
       <summary aria-label={`${item.name} 포털 이용 중단`}>포털 이용 중단</summary>
-      <div className={styles.fieldGroup}>
-        <p className={styles.hint}>이용을 중단한 단원은 다시 초대해야 포털을 쓸 수 있습니다.</p>
-        <label htmlFor={`revoke-${item.id}`}>{item.name} 포털 이용 중단 이유</label>
-        <Input id={`revoke-${item.id}`} value={reason} maxLength={500} onChange={(event) => setReason(event.target.value)} />
+      <div className={styles.detailsBody}>
+        <Field id={`revoke-${item.id}`} label={`${item.name} 포털 이용 중단 이유`} hint="이용을 중단한 단원은 다시 초대해야 포털을 쓸 수 있습니다.">
+          <Input value={reason} maxLength={500} onChange={(event) => setReason(event.target.value)} />
+        </Field>
         <div className={styles.actions}><Button variant="danger" type="button" disabled={busy || !reason.trim()}
           onClick={() => onRevoke(reason.trim())}>{item.name} 포털 이용 중단</Button></div>
       </div>
     </details>}
-  </article>;
+  </Section>;
 }
 
 // 승인 대기 행에서 운영진이 할 일을 한 상자에 모읍니다. 가입 승인 화면으로 옮겨 가지 않아도 이 자리에서 끝납니다.
@@ -232,19 +233,20 @@ function PendingApproval({ item, busy, onApprove, onReject }:
   const [type, setType] = useState<"ACTIVE" | "OB">("ACTIVE");
   const [reason, setReason] = useState("");
   return <div className={styles.approval}>
-    <p className={styles.hint}>구글 계정으로 로그인해 가입을 신청했습니다. 이름, 파트, 기수가 아는 단원과 맞는지 확인하고 단원 구분을 골라 승인해 주세요. 승인하면 이 자리에서 바로 직책을 줄 수 있고, 본인은 다시 로그인해야 합니다.</p>
-    <form className={styles.inlineForm} onSubmit={(event) => { event.preventDefault(); onApprove(type); }}>
+    <p className={ui.muted}>구글 계정으로 로그인해 가입을 신청했습니다. 이름, 파트, 기수가 아는 단원과 맞는지 확인하고 단원 구분을 골라 승인해 주세요. 승인하면 이 자리에서 바로 직책을 줄 수 있고, 본인은 다시 로그인해야 합니다.</p>
+    <Form layout="inline" onSubmit={(event) => { event.preventDefault(); onApprove(type); }}>
       <label htmlFor={`approve-${item.id}`}>단원 구분</label>
       <Select id={`approve-${item.id}`} aria-label={`${item.name} 단원 구분`} value={type} onChange={(event) => setType(event.target.value as "ACTIVE" | "OB")}>
         <option value="ACTIVE">활동 단원</option><option value="OB">OB</option>
       </Select>
       <Button variant="primary" type="submit" disabled={busy} aria-label={`${item.name} 승인`}>승인</Button>
-    </form>
+    </Form>
     <details className={styles.more}>
       <summary aria-label={`${item.name} 가입 신청 반려`}>가입 신청 반려</summary>
-      <div className={styles.fieldGroup}>
-        <label htmlFor={`reject-${item.id}`}>{item.name} 반려 이유</label>
-        <Input id={`reject-${item.id}`} value={reason} maxLength={500} onChange={(event) => setReason(event.target.value)} />
+      <div className={styles.detailsBody}>
+        <Field id={`reject-${item.id}`} label={`${item.name} 반려 이유`}>
+          <Input value={reason} maxLength={500} onChange={(event) => setReason(event.target.value)} />
+        </Field>
         <div className={styles.actions}><Button variant="danger" type="button" disabled={busy || !reason.trim()}
           onClick={() => { if (window.confirm(`${item.name}의 가입 신청을 반려할까요? 반려한 뒤에도 이 화면에서 취소할 수 있습니다.`)) onReject(reason.trim()); }}>{item.name} 반려</Button></div>
       </div>

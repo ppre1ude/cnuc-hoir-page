@@ -1,6 +1,7 @@
 "use client";
 
-import { Button, Input, Select, Textarea, Feedback } from "../../components/ui";
+import { Button, Input, Select, Textarea, Feedback , Section } from "../../components/ui";
+import ui from "../../components/ui/ui.module.css";
 
 import { useState, type FormEvent } from "react";
 import { ApiRequestError } from "../../lib/api";
@@ -103,9 +104,7 @@ export function EventBatchCreator({ onCreated }: Props) {
   // 월 입력을 지우면 ""가 들어옵니다. 그때는 날짜를 그리지 않고 등록도 막습니다.
   const valid = /^\d{4}-\d{2}$/.test(month);
   const days = valid ? Array.from({ length: monthDays(month) }, (_, index) => index + 1) : [];
-  return <section className={styles.section} aria-labelledby="batch-title">
-    <h2 id="batch-title">일정 등록</h2>
-    <p className={styles.lead}>달력에서 날짜를 고르고 오른쪽에 내용을 적으면, 고른 날짜마다 같은 일정이 생깁니다.</p>
+  return <Section title="일정 등록" id="batch-title" description="달력에서 날짜를 고르고 오른쪽에 내용을 적으면, 고른 날짜마다 같은 일정이 생깁니다.">
     <form onSubmit={create} className={styles.workspace}>
       <div className={styles.picker}>
         <label htmlFor="batch-month">월</label>
@@ -139,10 +138,10 @@ export function EventBatchCreator({ onCreated }: Props) {
         <label className={styles.check}><Input type="checkbox" checked={obEligible} onChange={(event) => setObEligible(event.target.checked)} /> OB도 참여 대상</label>
         {error && <Feedback tone="error">{error}</Feedback>}
         {saved && <Feedback>{saved}</Feedback>}
-        <div className={styles.actions}><Button variant="primary" type="submit" disabled={busy || !valid || dates.length === 0 || !title.trim()}>
+        <div className={ui.actions}><Button variant="primary" type="submit" disabled={busy || !valid || dates.length === 0 || !title.trim()}>
           {busy ? "등록 중..." : `${dates.length}개 일정 등록`}
         </Button></div>
       </div>
     </form>
-  </section>;
+  </Section>;
 }

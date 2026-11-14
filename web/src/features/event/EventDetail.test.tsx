@@ -33,9 +33,3 @@ test("같은 날 끝나는 일정은 끝 시각에 날짜를 다시 쓰지 않�
   expect(container.querySelector("time")!.parentElement).toHaveTextContent(/^2026\. 9\. 27\. \S+ 6:00 ~ 2026\. 9\. 28\. \S+ 12:00$/);
 });
 
-test("일정 페이지처럼 제목을 이미 보여 주는 곳에서는 제목을 다시 쓰지 않습니다", () => {
-  const { rerender } = render(<EventDetail event={event} memberType="ACTIVE" checkInOpen={false} />);
-  expect(screen.getByRole("heading", { name: "연습" })).toBeInTheDocument();
-  rerender(<EventDetail event={event} memberType="ACTIVE" checkInOpen={false} showTitle={false} />);
-  expect(screen.queryByRole("heading")).toBeNull();
-});

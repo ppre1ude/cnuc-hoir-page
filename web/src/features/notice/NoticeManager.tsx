@@ -1,8 +1,8 @@
 "use client";
 
-import { ActionLink, Button, Feedback, PageHeader, Pagination, SkeletonRows, StatusBadge } from "../../components/ui";
+import { ActionLink, Button, Feedback, List, PageHeader, Pagination, RowLink, SkeletonRows, StatusBadge } from "../../components/ui";
+import ui from "../../components/ui/ui.module.css";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { usePageParam } from "../../lib/pageParam";
@@ -63,17 +63,19 @@ export function NoticeManager() {
     {error && <><Feedback tone="error">{error}</Feedback>
       <Button variant="secondary" type="button" onClick={() => { setError(""); setData(null); setRetry((value) => value + 1); }}>다시 시도</Button></>}
     {!visible && !error && <SkeletonRows count={5} label="공지 목록을 불러오는 중입니다." />}
-    {visible?.items.length === 0 && <p className={styles.empty}>작성된 공지가 없습니다. 새 공지 작성으로 첫 공지를 올려 주세요.</p>}
-    {visible && visible.items.length > 0 && <ul className={styles.list} aria-label="공지 목록">
+    {visible?.items.length === 0 && <p className={ui.muted}>작성된 공지가 없습니다. 새 공지 작성으로 첫 공지를 올려 주세요.</p>}
+    {visible && visible.items.length > 0 && <List as="ul" aria-label="공지 목록">
       {visible.items.map((notice) => <li key={notice.id}>
-        <Link className={styles.row} href={href(notice.id)}>
+        <RowLink href={href(notice.id)}>
           <strong>{notice.title}</strong>
-          <StatusBadge tone={notice.published ? "neutral" : "attention"}>{notice.published ? "게시" : "초안"}</StatusBadge>
-          <time dateTime={notice.publishedAt ?? notice.updatedAt}>{date(notice.publishedAt ?? notice.updatedAt)}</time>
-          <span className={styles.arrow} aria-hidden="true">→</span>
-        </Link>
+          <span className={styles.meta}>
+            <StatusBadge tone={notice.published ? "neutral" : "attention"}>{notice.published ? "게시" : "초안"}</StatusBadge>
+            <time dateTime={notice.publishedAt ?? notice.updatedAt}>{date(notice.publishedAt ?? notice.updatedAt)}</time>
+            <span className={styles.arrow} aria-hidden="true">→</span>
+          </span>
+        </RowLink>
       </li>)}
-    </ul>}
+    </List>}
     {visible && <Pagination label="공지 관리 페이지" page={page} size={visible.size} total={visible.total} onChange={changePage} />}
   </section>;
 }

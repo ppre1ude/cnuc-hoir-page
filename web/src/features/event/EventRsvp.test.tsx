@@ -18,6 +18,12 @@ describe("행사 참석 응답", () => {
   beforeEach(() => { setEventRsvp.mockReset(); });
   afterEach(cleanup);
 
+  it("section 배치는 제목과 응답 배지를 제목 줄에 두고 버튼 묶음 이름을 지킨다", () => {
+    render(<EventRsvp layout="section" event={event} memberType="ACTIVE" choice="ATTENDING" onSaved={() => {}} />);
+    expect(screen.getByRole("heading", { level: 2, name: "참석 응답" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "참석 응답" })).toBeInTheDocument();
+  });
+
   it("참석 응답을 저장하고 마감 전에는 불참으로 바꿀 수 있다", async () => {
     const onSaved = vi.fn();
     setEventRsvp.mockResolvedValueOnce({ eventId: 7, choice: "ATTENDING" })
