@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { BrandLogo } from "@/components/ui";
 import { concert, isConcertUpcoming } from "@/features/concert/concert";
+import { stills } from "@/features/concert/stills";
 import { choirChannels } from "@/features/onboarding/choirProfile";
 import { myeongjo } from "../fonts/myeongjo";
 import { paperlogy } from "../fonts/paperlogy";
+import { Gallery } from "./Gallery";
 import { Recipient } from "./Recipient";
 import { ShareButton } from "./ShareButton";
 import styles from "./concert.module.css";
@@ -23,12 +24,6 @@ export const metadata: Metadata = {
   // 공유 카드 그림은 같은 폴더의 opengraph-image.jpg를 씁니다.
   openGraph: { title: `전남대학교 합창단 ${title}`, description, siteName: "전남대학교 합창단", type: "website", locale: "ko_KR" },
 };
-
-const PHOTOS = [
-  { src: "/images/concert/rehearsal-1.jpg", alt: "악보를 보며 노래하는 단원들", width: 1200, height: 1600 },
-  { src: "/images/concert/rehearsal-2.jpg", alt: "나란히 앉아 악보를 읽는 단원들", width: 1200, height: 1600 },
-  { src: "/images/concert/rehearsal-piano.jpg", alt: "피아노 앞에 나란히 앉은 반주자들", width: 1071, height: 1428 },
-];
 
 export default function ConcertPage() {
   const upcoming = isConcertUpcoming(new Date());
@@ -69,15 +64,8 @@ export default function ConcertPage() {
         <div className={styles.seal} aria-hidden="true"><BrandLogo mark alt="" /></div>
       </section>
 
-      <section className={styles.sketch} aria-label="연습 사진">
-        <div className={styles.wide}>
-          <Image src="/images/concert/rehearsal-wide.jpg" alt="연습실에 모여 앉아 합창을 연습하는 단원들" width={1472} height={1102} sizes="(max-width: 760px) 100vw, 880px" priority />
-        </div>
-        <div className={styles.photos}>
-          {PHOTOS.map((photo) => (
-            <Image key={photo.src} src={photo.src} alt={photo.alt} width={photo.width} height={photo.height} sizes="(max-width: 760px) 33vw, 290px" />
-          ))}
-        </div>
+      <section aria-label="연습 사진">
+        <Gallery photos={stills} />
       </section>
 
       <footer className={styles.credits}>
