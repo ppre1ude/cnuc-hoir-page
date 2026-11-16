@@ -3,7 +3,7 @@ export type Still = { src: string; alt: string; width: number; height: number };
 const still = (n: number, width: number, height: number, alt: string): Still =>
   ({ src: `/images/concert/still-${String(n).padStart(2, "0")}.jpg`, alt, width, height });
 
-// 연주회 안내의 연습실 사진입니다. 합창단이 홍보용으로 고른 스틸컷이고, 보이는 순서대로 적습니다.
+// 연주회 안내의 연습실 사진입니다. 합창단이 홍보용으로 고른 스틸컷이고, 보이는 순서대로 적습니다. 컬러 7장을 먼저, 흑백 9장을 뒤에 둡니다.
 export const stills: Still[] = [
   still(1, 1200, 1600, "악보를 보며 노래하는 단원들"),
   still(2, 1200, 1600, "나란히 앉아 악보를 읽는 단원들"),
@@ -11,8 +11,8 @@ export const stills: Still[] = [
   still(4, 1093, 1462, "옆에서 본, 악보를 읽는 단원들"),
   still(5, 1472, 1102, "연습실에 모여 앉아 합창을 연습하는 단원들"),
   still(6, 1146, 1530, "줄지어 앉아 노래하는 단원들"),
-  still(7, 1530, 1146, "지휘자를 보며 노래하는 합창단"),
   still(8, 1071, 1428, "피아노 앞에 나란히 앉은 반주자들"),
+  still(7, 1530, 1146, "지휘자를 보며 노래하는 합창단"),
   still(9, 1120, 1498, "반주자와 손을 들어 지휘하는 지휘자"),
   still(10, 1071, 1428, "보면대 앞에 앉아 이야기하는 지휘자"),
   still(11, 1094, 1459, "반주자 어깨 너머로 보이는 합창단"),
