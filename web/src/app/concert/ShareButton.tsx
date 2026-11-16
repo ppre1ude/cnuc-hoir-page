@@ -14,6 +14,7 @@ export function ShareButton({ title, text, className }: { title: string; text: s
       else {
         await navigator.clipboard.writeText(url);
         setCopied(true);
+        window.setTimeout(() => setCopied(false), 2000);
       }
     } catch {
       // 공유 창을 닫았거나 복사가 막힌 경우입니다. 주소창의 주소를 그대로 쓸 수 있으니 따로 알리지 않습니다.
@@ -22,7 +23,7 @@ export function ShareButton({ title, text, className }: { title: string; text: s
 
   return (
     <Button variant="unstyled" className={className} onClick={share}>
-      <span aria-live="polite">{copied ? "주소를 복사했어요" : "친구에게 공유하기"}</span>
+      <span aria-live="polite">{copied ? "복사 완료" : "친구에게 공유하기"}</span>
     </Button>
   );
 }

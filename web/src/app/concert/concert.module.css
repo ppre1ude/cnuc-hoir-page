@@ -40,7 +40,7 @@
 .facts a, .channel { color: var(--ink); text-underline-offset: 3px; }
 
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4) var(--space-5); }
-.share { min-height: var(--control-large); padding: var(--space-3) var(--space-6); border: 0; border-radius: var(--radius-control); background: var(--seal); color: var(--paper); font: inherit; font-weight: var(--weight-public-label); cursor: pointer; }
+.share { min-width: 11.5em; min-height: var(--control-large); padding: var(--space-3) var(--space-6); border: 0; border-radius: var(--radius-control); background: var(--seal); color: var(--paper); font: inherit; font-weight: var(--weight-public-label); cursor: pointer; }
 .share:hover { background: #461511; }
 .share:focus-visible, .letter a:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 .channel { font-size: var(--text-label); font-weight: var(--weight-public-medium); }
