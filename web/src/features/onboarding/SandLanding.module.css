@@ -70,7 +70,8 @@
 
 /* 04 → 05: 사진 하나가 두 장면을 오갑니다. 자리는 투명한 요소로 잡고 엔진이 그 좌표로 사진을 옮깁니다.
    자리 요소는 transform을 쓰지 않으므로 offset 값이 곧 화면에 보이는 위치입니다. 모서리 반지름은 엔진의 PHOTO_RADIUS와 같습니다. */
-.photoAnchor { position: absolute; left: 6%; right: 6%; top: 10%; height: 48%; display: flex; justify-content: center; align-items: flex-start; visibility: hidden; pointer-events: none; }
+/* 모바일: 머리글(64px) 아래부터 04 글 묶음(아래 7% + 글 높이 약 150px) 위까지를 사진 자리로 잡고 그 가운데에 둡니다. 사진 위아래 빈 곳이 같아집니다. */
+.photoAnchor { position: absolute; left: 6%; right: 6%; top: 64px; bottom: calc(7% + 150px); display: flex; justify-content: center; align-items: center; visibility: hidden; pointer-events: none; }
 .photoAnchor i { display: block; width: 100%; max-height: 100%; aspect-ratio: 4 / 3; }
 .photo { position: absolute; left: 0; top: 0; width: 0; height: 0; overflow: hidden; border-radius: 14px; opacity: 0; pointer-events: none; transition: opacity 1s ease, left .82s var(--motion-ease), top .82s var(--motion-ease), width .82s var(--motion-ease), height .82s var(--motion-ease); }
 .photo[data-show] { opacity: 1; }
