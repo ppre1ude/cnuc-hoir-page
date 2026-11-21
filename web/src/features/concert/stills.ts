@@ -1,4 +1,5 @@
-export type Still = { src: string; alt: string; width: number; height: number };
+// thumb이 있으면 격자용과 크게 보기용을 미리 줄여 둔 사진입니다. 그대로 내보내고 Next 이미지 변환은 거치지 않습니다.
+export type Still = { src: string; alt: string; width: number; height: number; thumb?: string };
 
 const still = (n: number, width: number, height: number, alt: string): Still =>
   ({ src: `/images/concert/still-${String(n).padStart(2, "0")}.jpg`, alt, width, height });
