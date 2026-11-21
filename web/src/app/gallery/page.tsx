@@ -48,8 +48,8 @@ export default function GalleryPage() {
       </section>
 
       <footer className={styles.foot}>
-        <Link href="/concert">초대장 다시 보기</Link>
-        <Link href="/">합창단 처음으로</Link>
+        <Link href="/concert">초대장 보기</Link>
+        <Link href="/">합창단 홈페이지</Link>
       </footer>
     </main>
   );
