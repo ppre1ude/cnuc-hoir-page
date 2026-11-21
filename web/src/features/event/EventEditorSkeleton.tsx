@@ -1,14 +1,15 @@
-import { Skeleton, SkeletonRows } from "../../components/ui";
+import { Panel, Section, Skeleton, SkeletonRows } from "../../components/ui";
+import ui from "../../components/ui/ui.module.css";
+import layout from "../../components/ui/layout.module.css";
 import styles from "./EventEditor.module.css";
 
 const sectionHeight = "calc(var(--text-section) * 1.2)";
 
 // 세션을 기다리는 동안 일정 관리와 같은 틀로 자리를 잡습니다. 라우트의 <main> 안에 놓입니다.
 export function EventEditorSkeleton() {
-  return <div className={styles.page}>
-    <div className={styles.skeletonHeader}><Skeleton width="var(--space-20)" height="calc(var(--text-title) * 1.2)" /></div>
-    <div className={styles.section}>
-      <Skeleton className={styles.skeletonHeading} width="20%" height={sectionHeight} />
+  return <div className={ui.page}>
+    <div className={ui.pageHeader}><Skeleton width="var(--space-20)" height="calc(var(--text-title) * 1.2)" /></div>
+    <Section titleProps={{ "aria-hidden": true }} title={<Skeleton width="20%" height={sectionHeight} />}>
       <div className={styles.workspace}>
         <div>
           <Skeleton height="var(--control-medium)" />
@@ -18,13 +19,12 @@ export function EventEditorSkeleton() {
           {[0, 1, 2, 3].map((index) => <div key={index}><Skeleton width="45%" /><Skeleton height="var(--control-medium)" /></div>)}
         </div>
       </div>
-    </div>
-    <div className={styles.section}>
-      <Skeleton className={styles.skeletonHeading} width="20%" height={sectionHeight} />
+    </Section>
+    <Section titleProps={{ "aria-hidden": true }} title={<Skeleton width="20%" height={sectionHeight} />}>
       <div className={styles.workspace}>
-        <SkeletonRows count={5} className={styles.rosterList} />
-        <div className={styles.detail}><Skeleton height="var(--space-20)" /></div>
+        <SkeletonRows count={5} className={layout.list} />
+        <div className={styles.detail}><Panel><Skeleton height="var(--space-20)" /></Panel></div>
       </div>
-    </div>
+    </Section>
   </div>;
 }

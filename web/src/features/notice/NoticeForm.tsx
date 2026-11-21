@@ -1,8 +1,8 @@
 "use client";
 
-import { Button, Feedback, Input, PageHeader, StatusBadge, Textarea } from "../../components/ui";
+import { BackLink, Button, Feedback, Field, Form, Input, PageHeader, Panel, StatusBadge, Textarea } from "../../components/ui";
+import ui from "../../components/ui/ui.module.css";
 
-import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ApiRequestError } from "../../lib/api";
@@ -88,23 +88,24 @@ export function NoticeForm(props: Props) {
 
   const empty = !form.title.trim() || !form.body.trim();
   const disabled = busy || empty;
-  return <section className={styles.page}>
-    <Link className={styles.back} href={editing ? props.returnTo : "/admin/notices"}>← 공지 관리로</Link>
-    <PageHeader title={editing ? "공지 수정" : "새 공지 작성"} actions={editing && <span className={styles.rowHeader}>
+  return <section className={ui.page}>
+    <BackLink href={editing ? props.returnTo : "/admin/notices"}>← 공지 관리로</BackLink>
+    <PageHeader title={editing ? "공지 수정" : "새 공지 작성"} actions={editing && <>
       <StatusBadge tone={props.notice.published ? "neutral" : "attention"}>{props.notice.published ? "게시" : "초안"}</StatusBadge>
       {props.notice.publishedAt && <time className={styles.time} dateTime={props.notice.publishedAt}>게시일 {date(props.notice.publishedAt)}</time>}
-    </span>} />
+    </>} />
     {restored && <div className={styles.restored}>
       <Feedback tone="success">작성 중이던 공지를 되살렸습니다.</Feedback>
       <Button variant="ghost" size="small" type="button" onClick={() => { clearDraft(); setForm(emptyDraft); setRestored(false); }}>지우기</Button>
     </div>}
     {saved && <Feedback tone="success">{saved}</Feedback>}
-    <form className={`${styles.detail} ${styles.form}`} onSubmit={save} noValidate>
-      <label htmlFor="notice-title">제목</label>
-      <Input id="notice-title" value={form.title} onChange={(event) => update({ title: event.target.value })} maxLength={200} required />
-      <label htmlFor="notice-body">본문</label>
-      <Textarea id="notice-body" value={form.body} onChange={(event) => update({ body: event.target.value })} maxLength={10000} rows={10} required />
-      <p className={styles.hint}>주소를 적으면 단원 화면에서 링크가 됩니다.</p>
+    <Panel><Form onSubmit={save} noValidate>
+      <Field id="notice-title" label="제목">
+        <Input value={form.title} onChange={(event) => update({ title: event.target.value })} maxLength={200} required />
+      </Field>
+      <Field id="notice-body" label="본문" hint="주소를 적으면 단원 화면에서 링크가 됩니다.">
+        <Textarea value={form.body} onChange={(event) => update({ body: event.target.value })} maxLength={10000} rows={10} required />
+      </Field>
       {/* 투표를 못 받았을 때는 있는지 모르는 투표를 또 붙이지 않게 묶음을 숨깁니다. */}
       {editing && props.poll ? <NoticePollResults view={props.poll} /> : editing && props.pollUnknown ? null : <NoticePollChoice value={form} onChange={update} />}
       {error && <Feedback tone="error">{error}</Feedback>}
@@ -122,6 +123,6 @@ export function NoticeForm(props: Props) {
           <Button variant="secondary" type="submit" disabled={disabled} onClick={unpublish}>초안으로 내리기</Button>
         </>}
       </div>
-    </form>
+    </Form></Panel>
   </section>;
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { Button, Feedback, Linkify, PageHeader, Pagination, SkeletonRows } from "../../components/ui";
+import { Button, Feedback, Linkify, List, PageHeader, Pagination, Panel, Row, Section, SkeletonRows } from "../../components/ui";
+import ui from "../../components/ui/ui.module.css";
 
 import { useCallback, useEffect, useState } from "react";
 import { usePageParam } from "../../lib/pageParam";
@@ -87,16 +88,15 @@ export function NoticeList({ initialNoticeId = null }: { initialNoticeId?: numbe
     </section>;
   }
 
-  return <main id="member-content" tabIndex={-1} className={styles.page}>
+  return <main id="member-content" tabIndex={-1} className={ui.readingPage}>
     <PageHeader title="공지" />
     {listError && <><Feedback tone="error">{listError}</Feedback><Button variant="secondary" type="button" onClick={() => { setListError(""); setData(null); setRetry(retry + 1); }}>다시 시도</Button></>}
-    {visibleData?.items.length === 0 && <p>게시된 공지가 없습니다.</p>}
-    {visibleData && selectedId !== null && !isListed && <article className={styles.standalone}>
-      <h2>{visibleNotice?.title ?? "선택한 공지"}</h2>
-      {detail()}
-    </article>}
-    <div className={styles.list}>{!visibleData && !listError && <SkeletonRows count={5} label="공지를 불러오는 중입니다." />}
-      {visibleData?.items.map((notice) => <article key={notice.id} className={`${styles.row} ${selectedId === notice.id ? styles.expanded : ""}`}>
+    {visibleData?.items.length === 0 && <p className={ui.muted}>게시된 공지가 없습니다.</p>}
+    {visibleData && selectedId !== null && !isListed && <Panel className={styles.standalone}>
+      <Section title={visibleNotice?.title ?? "선택한 공지"}>{detail()}</Section>
+    </Panel>}
+    <List>{!visibleData && !listError && <SkeletonRows count={5} label="공지를 불러오는 중입니다." />}
+      {visibleData?.items.map((notice) => <Row as="article" key={notice.id} className={`${styles.row} ${selectedId === notice.id ? styles.expanded : ""}`}>
       <h2><Button variant="unstyled" id={`notice-trigger-${notice.id}`} aria-expanded={selectedId === notice.id}
         aria-controls={`notice-body-${notice.id}`} aria-describedby={notice.poll ? `notice-poll-status-${notice.id}` : undefined} onClick={() => open(notice.id)}>
         <span>{notice.title}</span><span className={styles.chevron} aria-hidden="true">{selectedId === notice.id ? "−" : "+"}</span>
@@ -108,7 +108,7 @@ export function NoticeList({ initialNoticeId = null }: { initialNoticeId?: numbe
       <div id={`notice-body-${notice.id}`} hidden={selectedId !== notice.id}>
         {selectedId === notice.id && detail()}
       </div>
-    </article>)}</div>
+    </Row>)}</List>
     {visibleData && <Pagination label="공지 목록 페이지" page={page} size={visibleData.size} total={visibleData.total} onChange={changePage} />}
   </main>;
 }

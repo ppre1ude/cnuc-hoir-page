@@ -1,11 +1,7 @@
 .page { composes: page from "../../components/ui/ui.module.css"; }
+/* 저장 뒤 목록 맨 위로 초점을 옮기므로 바깥 윤곽선은 그리지 않습니다. */
 .page:focus { outline: none; }
-.skeletonHeader { composes: pageHeader from "../../components/ui/ui.module.css"; }
-.empty { margin: 0; color: var(--color-muted); font-size: var(--text-label); line-height: 1.65; }
-.list { margin: 0; padding: 0; border-top: 2px solid var(--color-ink); list-style: none; }
-/* 일정 관리 목록 행과 같은 규칙입니다. 행 전체가 수정 화면으로 가는 링크이고 끝에 →를 둡니다. */
-.row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); min-height: var(--control-large); padding: var(--space-4) 0; border-bottom: 1px solid var(--color-line); color: var(--color-ink); font-weight: var(--weight-label); text-decoration: none; }
-.row:hover { color: var(--color-primary); }
-.row strong { flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere; }
-.row time { color: var(--color-muted); font-size: var(--text-small); font-weight: var(--weight-body); white-space: nowrap; }
+/* 행 오른쪽 묶음: 상태 배지, 날짜, 화살표. 행 전체가 수정 화면으로 가는 링크입니다. */
+.meta { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: var(--space-2); }
+.meta time { white-space: nowrap; }
 .arrow { color: var(--color-primary); }

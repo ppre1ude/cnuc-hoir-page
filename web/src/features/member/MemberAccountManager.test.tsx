@@ -28,7 +28,7 @@ function pending(id: number, name: string): MemberItem {
 const roster = () => within(screen.getByRole("list", { name: "단원 명단" }));
 async function open(name: string) {
   await userEvent.click(await roster().findByRole("button", { name: new RegExp(`^${name}`) }));
-  return (await screen.findByRole("heading", { name })).closest("article")!;
+  return (await screen.findByRole("heading", { name })).closest("section")!;
 }
 
 beforeEach(() => {
@@ -195,7 +195,7 @@ test("목록에는 이름과 파트만 보이고, 누르면 그 사람의 정보
   expect(screen.queryByText("member3@example.test")).not.toBeInTheDocument();
   expect(screen.getByText("목록에서 단원을 선택하세요.")).toBeInTheDocument();
   await userEvent.click(row);
-  const detail = (await screen.findByRole("heading", { name: "이서연" })).closest("article")!;
+  const detail = (await screen.findByRole("heading", { name: "이서연" })).closest("section")!;
   expect(within(detail).getByText("member3@example.test")).toBeInTheDocument();
   expect(within(detail).getByText("기수", { selector: "dt" }).nextElementSibling).toHaveTextContent("2기");
   expect(row).toHaveAttribute("aria-current", "true");

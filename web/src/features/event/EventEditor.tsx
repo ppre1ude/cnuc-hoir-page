@@ -1,9 +1,9 @@
 "use client";
 
-import { Button, Input, Select, Textarea, Feedback, PageHeader, ActionLink, SkeletonRows, StatusBadge } from "../../components/ui";
+import { ActionLink, Button, Feedback, Field, Form, Input, List, PageHeader, Panel, RowButton, Section, Select, SkeletonRows, StatusBadge, Textarea } from "../../components/ui";
+import ui from "../../components/ui/ui.module.css";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import Link from "next/link";
 import { canManageEvent, canManageRoster, type Part } from "../auth/session";
 import { useSession } from "../auth/SessionProvider";
 import { partLabel, parts } from "../member/roles";
@@ -150,73 +150,74 @@ export function EventEditor() {
     setLoadedMonth("");
     setRetry((value) => value + 1);
   }
-  return <div className={styles.page}>
+  return <div className={ui.page}>
     <PageHeader title="일정 관리" actions={<ActionLink variant="secondary" href="/dashboard">홈으로 가기</ActionLink>} />
     {listError && <Feedback tone="error">{listError} <Button variant="secondary" type="button" onClick={() => { setListError(""); setRetry(retry + 1); }}>다시 시도</Button></Feedback>}
     {saved && <p role="status">{saved}</p>}
     <EventBatchCreator onCreated={refreshList} />
-    <section className={styles.section} aria-labelledby="list-title">
-      <h2 id="list-title">등록된 일정</h2>
+    <Section title="등록된 일정" id="list-title">
       {/* 단원 명단과 같은 틀입니다. 왼쪽 좁은 칸에 월과 일정 목록, 오른쪽에 고른 일정의 수정 폼과 응답 집계를 둡니다. */}
       <div className={styles.workspace} data-view={selected ? "detail" : "list"}>
         <div className={styles.roster}>
-          <label htmlFor="list-month">조회 월</label>
-          <Input id="list-month" type="month" value={month} onChange={(change) => { currentMonth.current = change.target.value; setMonth(change.target.value); setLoadedMonth(""); }} />
-          {!validMonth && <p>조회할 월을 골라 주세요.</p>}
+          <Field id="list-month" label="조회 월">
+            <Input type="month" value={month} onChange={(change) => { currentMonth.current = change.target.value; setMonth(change.target.value); setLoadedMonth(""); }} />
+          </Field>
+          {!validMonth && <p className={ui.muted}>조회할 월을 골라 주세요.</p>}
           {validMonth && !visible && !listError && <SkeletonRows count={5} label="일정을 불러오는 중입니다." />}
-          {visible?.length === 0 && <p>이번 달 등록된 일정이 없습니다.</p>}
-          <ul className={styles.rosterList} aria-label="일정 목록">
+          {visible?.length === 0 && <p className={ui.muted}>이번 달 등록된 일정이 없습니다.</p>}
+          <List as="ul" aria-label="일정 목록">
             {visible?.map((event) => <li key={event.id}>
-              <button type="button" className={styles.rosterRow} aria-current={selected?.id === event.id ? "true" : undefined} onClick={() => edit(event)}>
+              <RowButton aria-current={selected?.id === event.id ? "true" : undefined} onClick={() => edit(event)}>
                 <strong className={event.cancelledAt ? calendarStyles.cancelled : undefined}>{event.title}</strong><span>{seoulDayLabel(event.startAt)}</span>
                 <small>{event.cancelledAt && "취소됨 "}{eventKindText(event) !== event.title && `${eventKindText(event)} `}{seoulTime(event.startAt)}</small>
-              </button>
+              </RowButton>
             </li>)}
-          </ul>
+          </List>
         </div>
         <div className={styles.detail}>
           <Button variant="secondary" size="small" type="button" className={styles.toList} onClick={clear}>목록으로</Button>
+          <Panel>
           {!selected && <p className={styles.placeholder}>목록에서 일정을 선택하세요.</p>}
           {selected && <>
-        <div className={styles.detailHeader}>
-          <h3>{selected.title}</h3>
+        <Section level={3} title={selected.title} badge={<>
           <span className={`${calendarStyles.kind} ${calendarStyles.kindBadge}`} data-kind={eventKind(selected)}>{eventKindText(selected)}</span>
           {selected.cancelledAt && <StatusBadge tone="neutral">취소됨</StatusBadge>}
-        </div>
+        </>} actions={<ActionLink variant="secondary" href={`/admin/events/${selected.id}/attendance`}>이 일정 출석 관리</ActionLink>}>
         {/* 여러 날에 걸친 일정은 끝나는 날짜도 적습니다. */}
-        <p className={styles.when}>{seoulDayLabel(selected.startAt)} {seoulTime(selected.startAt)} ~ {seoulDayLabel(selected.endAt) !== seoulDayLabel(selected.startAt) && `${seoulDayLabel(selected.endAt)} `}{seoulTime(selected.endAt)}</p>
-        {selected.createdBy && <p className={styles.when}>등록한 사람: {selected.createdBy}</p>}
-        <p><Link href={`/admin/events/${selected.id}/attendance`}>이 일정 출석 관리</Link></p>
+        <p className={ui.muted}>{seoulDayLabel(selected.startAt)} {seoulTime(selected.startAt)} ~ {seoulDayLabel(selected.endAt) !== seoulDayLabel(selected.startAt) && `${seoulDayLabel(selected.endAt)} `}{seoulTime(selected.endAt)}</p>
+        {selected.createdBy && <p className={ui.muted}>등록한 사람: {selected.createdBy}</p>}
         {error && <Feedback tone="error">{error}</Feedback>}
-        <form onSubmit={save} className={styles.form}>
-          {!editable && <p className={styles.hint}>이 일정은 고칠 권한이 없습니다. 출석 관리와 응답 집계만 볼 수 있습니다.</p>}
-          <label htmlFor="event-kind">종류</label><Select id="event-kind" value={kind} onChange={(change) => {
+        <Form onSubmit={save}>
+          {!editable && <p className={ui.muted}>이 일정은 고칠 권한이 없습니다. 출석 관리와 응답 집계만 볼 수 있습니다.</p>}
+          <Field id="event-kind" label="종류"><Select value={kind} onChange={(change) => {
             const next = change.target.value as ScheduleKind;
             setKind(next); if (next === "PART_REHEARSAL" && !part) setPart(partChoices[0] ?? null);
-          }}>{kindChoices.map((item) => <option key={item} value={item}>{scheduleKindLabel[item]}</option>)}</Select>
-          {kind === "PART_REHEARSAL" && <><label htmlFor="event-part">파트</label><Select id="event-part" value={part ?? ""}
+          }}>{kindChoices.map((item) => <option key={item} value={item}>{scheduleKindLabel[item]}</option>)}</Select></Field>
+          {kind === "PART_REHEARSAL" && <Field id="event-part" label="파트"><Select value={part ?? ""}
             onChange={(change) => setPart(change.target.value as Part)}>
-            {partChoices.map((item) => <option key={item} value={item}>{partLabel[item]}</option>)}</Select></>}
-          <label htmlFor="event-title">제목</label><Input id="event-title" value={title} onChange={(change) => setTitle(change.target.value)} maxLength={200} required />
-          <label htmlFor="event-description">내용 (선택)</label><Textarea id="event-description" value={description} onChange={(change) => setDescription(change.target.value)} maxLength={10000} rows={7} />
-          <label htmlFor="event-start">시작 시각 (한국 시간)</label><Input id="event-start" type="datetime-local" value={startAt} min="2000-01-01T00:00" step={300} onClick={(change) => openPicker(change.currentTarget)} onChange={(change) => setStartAt(change.target.value)} required />
-          <label htmlFor="event-end">종료 시각 (한국 시간)</label><Input id="event-end" type="datetime-local" value={endAt} min="2000-01-01T00:00" step={300} onClick={(change) => openPicker(change.currentTarget)} onChange={(change) => setEndAt(change.target.value)} required />
+            {partChoices.map((item) => <option key={item} value={item}>{partLabel[item]}</option>)}</Select></Field>}
+          <Field id="event-title" label="제목"><Input value={title} onChange={(change) => setTitle(change.target.value)} maxLength={200} required /></Field>
+          <Field id="event-description" label="내용 (선택)"><Textarea value={description} onChange={(change) => setDescription(change.target.value)} maxLength={10000} rows={7} /></Field>
+          <Field id="event-start" label="시작 시각 (한국 시간)"><Input type="datetime-local" value={startAt} min="2000-01-01T00:00" step={300} onClick={(change) => openPicker(change.currentTarget)} onChange={(change) => setStartAt(change.target.value)} required /></Field>
+          <Field id="event-end" label="종료 시각 (한국 시간)"><Input type="datetime-local" value={endAt} min="2000-01-01T00:00" step={300} onClick={(change) => openPicker(change.currentTarget)} onChange={(change) => setEndAt(change.target.value)} required /></Field>
           <label className={styles.check}><Input type="checkbox" checked={obEligible} onChange={(change) => setObEligible(change.target.checked)} /> OB도 참여 대상</label>
-          <div className={styles.actions}>{editable && <Button variant="primary" type="submit" disabled={busy || !title.trim()}>{busy ? "저장 중..." : "저장"}</Button>}
+          <div className={ui.actions}>{editable && <Button variant="primary" type="submit" disabled={busy || !title.trim()}>{busy ? "저장 중..." : "저장"}</Button>}
             <Button variant="secondary" type="button" onClick={clear}>닫기</Button></div>
-        </form>
-        {editable && <div className={styles.actions}>
+        </Form>
+        {editable && <div className={ui.actions}>
           {!selected.cancelledAt && <Button variant="danger" type="button" disabled={busy} onClick={() => confirmCancel(selected)}>이 일정 취소하기</Button>}
           {selected.cancelledAt && <>
             <Button variant="secondary" type="button" disabled={busy} onClick={() => void changeStatus(() => restoreEvent(selected.id), "일정 취소를 되돌렸습니다. 닫힌 출석 창은 필요하면 다시 열어 주세요.", "취소를 되돌리지 못했습니다.")}>취소 되돌리기</Button>
             <Button variant="danger" type="button" disabled={busy} onClick={() => confirmDelete(selected)}>완전히 삭제</Button>
           </>}
         </div>}
-        {selected.cancelledAt && <p className={styles.hint}>단원에게 취소됨으로 보입니다. 출석 기록이 있는 일정은 삭제할 수 없고, 기록은 그대로 남습니다.</p>}
+        {selected.cancelledAt && <p className={ui.muted}>단원에게 취소됨으로 보입니다. 출석 기록이 있는 일정은 삭제할 수 없고, 기록은 그대로 남습니다.</p>}
+        </Section>
         <AdminEventRsvps key={selected.id} eventId={selected.id} />
           </>}
+          </Panel>
         </div>
       </div>
-    </section>
+    </Section>
   </div>;
 }

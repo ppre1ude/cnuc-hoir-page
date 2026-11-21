@@ -1,7 +1,3 @@
-.page { composes: readingPage from "../../components/ui/ui.module.css"; }
-.list { border-top: 2px solid var(--color-ink); }
-.row { padding: var(--space-5) 0; border-bottom: 1px solid var(--color-line); }
-.row h2 { margin: 0; font-size: var(--text-section); }
 .row h2 button { display: flex; align-items: center; justify-content: space-between; gap: var(--space-5); width: 100%; min-height: var(--control-medium); padding: 0 var(--space-2); text-align: left; font-weight: var(--weight-label); }
 .row h2 button > span:first-child { min-width: 0; overflow-wrap: anywhere; }
 .row h2 button:hover { color: var(--color-primary); }
@@ -14,12 +10,8 @@
 .detail { padding: var(--space-6) var(--space-2) 0; }
 .body { margin: 0; font-size: var(--text-body); line-height: 1.9; overflow-wrap: anywhere; white-space: pre-wrap; }
 .close { display: flex; margin: var(--space-4) 0 0 auto; }
-.standalone { margin-bottom: var(--space-8); padding: var(--space-6); border: 1px solid var(--color-line); border-radius: var(--radius-control); }
-.standalone h2 { margin: 0; overflow-wrap: anywhere; }
-.skeletonHeader { composes: pageHeader from "../../components/ui/ui.module.css"; }
+.standalone { margin-bottom: var(--space-8); }
 @media (max-width: 760px) {
-  .row h2 { font-size: 18px; }
   .row h2 button, .detail { padding-inline: 0; }
   .rowMeta { margin-inline: 0; }
-  .standalone { padding: var(--space-5); }
 }

@@ -1,8 +1,6 @@
 .dashboard {
   composes: page from "../../components/ui/ui.module.css";
 }
-.eventPage { composes: readingPage from "../../components/ui/ui.module.css"; }
-.eventPageCard { composes: surface from "../../components/ui/ui.module.css"; }
 .hero { padding-bottom: var(--space-6); border-bottom: 1px solid var(--color-line); }
 /* 출석 창이 열린 동안에만 달력 위에 놓입니다. 현장에서 사이트를 열자마자 눈에 띄어야 합니다. */
 .checkInBanner { composes: banner from "../../components/ui/ui.module.css"; margin-bottom: var(--space-6); }
@@ -112,11 +110,6 @@
 .emptyDay p { margin: 0; color: var(--color-muted); font-size: var(--text-body); }
 .error { margin-bottom: var(--space-5); padding: var(--space-4); border: 1px solid var(--color-danger-border); border-radius: var(--radius-control); background: var(--color-danger-background); color: var(--color-danger); }
 .error button { margin-left: var(--space-2); }
-.backLink { display: inline-flex; align-items: center; min-height: var(--control-medium); margin-bottom: var(--space-4); color: var(--color-primary); font-size: var(--text-label); font-weight: var(--weight-label); text-decoration: none; }
-.backLink:hover { text-decoration: underline; }
-.eventAttendance { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-6); padding-top: var(--space-6); border-top: 1px solid var(--color-line); }
-.eventPageCard > p:last-child a { color: var(--color-primary); font-size: var(--text-label); font-weight: var(--weight-label); text-decoration: none; }
-.eventPageCard > p:last-child a:hover { text-decoration: underline; }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .skeletonHeader { composes: pageHeader from "../../components/ui/ui.module.css"; }
 .skeletonCalendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); justify-items: center; gap: var(--space-2); margin-top: var(--space-5); }
