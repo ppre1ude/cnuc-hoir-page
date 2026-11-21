@@ -117,7 +117,10 @@ export function SandLanding({ showConcert = false }: { showConcert?: boolean }) 
                     {year.items.map((item) => (
                       <li key={item.id}>
                         <time dateTime={item.date}>{item.monthDay}</time>
-                        <span>{item.title}{item.description && <small>{item.description}</small>}</span>
+                        <span>
+                          {item.title}{item.description && <small>{item.description}</small>}
+                          {item.link && <Link className={styles.eventLink} href={item.link.href}>{item.link.label}</Link>}
+                        </span>
                       </li>
                     ))}
                   </ul>

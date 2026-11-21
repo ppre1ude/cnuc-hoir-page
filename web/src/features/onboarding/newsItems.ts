@@ -4,10 +4,19 @@ export type PublicNewsItem = {
   date: string;
   title: string;
   description?: string;
+  /** 그 일을 더 볼 수 있는 사이트 안 페이지가 있을 때만 적습니다. */
+  link?: { href: string; label: string };
 };
 
 // 공개 연혁은 합창단이 확인한 사실만 정적으로 관리하며 회원 공지와 분리합니다.
 export const publicNews: PublicNewsItem[] = [
+  {
+    id: "concert-2026",
+    date: "2026-11-20",
+    title: "제2회 정기연주회 개최",
+    description: "전남대학교 민주마루",
+    link: { href: "/gallery", label: "공연 사진 보기" },
+  },
   {
     id: "central-club-2026",
     date: "2026-09-29",

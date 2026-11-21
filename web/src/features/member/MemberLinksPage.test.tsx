@@ -3,17 +3,29 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { MemberLinksPage } from "./MemberLinksPage";
 import { choirChannels } from "../onboarding/choirProfile";
 
-const previous = { sheet: process.env.NEXT_PUBLIC_PRACTICE_SHEET_URL, drive: process.env.NEXT_PUBLIC_MATERIALS_DRIVE_URL };
+const previous = { sheet: process.env.NEXT_PUBLIC_PRACTICE_SHEET_URL, drive: process.env.NEXT_PUBLIC_MATERIALS_DRIVE_URL, photos: process.env.NEXT_PUBLIC_CONCERT_PHOTOS_DRIVE_URL };
 
 beforeEach(() => {
   process.env.NEXT_PUBLIC_PRACTICE_SHEET_URL = "https://docs.google.com/spreadsheets/d/sheet-id/edit";
   process.env.NEXT_PUBLIC_MATERIALS_DRIVE_URL = "https://drive.google.com/drive/folders/drive-id";
+  delete process.env.NEXT_PUBLIC_CONCERT_PHOTOS_DRIVE_URL;
 });
 
 afterEach(() => {
   cleanup();
   process.env.NEXT_PUBLIC_PRACTICE_SHEET_URL = previous.sheet;
   process.env.NEXT_PUBLIC_MATERIALS_DRIVE_URL = previous.drive;
+  process.env.NEXT_PUBLIC_CONCERT_PHOTOS_DRIVE_URL = previous.photos;
+});
+
+test("연주회 사진 원본 링크는 주소를 넣었을 때만 보입니다", () => {
+  const { unmount } = render(<MemberLinksPage />);
+  expect(screen.queryByRole("heading", { name: "연주회 기록" })).toBeNull();
+  unmount();
+
+  process.env.NEXT_PUBLIC_CONCERT_PHOTOS_DRIVE_URL = "https://drive.google.com/drive/folders/photos-id";
+  render(<MemberLinksPage />);
+  expect(screen.getByRole("link", { name: /제2회 정기연주회 사진 원본/ })).toHaveAttribute("href", "https://drive.google.com/drive/folders/photos-id");
 });
 
 test("연습 자료와 공식 채널을 나눠 보여 주고 모두 새 탭으로 엽니다", () => {

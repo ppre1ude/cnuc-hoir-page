@@ -10,8 +10,14 @@ export function memberLinkGroups(): { title: string; links: MemberLink[] }[] {
       note: "연습 일정은 이 시트가 기준입니다. 참석 일정이 바뀌면 시트에 적어 주세요." },
     { label: "악보와 자료 드라이브", href: process.env.NEXT_PUBLIC_MATERIALS_DRIVE_URL ?? "" },
   ].filter((link) => link.href);
+  // 공개 갤러리에는 줄인 사진만 걸고, 원본은 단원만 이 링크로 받습니다.
+  const records: MemberLink[] = [
+    { label: "제2회 정기연주회 사진 원본", href: process.env.NEXT_PUBLIC_CONCERT_PHOTOS_DRIVE_URL ?? "",
+      note: "공연 날 찍은 사진과 영상 원본을 내려받을 수 있습니다." },
+  ].filter((link) => link.href);
   return [
     { title: "연습 자료", links: practice },
+    { title: "연주회 기록", links: records },
     { title: "공식 채널", links: [
       { label: "인스타그램", href: choirChannels.instagram },
       { label: "유튜브", href: choirChannels.youtube },

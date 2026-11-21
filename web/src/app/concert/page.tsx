@@ -39,7 +39,12 @@ export default function ConcertPage() {
         <h1 className={styles.title} id="concert-title" aria-label={concert.title}>
           <Recipient className={styles.blank} caretClassName={styles.caret} />{concert.title.replace(/^_+/, "")}
         </h1>
-        {!upcoming && <p className={styles.ended}>공연을 마쳤습니다. 함께해 주셔서 감사합니다.</p>}
+        {!upcoming && (
+          <p className={styles.ended}>
+            공연을 마쳤습니다. 함께해 주셔서 감사합니다.<br />
+            <Link className={styles.channel} href="/gallery">공연 사진 보기</Link>
+          </p>
+        )}
         <dl className={styles.facts}>
           <div>
             <dt>일시</dt>
