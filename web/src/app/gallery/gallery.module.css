@@ -1,0 +1,55 @@
+/* 공연 사진: 민주마루 객석에 앉아 무대를 보는 화면입니다. 위쪽은 불 꺼진 객석과 나무 벽 무대, 아래쪽은 그랜드피아노의 검은 칠과 건반입니다.
+   색은 공연 날 사진에서 가져왔습니다. 나무 벽, 단풍나무 바닥, 피아노 칠, 상아 건반, 바퀴의 황동, 건반 위 붉은 펠트입니다. */
+.page {
+  --house: #17110d; --wood: #a8642a; --lacquer: #0a0908; --ivory: #f4ecdc; --brass: #c79a3b; --felt: #7d1f1c;
+  --on-dark: var(--ivory); --on-dark-soft: #b3a48d; /* 사진 격자와 크게 보기 창도 이 글자색을 씁니다. */
+  --serif: var(--font-myeongjo), "Nanum Myeongjo", "AppleMyungjo", "Batang", serif;
+  --gutter: max(var(--space-5), calc((100% - 1120px) / 2));
+  min-height: 100dvh; padding-bottom: var(--page-bottom);
+  background: var(--lacquer); color: var(--on-dark);
+  font-family: var(--font-paperlogy), "Pretendard Variable", "Malgun Gothic", sans-serif;
+}
+
+/* 객석. 무대 조명이 아래에서 번져 올라오듯 나무색을 깔았습니다. */
+.house { background: radial-gradient(90% 70% at 50% 100%, rgb(168 100 42 / .34), transparent 70%), var(--house); }
+.header { display: flex; align-items: center; height: 64px; padding: 0 var(--gutter); }
+.logo { --logo-width: min(36vw, 190px); }
+/* 무대 사진. 넓은 화면에서는 높이를 눌러 공연 이름이 첫 화면에 걸리게 하고, 위쪽 빈 벽을 잘라 피아노와 객석을 남깁니다. */
+.hall { display: block; width: 100%; max-width: 1120px; height: auto; max-height: 68dvh; margin: 0 auto; object-fit: cover; object-position: center 70%; animation: lightsUp 1.8s cubic-bezier(.2, .6, .2, 1) both; }
+/* 들어오면 무대 조명이 켜집니다. 이 페이지에서 저절로 움직이는 것은 이것 하나입니다. */
+@keyframes lightsUp { from { filter: brightness(.18) saturate(.7); } }
+@media (prefers-reduced-motion: reduce) { .hall { animation: none; } }
+
+/* 건반 뚜껑. 검은 칠 위쪽에 조명이 살짝 비칩니다. */
+.fallboard {
+  display: grid; justify-items: center; gap: var(--space-2); padding: var(--space-8) var(--gutter) var(--space-6); text-align: center;
+  background: linear-gradient(180deg, rgb(255 255 255 / .08), transparent 26%), var(--lacquer);
+}
+/* 피아노 이름표처럼 황동색으로 적습니다. 글자에 그러데이션을 입히지 못하는 브라우저에서는 단색 황동으로 보입니다. */
+.title {
+  margin: 0; color: var(--brass); font-family: var(--serif); font-size: clamp(26px, 6.4vw, 46px); font-weight: 800; letter-spacing: .02em; line-height: 1.25;
+  background: linear-gradient(180deg, #ecd081, #b78a34); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.work { margin: 0; font-family: var(--serif); font-size: clamp(17px, 4.4vw, 22px); font-weight: 700; line-height: 1.5; }
+.blank { display: inline-block; width: 2.2em; margin-right: .15em; border-bottom: .07em solid currentColor; vertical-align: -.1em; }
+.facts { margin: 0; color: var(--on-dark-soft); font-size: var(--text-label); }
+
+/* 건반. 한 옥타브(흰 건반 일곱, 검은 건반 다섯)를 그려 옆으로 이어 붙입니다. 위의 붉은 줄은 건반과 뚜껑 사이의 펠트입니다. */
+.keys {
+  --key: clamp(18px, 3.2vw, 34px);
+  height: calc(var(--key) * 3.4); border-top: 3px solid var(--felt);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 60' preserveAspectRatio='none'%3E%3Crect width='70' height='60' fill='%23f4ecdc'/%3E%3Cpath d='M0 0v60M10 0v60M20 0v60M30 0v60M40 0v60M50 0v60M60 0v60M70 0v60' stroke='%234a3d31' stroke-width='.7'/%3E%3Cpath d='M7 0h6v38h-6zM17 0h6v38h-6zM37 0h6v38h-6zM47 0h6v38h-6zM57 0h6v38h-6z' fill='%230a0908'/%3E%3C/svg%3E") center top / calc(var(--key) * 7) 100% repeat-x;
+  box-shadow: inset 0 10px 12px -8px rgb(0 0 0 / .55), inset 0 -6px 8px -6px rgb(0 0 0 / .35);
+}
+
+.photos { padding: var(--space-8) var(--gutter) 0; }
+.count { margin: 0; color: var(--on-dark-soft); font-size: var(--text-label); font-weight: var(--weight-public-medium); }
+
+.foot { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); margin: var(--space-12) var(--gutter) 0; padding-top: var(--space-5); border-top: 1px solid rgb(244 236 220 / .16); font-size: var(--text-label); }
+.foot a { color: var(--on-dark-soft); text-underline-offset: 3px; }
+.foot a:hover { color: var(--on-dark); }
+.foot a:focus-visible, .header a:focus-visible { outline: 2px solid var(--on-dark); outline-offset: 3px; }
+
+@media (min-width: 900px) {
+  .photos { --gallery-cols: 6; }
+}

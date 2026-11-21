@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BrandLogo } from "@/components/ui";
 import { concert, isConcertUpcoming } from "@/features/concert/concert";
-import { stagePhotos } from "@/features/concert/stagePhotos";
 import { stills } from "@/features/concert/stills";
 import { choirChannels } from "@/features/onboarding/choirProfile";
 import { myeongjo } from "../fonts/myeongjo";
@@ -40,7 +39,12 @@ export default function ConcertPage() {
         <h1 className={styles.title} id="concert-title" aria-label={concert.title}>
           <Recipient className={styles.blank} caretClassName={styles.caret} />{concert.title.replace(/^_+/, "")}
         </h1>
-        {!upcoming && <p className={styles.ended}>공연을 마쳤습니다. 함께해 주셔서 감사합니다.</p>}
+        {!upcoming && (
+          <p className={styles.ended}>
+            공연을 마쳤습니다. 함께해 주셔서 감사합니다.<br />
+            <Link className={styles.channel} href="/gallery">공연 사진 보기</Link>
+          </p>
+        )}
         <dl className={styles.facts}>
           <div>
             <dt>일시</dt>
@@ -65,14 +69,7 @@ export default function ConcertPage() {
         <div className={styles.seal} aria-hidden="true"><BrandLogo mark alt="" /></div>
       </section>
 
-      <section aria-labelledby="stage-photos">
-        <h2 className={styles.galleryTitle} id="stage-photos">공연 사진</h2>
-        {/* 격자가 네 칸이라 마지막 줄이 비지 않게 여덟 줄만 먼저 보여 줍니다. */}
-        <Gallery photos={stagePhotos} initial={32} />
-      </section>
-
-      <section aria-labelledby="practice-photos">
-        <h2 className={styles.galleryTitle} id="practice-photos">연습 사진</h2>
+      <section aria-label="연습 사진">
         <Gallery photos={stills} />
       </section>
 
