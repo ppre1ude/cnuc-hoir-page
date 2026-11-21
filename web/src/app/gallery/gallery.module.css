@@ -43,7 +43,7 @@
 }
 
 .photos { padding: var(--space-8) var(--gutter) 0; }
-.count { margin: 0; color: var(--on-dark-soft); font-size: var(--text-label); font-weight: var(--weight-public-medium); }
+.photosTitle { margin: 0; color: var(--on-dark-soft); font-size: var(--text-label); font-weight: var(--weight-public-medium); }
 
 .foot { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); margin: var(--space-12) var(--gutter) 0; padding-top: var(--space-5); border-top: 1px solid rgb(244 236 220 / .16); font-size: var(--text-label); }
 .foot a { color: var(--on-dark-soft); text-underline-offset: 3px; }

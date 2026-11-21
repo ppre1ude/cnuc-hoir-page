@@ -42,7 +42,7 @@ export default function GalleryPage() {
       <div className={styles.keys} aria-hidden="true" />
 
       <section className={styles.photos} aria-labelledby="photos-title">
-        <h2 className={styles.count} id="photos-title">공연 사진 {stagePhotos.length}장</h2>
+        <h2 className={styles.photosTitle} id="photos-title">공연 사진 보기</h2>
         {/* 휴대폰은 네 칸, 넓은 화면은 여섯 칸이라 어느 쪽에서도 마지막 줄이 차는 36장을 먼저 보여 줍니다. */}
         <Gallery photos={stagePhotos} initial={36} />
       </section>
