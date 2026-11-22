@@ -101,7 +101,7 @@ test("운영진 초대부터 출석 정정 반영까지 실제 서비스 흐름"
     await expect(row).toContainText("출석 완료");
     await row.getByLabel(`${name} 정정 이유`).fill("현장 기록 확인");
     await row.getByRole("button", { name: `${name} 미출석으로 정정` }).click();
-    await expect(row).toContainText("미출석");
+    await expect(row.getByText("미출석", { exact: true })).toBeVisible();
     await page.reload();
     await expect(page.getByRole("listitem").filter({ hasText: eventTitle })).toContainText("미출석");
 
