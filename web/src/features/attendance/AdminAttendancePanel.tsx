@@ -211,7 +211,7 @@ export function AdminAttendancePanel({ eventId }: { eventId: number }) {
         <div className={styles.detail} ref={detail} tabIndex={-1}>
           <Button variant="secondary" size="small" type="button" className={styles.toList} onClick={() => { focus.leave(selected); setSelected(null); }}>목록으로</Button>
           <Panel>
-          {current ? <Section level={3} title={rosterName(current)} badge={<>
+          {current ? <Section level={3} id={`member-detail-${current.memberId}`} title={rosterName(current)} badge={<>
               <StatusBadge tone={attendanceTone(current.status)}>{statusLabel(current)}</StatusBadge>
               {current.checkedInAt && <span className={styles.time}>{seoulTime(current.checkedInAt)}</span>}
               {current.correctedAt && <span className={styles.time}>정정됨</span>}
