@@ -104,3 +104,9 @@ test("저장이 끝나면 임시 저장을 지우고, 서버가 투표 오류를
   await userEvent.click(publish());
   await waitFor(() => expect(sessionStorage.getItem("notice-draft")).toBeNull());
 });
+
+test("공지 폼의 제목과 본문 입력은 라벨과 이어집니다", () => {
+  renderWithSession(<NoticeForm mode="new" />, staff);
+  expect(screen.getByLabelText("제목")).toHaveAttribute("id", "notice-title");
+  expect(screen.getByLabelText("본문")).toHaveAttribute("id", "notice-body");
+});

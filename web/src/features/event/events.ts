@@ -167,3 +167,13 @@ export function rsvpChip(event: ChoirEvent, member: { memberType: "ACTIVE" | "OB
   if (choice === "ABSENT") return closed ? { tone: "neutral", label: "불참 응답" } : { tone: "negative", label: "불참" };
   return { tone: closed ? "neutral" : "attention", label: "미응답" };
 }
+
+const seoulShortTime = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", timeStyle: "short" });
+// 같은 날 끝나는 일정은 날짜를 두 번 읽지 않게 끝 시각만 돌려줍니다.
+export function eventEndLabel(event: Pick<ChoirEvent, "startAt" | "endAt">): string {
+  return seoulDateKey(event.startAt) === seoulDateKey(event.endAt) ? seoulShortTime.format(new Date(event.endAt)) : seoulDateTime(event.endAt);
+}
+// 대상 배지 문구. OB에게는 참여 가능 여부를, 활동 단원에게는 대상 범위를 말합니다.
+export function eventAudienceLabel(event: ChoirEvent, memberType: "ACTIVE" | "OB" | null): string {
+  return memberType === "OB" ? (event.obEligible ? "OB 참여 가능" : "OB 참여 불가") : `${eventAudience(event)} 대상`;
+}

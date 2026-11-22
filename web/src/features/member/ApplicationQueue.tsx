@@ -1,6 +1,7 @@
 "use client";
 
-import { Button, Textarea, Feedback, PageHeader, Pagination, SkeletonRows } from "../../components/ui";
+import { Button, Facts, Feedback, Field, List, PageHeader, Pagination, Panel, RowButton, Section, SkeletonRows, Textarea } from "../../components/ui";
+import ui from "../../components/ui/ui.module.css";
 
 import { useEffect, useState } from "react";
 import { ApiRequestError } from "../../lib/api";
@@ -60,31 +61,33 @@ export function ApplicationQueue() {
   const current = selected === null ? null : items.find((item) => item.id === selected) ?? items[0] ?? null;
 
   return (
-    <section className={styles.page}>
+    <section className={ui.page}>
       <PageHeader title="가입 승인" />
-      <p>가입 신청자가 적은 이름, 기수, 파트와 구글 이메일이 실제 단원과 맞는지 확인한 뒤 승인해 주세요.</p>
+      <p className={ui.muted}>가입 신청자가 적은 이름, 기수, 파트와 구글 이메일이 실제 단원과 맞는지 확인한 뒤 승인해 주세요.</p>
       {error && <Feedback tone="error">{error}</Feedback>}
       {!data && error && <Button variant="secondary" type="button" onClick={() => { setError(""); setRetry((value) => value + 1); }}>다시 시도</Button>}
       {!data && !error && <SkeletonRows count={3} label="신청 목록을 불러오는 중입니다." />}
-      {data?.items.length === 0 && <p>승인 대기 신청이 없습니다.</p>}
+      {data?.items.length === 0 && <p className={ui.muted}>승인 대기 신청이 없습니다.</p>}
       {items.length > 0 && <div className={styles.workspace} data-view={current ? "detail" : "list"}>
         <div className={styles.roster}>
-          <ul className={styles.rosterList} aria-label="신청자 목록">
+          <List as="ul" aria-label="신청자 목록">
             {items.map((item) => <li key={item.id}>
-              <button type="button" className={styles.rosterRow} aria-current={current?.id === item.id ? "true" : undefined} onClick={() => setSelected(item.id)}>
+              <RowButton aria-current={current?.id === item.id ? "true" : undefined} onClick={() => setSelected(item.id)}>
                 <strong>{item.name}</strong>
                 <span>{rosterDetail(item) || "정보 미입력"}</span>
-              </button>
+              </RowButton>
             </li>)}
-          </ul>
+          </List>
           {data && data.total > data.size && <Pagination label="신청 목록 페이지" page={page} size={data.size} total={data.total} onChange={setPage} />}
         </div>
         <div className={styles.detail}>
           <Button variant="secondary" size="small" type="button" className={styles.toList} onClick={() => setSelected(null)}>목록으로</Button>
+          <Panel>
           {current ? <ApplicationDetail key={current.id} item={current} busy={busy === current.id}
             onApprove={(type) => update(current.id, () => approveApplication(current.id, type))}
             onReject={(reason) => update(current.id, () => rejectApplication(current.id, reason))} />
             : <p className={styles.placeholder}>목록에서 신청자를 선택하세요.</p>}
+          </Panel>
         </div>
       </div>}
     </section>
@@ -102,16 +105,15 @@ function ApplicationDetail({ item, busy, onApprove, onReject }: {
 }) {
   const [type, setType] = useState<"ACTIVE" | "OB">("ACTIVE");
   const [reason, setReason] = useState("");
-  return <article>
-    <h2>{item.name}</h2>
-    <dl className={styles.facts}>
-      <div><dt>파트</dt><dd>{item.part ? partLabel[item.part] : "미입력"}</dd></div>
-      <div><dt>기수</dt><dd>{item.cohort == null ? "미입력" : `${item.cohort}기`}</dd></div>
-      <div><dt>신청일</dt><dd>{new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", dateStyle: "medium" }).format(new Date(item.createdAt))}</dd></div>
-      <div><dt>이메일</dt><dd>{item.email}</dd></div>
-    </dl>
+  return <Section title={item.name}>
+    <Facts items={[
+      { label: "파트", value: item.part ? partLabel[item.part] : "미입력" },
+      { label: "기수", value: item.cohort == null ? "미입력" : `${item.cohort}기` },
+      { label: "신청일", value: new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", dateStyle: "medium" }).format(new Date(item.createdAt)) },
+      { label: "이메일", value: item.email },
+    ]} />
     <div className={styles.approval}>
-      <p className={styles.hint}>이름, 파트, 기수와 이메일이 아는 단원과 맞으면 단원 구분을 골라 승인해 주세요. 승인하면 본인은 다시 로그인해야 합니다.</p>
+      <p className={ui.muted}>이름, 파트, 기수와 이메일이 아는 단원과 맞으면 단원 구분을 골라 승인해 주세요. 승인하면 본인은 다시 로그인해야 합니다.</p>
       <div className={styles.decision}>
         <span className={styles.fieldLabel}>단원 구분</span>
         <div className={styles.choice} role="group" aria-label={`${item.name} 단원 구분`}>
@@ -121,14 +123,15 @@ function ApplicationDetail({ item, busy, onApprove, onReject }: {
       </div>
       <details className={styles.reject}>
         <summary aria-label={`${item.name} 가입 신청 반려`}>가입 신청 반려</summary>
-        <div className={styles.fieldGroup}>
-          <label htmlFor={`reason-${item.id}`}>반려 이유</label>
-          <Textarea id={`reason-${item.id}`} aria-label={`${item.name} 반려 이유`} value={reason} onChange={(event) => setReason(event.target.value)} maxLength={500} />
-          <div className={styles.actions}><Button variant="danger" type="button" disabled={busy || !reason.trim()} aria-label={`${item.name} 반려`} onClick={() => {
+        <div className={styles.rejectBody}>
+          <Field id={`reason-${item.id}`} label="반려 이유">
+            <Textarea aria-label={`${item.name} 반려 이유`} value={reason} onChange={(event) => setReason(event.target.value)} maxLength={500} />
+          </Field>
+          <div className={ui.actions}><Button variant="danger" type="button" disabled={busy || !reason.trim()} aria-label={`${item.name} 반려`} onClick={() => {
             if (window.confirm(`${item.name}의 가입 신청을 반려할까요? 반려한 계정은 단원 정보 관리 화면에서 반려를 취소할 수 있습니다.`)) onReject(reason.trim());
           }}>반려</Button></div>
         </div>
       </details>
     </div>
-  </article>;
+  </Section>;
 }

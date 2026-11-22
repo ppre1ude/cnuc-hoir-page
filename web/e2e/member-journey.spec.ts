@@ -47,8 +47,8 @@ test("운영진 초대부터 출석 정정 반영까지 실제 서비스 흐름"
     await expect(adminPage.getByRole("status")).toContainText("공지를 저장했습니다.");
 
     await adminPage.goto(`/admin/events/${eventId}/attendance`);
-    await adminPage.getByRole("button", { name: "출석 창 열기" }).click();
-    const code = await adminPage.locator('section[aria-label="출석 창"] strong').innerText();
+    await adminPage.getByRole("button", { name: "출석 받기" }).click();
+    const code = await adminPage.getByRole("region", { name: "출석 창" }).locator("strong").innerText();
     expect(code).toMatch(/^[A-Z0-9]{8}$/);
 
     await login(page, email, password);
@@ -94,11 +94,14 @@ test("운영진 초대부터 출석 정정 반영까지 실제 서비스 흐름"
     await expect(page.getByRole("listitem").filter({ hasText: eventTitle })).toContainText("출석 완료");
 
     await adminPage.goto(`/admin/events/${eventId}/attendance`);
-    const row = adminPage.locator("section[aria-label='단원 출석 기록'] > div").filter({ hasText: email });
+    // 단원별 상태는 왼쪽 목록에서 단원을 고르면 오른쪽 상세에 기록과 정정 칸이 나옵니다.
+    const roster = adminPage.getByRole("region", { name: "단원별 상태" });
+    await roster.getByRole("button", { name: new RegExp(`^${name}`) }).click();
+    const row = roster.getByRole("region", { name: new RegExp(`^${name}`) });
     await expect(row).toContainText("출석 완료");
-    await row.getByLabel("정정 이유").fill("현장 기록 확인");
-    await row.getByRole("button", { name: "미출석으로 정정" }).click();
-    await expect(row).toContainText(/· 미출석/);
+    await row.getByLabel(`${name} 정정 이유`).fill("현장 기록 확인");
+    await row.getByRole("button", { name: `${name} 미출석으로 정정` }).click();
+    await expect(row.getByText("미출석", { exact: true })).toBeVisible();
     await page.reload();
     await expect(page.getByRole("listitem").filter({ hasText: eventTitle })).toContainText("미출석");
 
