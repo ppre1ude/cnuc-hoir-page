@@ -2,15 +2,22 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { BrandLogo } from "@/components/ui";
-import { concert } from "@/features/concert/concert";
-import { stagePhotos } from "@/features/concert/stagePhotos";
+import { greetings } from "@/features/concert/greetings";
+import { stagePhoto, stagePhotos } from "@/features/concert/stagePhotos";
 import { Gallery } from "../concert/Gallery";
 import { myeongjo } from "../fonts/myeongjo";
 import { paperlogy } from "../fonts/paperlogy";
+import { Letter } from "./Letter";
+import concertStyles from "../concert/concert.module.css";
 import styles from "./gallery.module.css";
 
-const title = `${concert.round} 공연 사진`;
-const description = `${concert.venue}에서 올린 ${concert.round} 무대를 사진으로 남겼습니다.`;
+// 이 페이지는 제2회 정기연주회의 기록입니다. 다음 연주회 안내로 바뀌는 concert.ts를 따라가지 않도록 값을 여기에 따로 적습니다.
+const round = "제2회 정기연주회";
+const work = "에게 보내는 편지";
+const venue = "전남대학교 민주마루";
+
+const title = `${round} 공연 사진`;
+const description = `${venue}에서 올린 ${round} 무대를 사진으로 남겼습니다.`;
 
 export const metadata: Metadata = {
   title,
@@ -18,8 +25,8 @@ export const metadata: Metadata = {
   openGraph: { title: `전남대학교 합창단 ${title}`, description, siteName: "전남대학교 합창단", type: "website", locale: "ko_KR" },
 };
 
-// 첫 화면에 거는 사진은 객석에서 본 무대 전경입니다. 그 사진을 내리면 첫 장을 씁니다.
-const hall = stagePhotos.find((photo) => photo.src.endsWith("/195.webp")) ?? stagePhotos[0];
+// 첫 화면에 거는 사진은 객석에서 본 무대 전경입니다.
+const hall = stagePhoto(195);
 
 export default function GalleryPage() {
   return (
@@ -33,13 +40,34 @@ export default function GalleryPage() {
           alt="객석에서 본 민주마루 무대. 나무 벽 앞에 합창단이 줄지어 서 있고 가운데에 그랜드피아노가 놓여 있습니다." />
       </div>
 
-      {/* 피아노: 건반 뚜껑 안쪽의 금빛 글씨 자리에 공연 이름을 적고, 그 아래에 건반을 둡니다. */}
-      <div className={styles.fallboard}>
-        <h1 className={styles.title}>{concert.round}</h1>
-        <p className={styles.work} aria-label={concert.title}><span className={styles.blank} />{concert.title.replace(/^_+/, "")}</p>
-        <p className={styles.facts}>{concert.dateLabel}, {concert.venue}</p>
+      {/* 표지: 프로그램북 표지를 옮긴 편지지입니다. 밀랍 봉인과 금빛 필기체는 표지에 쓴 그림 그대로입니다. */}
+      <div className={`${concertStyles.letter} ${styles.cover}`}>
+        <p className={styles.host}>전남대학교 합창단</p>
+        <h1 className={styles.title} aria-label={`${round} _____${work}`}>
+          <span className={styles.round}>{round}</span>
+          <span className={styles.work}><span className={styles.blank} />{work}</span>
+        </h1>
+        <div className={styles.flourish} aria-hidden="true">
+          <Image className={styles.script} src="/images/concert/autumn-script.svg" alt="" width={537} height={80} unoptimized />
+          <Image className={styles.waxSeal} src="/images/concert/wax-seal.webp" alt="" width={252} height={240} />
+        </div>
+        <p className={styles.when}>
+          <time dateTime="2026-11-20T19:00+09:00">2026. 11. 20.<sup>fri</sup> 7:00<sup>pm</sup></time>
+          <span>{venue}</span>
+        </p>
       </div>
-      <div className={styles.keys} aria-hidden="true" />
+
+      <section className={styles.letters} aria-label="축사와 인사말">
+        {greetings.map((greeting) => {
+          const photo = stagePhoto(greeting.photo);
+          return (
+            <article className={styles.greeting} key={greeting.heading}>
+              <Image className={styles.print} src={photo.src} alt={greeting.photoAlt} width={photo.width} height={photo.height} unoptimized />
+              <Letter greeting={greeting} />
+            </article>
+          );
+        })}
+      </section>
 
       <section className={styles.photos} aria-labelledby="photos-title">
         <h2 className={styles.photosTitle} id="photos-title">공연 사진 보기</h2>

@@ -7,13 +7,15 @@ const base = "https://mwpbchhhkxoievvtjtay.supabase.co/storage/v1/object/public/
 // 번호순으로 가로(L)인지 세로(P)인지 적었습니다. 사진이 모두 3:2라 방향만 알면 크기가 정해집니다.
 const orientation = "LPLLLLPPLLLLLLLPPPPPPLLPPLLPPPPPPPPPLPPPPPPPLPLLLPPPPPPPPPPPPPPPPPPPPLLLLLLLLLLLPPPPLLLLPPPPPPPPPPPPPPPPPPPPPLLLLLPPPPPPPPPPPPPPPPPPPLLLLLPPPPPPPLLLLLPPPPPPPLLLLLLLLLLPPPPLLLLLLLPPPPPPPPPPPLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL";
 
-// 내릴 사진의 번호를 적으면 갤러리에서 빠집니다. 주소로도 열리지 않게 하려면 보관함의 thumb, view 파일도 지웁니다.
+// 내릴 사진의 번호를 적으면 갤러리 격자에서 빠집니다. 주소로도 열리지 않게 하려면 보관함의 thumb, view 파일도 지웁니다.
+// 195(첫 화면 무대), 19와 46(축사와 인사말)은 갤러리 페이지가 따로 쓰므로, 격자에서 빼더라도 보관함의 파일은 남겨 둡니다.
 const removed = new Set<number>([]);
 
-export const stagePhotos: Still[] = [...orientation].flatMap((side, i) => {
-  const n = i + 1;
-  if (removed.has(n)) return [];
+/** 번호로 사진 한 장을 만듭니다. 격자에서 내린 사진도 번호로는 꺼낼 수 있습니다. */
+export function stagePhoto(n: number): Still {
   const file = `${String(n).padStart(3, "0")}.webp`;
-  const [width, height] = side === "L" ? [1600, 1067] : [1067, 1600];
-  return [{ src: `${base}/view/${file}`, thumb: `${base}/thumb/${file}`, alt: `제2회 정기연주회 공연 사진 ${n}`, width, height }];
-});
+  const [width, height] = orientation[n - 1] === "L" ? [1600, 1067] : [1067, 1600];
+  return { src: `${base}/view/${file}`, thumb: `${base}/thumb/${file}`, alt: `제2회 정기연주회 공연 사진 ${n}`, width, height };
+}
+
+export const stagePhotos: Still[] = Array.from(orientation, (_, i) => i + 1).filter((n) => !removed.has(n)).map(stagePhoto);
