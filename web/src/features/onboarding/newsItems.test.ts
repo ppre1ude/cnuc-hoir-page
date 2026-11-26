@@ -51,6 +51,19 @@ it("제2회 정기연주회는 사진, 사실 정보, 페이지 링크를 가진
   ]);
 });
 
+it("정기연주회는 회차마다 공연 이름을 가진다", () => {
+  const subtitle = (id: string) => publicNews.find((item) => item.id === id)?.detail?.subtitle;
+  expect(subtitle("concert-2026")).toBe("_____에게 보내는 편지");
+  expect(subtitle("concert-2025")).toBe("희망 L'espoir");
+});
+
+it("제1회 정기연주회 프로그램은 1부와 2부 곡 목록이다", () => {
+  const program = publicNews.find((item) => item.id === "concert-2025")!.detail!.program!;
+  expect(program.map((part) => [part.part, part.pieces.length])).toEqual([["1부", 6], ["2부", 5]]);
+  expect(program[0].pieces[3]).toEqual({ title: "내 고향", note: "뮤지컬 '팬텀' 中, 듀엣" });
+  expect(program[1].pieces.at(-1)).toEqual({ title: "나 하나 꽃 피어" });
+});
+
 it("제1회 정기연주회는 전용 페이지 없이도 세부 내용을 가진다", () => {
   const detail = publicNews.find((item) => item.id === "concert-2025")!.detail!;
   expect(detail.photo).toBeUndefined();
