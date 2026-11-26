@@ -98,6 +98,12 @@ describe("SandLanding", () => {
     expect(css).toContain(`@media (scripting: none), ${STACKED_MEDIA} {`);
   });
 
+  it("마지막 장면에서 머리글 지원하기를 숨기는 규칙은 데스크톱에만 건다", () => {
+    // 휴대폰에서는 지원하기가 메뉴 안에 있어, 자리를 남기는 visibility로 숨기면 메뉴에 빈칸이 생깁니다.
+    const css = readFileSync(resolve(process.cwd(), "src/features/onboarding/SandLanding.module.css"), "utf8");
+    expect(css).toMatch(/@media \(min-width: 761px\) \{\s*\.landing\[data-current="6"\] \[data-public-nav="apply"\]/);
+  });
+
   it("낮은 화면에서는 엔진 없이 장면을 모두 펼치고, 화면이 높아지면 엔진을 시작한다", () => {
     engine.real = true;
     const low = stubStackedMedia(true);
