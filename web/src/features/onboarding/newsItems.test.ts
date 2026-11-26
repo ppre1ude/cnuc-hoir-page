@@ -56,7 +56,8 @@ it("제1회 정기연주회는 전용 페이지 없이도 세부 내용을 가�
   expect(detail.photo).toBeUndefined();
   expect(detail.links).toBeUndefined();
   expect(detail.facts).toEqual([
-    { label: "일시", value: "2025. 9. 12. (금)" },
+    { label: "일시", value: "2025. 9. 12. (금) 19:00" },
     { label: "장소", value: "전남대학교 예술대학 3호관 예향홀" },
+    { label: "지휘", value: "박찬영" },
   ]);
 });

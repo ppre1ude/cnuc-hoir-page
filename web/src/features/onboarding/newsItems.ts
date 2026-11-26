@@ -63,11 +63,12 @@ export const publicNews: PublicNewsItem[] = [
     date: "2025-09-12",
     title: "제1회 정기연주회",
     description: "전남대학교 예술대학 3호관 예향홀",
-    // 시작 시각, 지휘, 사진은 받으면 채웁니다.
+    // 창단연주회를 겸한 첫 정기연주회입니다. 사진은 받으면 채웁니다.
     detail: {
       facts: [
-        { label: "일시", value: "2025. 9. 12. (금)" },
+        { label: "일시", value: "2025. 9. 12. (금) 19:00" },
         { label: "장소", value: "전남대학교 예술대학 3호관 예향홀" },
+        { label: "지휘", value: "박찬영" },
       ],
     },
   },
