@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { BrandLogo } from "@/components/ui";
 import { greetings } from "@/features/concert/greetings";
-import { stagePhoto, stagePhotos } from "@/features/concert/stagePhotos";
+import { hallPhoto, stagePhoto, stagePhotos } from "@/features/concert/stagePhotos";
 import { Gallery } from "../concert/Gallery";
 import { myeongjo } from "../fonts/myeongjo";
 import { paperlogy } from "../fonts/paperlogy";
@@ -25,9 +25,6 @@ export const metadata: Metadata = {
   openGraph: { title: `전남대학교 합창단 ${title}`, description, siteName: "전남대학교 합창단", type: "website", locale: "ko_KR" },
 };
 
-// 첫 화면에 거는 사진은 객석에서 본 무대 전경입니다.
-const hall = stagePhoto(195);
-
 export default function GalleryPage() {
   return (
     <main className={`${paperlogy.variable} ${myeongjo.variable} ${styles.page}`}>
@@ -36,8 +33,8 @@ export default function GalleryPage() {
         <header className={styles.header}>
           <Link href="/" aria-label="전남대학교 합창단 처음으로"><BrandLogo className={styles.logo} alt="" priority /></Link>
         </header>
-        <Image className={styles.hall} src={hall.src} width={hall.width} height={hall.height} unoptimized priority
-          alt="객석에서 본 민주마루 무대. 나무 벽 앞에 합창단이 줄지어 서 있고 가운데에 그랜드피아노가 놓여 있습니다." />
+        {/* 첫 화면에 거는 사진은 객석에서 본 무대 전경입니다. */}
+        <Image className={styles.hall} src={hallPhoto.src} width={hallPhoto.width} height={hallPhoto.height} alt={hallPhoto.alt} unoptimized priority />
       </div>
 
       {/* 표지: 프로그램북 표지를 옮긴 편지지입니다. 밀랍 봉인과 금빛 필기체는 표지에 쓴 그림 그대로입니다. */}

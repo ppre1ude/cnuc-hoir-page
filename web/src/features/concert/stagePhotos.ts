@@ -19,3 +19,9 @@ export function stagePhoto(n: number): Still {
 }
 
 export const stagePhotos: Still[] = Array.from(orientation, (_, i) => i + 1).filter((n) => !removed.has(n)).map(stagePhoto);
+
+/** 객석에서 본 무대 전경. 갤러리 첫 화면과 무대 페이지가 함께 씁니다. */
+export const hallPhoto: Still = {
+  ...stagePhoto(195),
+  alt: "객석에서 본 민주마루 무대. 나무 벽 앞에 합창단이 줄지어 서 있고 가운데에 그랜드피아노가 놓여 있습니다.",
+};

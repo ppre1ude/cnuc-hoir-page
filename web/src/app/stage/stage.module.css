@@ -1,0 +1,55 @@
+/* 무대: 왼쪽은 연도별 행사 목록, 오른쪽은 고른 행사의 본문입니다. 값은 모두 tokens.css에서 가져옵니다. */
+.page {
+  /* 페이퍼로지는 정적 굵기라 공개 페이지에서는 굵기 토큰을 그에 맞춥니다(SandLanding.module.css와 같음). */
+  --weight-medium: var(--weight-public-medium);
+  --weight-label: var(--weight-public-label);
+  --weight-heading: var(--weight-public-heading);
+  min-height: 100dvh;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-paperlogy), "Pretendard Variable", "Malgun Gothic", sans-serif;
+  word-break: keep-all;
+}
+
+.header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); height: var(--space-16); padding-inline: var(--page-gutter); border-bottom: 1px solid var(--color-line); }
+.header > a { display: flex; }
+.logo { --logo-width: min(36vw, 190px); }
+
+.main { max-width: var(--layout-public); margin: 0 auto; padding: var(--page-top) var(--page-gutter) var(--page-bottom); }
+.heading h1 { font-size: var(--text-display); }
+
+.board { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-16); align-items: start; }
+.panel { position: sticky; top: var(--space-8); }
+
+/* 목록 한 줄: 이름과 날짜를 같은 본문 크기로 두고, 연도 제목과 같은 왼쪽 선에 맞춥니다. 크게 보이는 것은 오른쪽 본문 제목입니다. */
+.event { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; column-gap: var(--space-4); font-size: var(--text-body); line-height: 1.5; }
+.date { color: var(--color-muted); font-variant-numeric: tabular-nums; }
+/* 페이지가 있는 행사만 굵게 두고 눌러 고릅니다. 고른 행사는 초록 글자로만 표시합니다. */
+.pick { color: var(--color-ink); font-weight: var(--weight-label); text-decoration: none; }
+.pick::after { content: ""; position: absolute; inset: 0; } /* 행 전체를 누를 수 있게 합니다. */
+.pick:hover { text-decoration: underline; }
+.pick[aria-current="true"] { color: var(--color-primary); }
+
+/* 본문 */
+.detail { display: flex; flex-direction: column; gap: var(--space-5); }
+.photo { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; border-radius: var(--radius-panel); }
+.detailTitle { margin: 0; font-size: var(--text-title); font-weight: var(--weight-heading); line-height: 1.2; letter-spacing: var(--tracking-heading); }
+.lead { margin: 0; font-size: var(--text-section); font-weight: var(--weight-body); line-height: 1.6; }
+/* 사실 정보: 상자 없이 2열 격자로 두고, 칸마다 위에 가는 선과 작은 회색 항목 이름, 그 아래 값을 둡니다(참고: 위그모어 홀 지난 공연). */
+.facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-5) var(--space-6); margin: 0; }
+.facts > div { padding-top: var(--space-3); border-top: 1px solid var(--color-line); }
+.facts dt { color: var(--color-muted); font-size: var(--text-label); font-weight: var(--weight-label); }
+.facts dd { margin: var(--space-1) 0 0; font-size: var(--text-body); line-height: 1.5; }
+.links { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+/* 목록 안 본문은 휴대폰에서만, 오른쪽 칸은 데스크톱에서만 보입니다. */
+.inline { display: none; }
+
+@media (max-width: 760px) {
+  .board { grid-template-columns: minmax(0, 1fr); }
+  .panel { display: none; }
+  .inline { display: flex; padding-block: var(--space-4) var(--space-6); }
+  .inline .detailTitle { display: none; } /* 바로 위 고른 행에 같은 이름이 있습니다. */
+  /* 휴대폰에서는 사진을 화면 좌우 끝까지 넓힙니다. */
+  .inline .photo { width: calc(100% + 2 * var(--page-gutter)); max-width: none; margin-inline: calc(-1 * var(--page-gutter)); border-radius: 0; }
+}
