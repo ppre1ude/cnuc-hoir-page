@@ -24,8 +24,8 @@
 /* 목록 한 줄: 이름과 날짜를 같은 본문 크기로 두고, 연도 제목과 같은 왼쪽 선에 맞춥니다. 크게 보이는 것은 오른쪽 본문 제목입니다. */
 .event { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; column-gap: var(--space-4); font-size: var(--text-body); line-height: 1.5; }
 .date { color: var(--color-muted); font-variant-numeric: tabular-nums; }
-/* 페이지가 있는 행사만 굵게 두고 눌러 고릅니다. 고른 행사는 초록 글자로만 표시합니다. */
-.pick { color: var(--color-ink); font-weight: var(--weight-label); text-decoration: none; }
+/* 세부 내용이 있는 행사만 굵게 두고 눌러 고릅니다(버튼이지만 글자처럼 보이게). 고른 행사는 초록 글자로만 표시합니다. */
+.pick { padding: 0; border: 0; background: none; color: var(--color-ink); font: inherit; font-weight: var(--weight-label); text-align: left; text-decoration: none; cursor: pointer; }
 .pick::after { content: ""; position: absolute; inset: 0; } /* 행 전체를 누를 수 있게 합니다. */
 .pick:hover { text-decoration: underline; }
 .pick[aria-current="true"] { color: var(--color-primary); }
