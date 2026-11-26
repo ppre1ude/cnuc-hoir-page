@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { ActionLink, Facts } from "../../components/ui";
+import { ActionLink } from "../../components/ui";
 import type { StageItem } from "../../features/onboarding/newsItems";
 import styles from "./stage.module.css";
 
@@ -12,7 +12,9 @@ export function StageDetail({ item, className }: { item: StageItem; className?: 
         sizes="(max-width: 760px) 100vw, 760px" unoptimized />
       <h3 className={styles.detailTitle}>{name}</h3>
       {lead && <p className={styles.lead}>{lead}</p>}
-      <Facts className={styles.facts} items={facts} />
+      <dl className={styles.facts}>
+        {facts.map((fact) => <div key={fact.label}><dt>{fact.label}</dt><dd>{fact.value}</dd></div>)}
+      </dl>
       <div className={styles.links}>
         {links.map((link, i) => (
           <ActionLink key={link.href} href={link.href} size="large" variant={i === 0 ? "primary" : "secondary"}>{link.label}</ActionLink>
