@@ -47,4 +47,5 @@
   .board { grid-template-columns: minmax(0, 1fr); }
   .panel { display: none; }
   .inline { display: flex; padding-block: var(--space-4) var(--space-6); }
+  .inline .detailTitle { display: none; } /* 바로 위 고른 행에 같은 이름이 있습니다. */
 }
