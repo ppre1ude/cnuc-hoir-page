@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BrandLogo, List, PageHeader, Row, RowLink, Section } from "../../components/ui";
+import { BrandLogo, List, PageHeader, Row, Section } from "../../components/ui";
 import { pickStage, publicNews, stageYears } from "../../features/onboarding/newsItems";
 import { PublicNav } from "../../features/onboarding/PublicNav";
 import { paperlogy } from "../fonts/paperlogy";
@@ -26,18 +26,17 @@ export default async function StagePage({ searchParams }: { searchParams: Promis
             {stageYears(publicNews).map(({ year, items }) => (
               <Section key={year} id={`year-${year}`} title={year}>
                 <List as="ul">
-                  {items.map((item) => item.stage ? (
+                  {items.map((item) => (
                     <li key={item.id}>
-                      <RowLink className={styles.pick} href={`/stage?event=${item.id}`} scroll={false}
-                        aria-current={item.id === selected?.id ? "true" : undefined}>
-                        <strong>{item.stage.name}</strong><span>{item.monthDay}</span>
-                      </RowLink>
-                      {item.id === selected?.id && <StageDetail className={styles.inline} item={selected} />}
+                      <Row className={styles.event}>
+                        {item.stage ? (
+                          <Link className={styles.pick} href={`/stage?event=${item.id}`} scroll={false}
+                            aria-current={item.id === selected?.id ? "true" : undefined}>{item.stage.name}</Link>
+                        ) : <span>{item.title}</span>}
+                        <span className={styles.date}>{item.monthDay}</span>
+                      </Row>
+                      {selected && item.id === selected.id && <StageDetail className={styles.inline} item={selected} />}
                     </li>
-                  ) : (
-                    <Row as="li" key={item.id} className={styles.event}>
-                      <strong>{item.title}</strong><span>{item.monthDay}</span>
-                    </Row>
                   ))}
                 </List>
               </Section>
