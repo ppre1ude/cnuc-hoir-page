@@ -58,7 +58,8 @@ describe("SandLanding", () => {
 
   it("지원서와 공식 채널은 마지막 장면에, 단원 로그인은 머리글에 있다", () => {
     render(<SandLanding />);
-    expect(screen.getByRole("link", { name: "단원 로그인" })).toHaveAttribute("href", "/login");
+    // 머리글 링크는 jsdom이 닫힌 popover로 숨기므로 숨은 요소까지 찾습니다(PublicNav.test.tsx 참고).
+    expect(screen.getByRole("link", { name: "단원 로그인", hidden: true })).toHaveAttribute("href", "/login");
     const join = screen.getByRole("region", { name: "함께 노래해요." });
     expect(within(join).getByRole("link", { name: /지원서 작성하기/ })).toHaveAttribute("href", choirChannels.application);
     const channels = within(join).getByRole("navigation", { name: "공식 채널" });
@@ -82,9 +83,14 @@ describe("SandLanding", () => {
 
   it("머리글에서 바로 지원서로 갈 수 있다", () => {
     const { container } = render(<SandLanding />);
-    const apply = within(container.querySelector("header")!).getByRole("link", { name: /지원하기/ });
+    const apply = within(container.querySelector("header")!).getByRole("link", { name: /지원하기/, hidden: true });
     expect(apply).toHaveAttribute("href", choirChannels.application);
     expect(apply).toHaveAttribute("target", "_blank");
+  });
+
+  it("머리글에서 무대 페이지로 갈 수 있다", () => {
+    const { container } = render(<SandLanding />);
+    expect(within(container.querySelector("header")!).getByRole("link", { name: "무대", hidden: true })).toHaveAttribute("href", "/stage");
   });
 
   it("세로 배치 기준은 CSS와 엔진이 같다", () => {

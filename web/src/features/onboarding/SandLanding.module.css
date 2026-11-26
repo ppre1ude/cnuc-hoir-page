@@ -17,18 +17,13 @@
 .stage { position: sticky; top: 0; width: 100%; height: 100dvh; overflow: hidden; }
 .canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; pointer-events: none; }
 
-/* 머리글: 작은 로고와 단원 로그인. 첫 장면에서는 큰 심벌이 있어 작은 로고를 숨깁니다. 높이는 엔진의 HEADER_HEIGHT와 같습니다. */
+/* 머리글: 작은 로고와 링크 묶음(PublicNav). 첫 장면에서는 큰 심벌이 있어 작은 로고를 숨깁니다. 높이는 엔진의 HEADER_HEIGHT와 같습니다. */
 .header { position: absolute; inset: 0 0 auto 0; z-index: 6; display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); height: 64px; padding-left: max(var(--space-5), env(safe-area-inset-left, 0px)); padding-right: max(var(--space-5), env(safe-area-inset-right, 0px)); }
 .home { display: flex; transition: visibility .7s; } /* 첫 장면에서는 숨은 로고로 키보드 초점이 가지 않게 빼고, 다시 숨을 때는 흐려진 뒤 빠집니다. */
 .landing[data-current="0"] .home { visibility: hidden; }
-.actions { display: flex; gap: var(--space-2); }
-.landing[data-current="6"] .headerApply { visibility: hidden; } /* 마지막 장면에는 큰 지원서 버튼이 있습니다. */
-.headerApply { white-space: nowrap; }
-@media (max-width: 760px) { .actions a { padding-inline: 10px; } } /* 좁은 폰에서 로고와 두 버튼이 한 줄에 들어가게 합니다. */
+.landing[data-current="6"] [data-public-nav="apply"] { visibility: hidden; } /* 마지막 장면에는 큰 지원서 버튼이 있습니다. */
 .headerLogo { --logo-width: min(36vw, 190px); transition: opacity .7s ease; }
 .landing[data-current="0"] .headerLogo { opacity: 0; }
-.login { white-space: nowrap; }
-
 /* 오른쪽 목차(PC): 지금 장면의 줄이 길어지고 상징색이 됩니다. */
 .nav { position: absolute; top: 50%; right: 28px; z-index: 5; display: none; flex-direction: column; transform: translateY(-50%); }
 .nav button { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); height: 40px; padding: 0; border: 0; background: none; color: var(--color-muted); font-size: .75rem; transition: color .3s; }

@@ -8,6 +8,7 @@ import { concert } from "../concert/concert";
 import { stagePhoto } from "./activityPhotos";
 import { choirChannels } from "./choirProfile";
 import { historyByYear, publicNews } from "./newsItems";
+import { PublicNav } from "./PublicNav";
 import { startSandStage } from "./sand/stage";
 import styles from "./SandLanding.module.css";
 
@@ -59,10 +60,7 @@ export function SandLanding({ showConcert = false }: { showConcert?: boolean }) 
           <Link href="/" className={styles.home} aria-label="전남대학교 합창단 처음으로" data-sand="home">
             <BrandLogo className={styles.headerLogo} alt="" />
           </Link>
-          <div className={styles.actions}>
-            <ActionLink href={choirChannels.application} target="_blank" rel="noopener noreferrer" className={styles.headerApply}>지원하기</ActionLink>
-            <ActionLink variant="secondary" href="/login" className={styles.login}>단원 로그인</ActionLink>
-          </div>
+          <PublicNav />
         </header>
 
         <nav className={styles.nav} aria-label="장면">
