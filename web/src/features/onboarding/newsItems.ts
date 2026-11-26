@@ -4,38 +4,42 @@ export type PublicNewsItem = {
   id: string;
   /** YYYY-MM-DD */
   date: string;
+  /** 행사 이름. 공개 메인 '걸어온 길'과 무대 페이지가 함께 씁니다. "개최" 같은 말은 붙이지 않습니다. */
   title: string;
   description?: string;
-  /** 그 일을 더 볼 수 있는 사이트 안 페이지가 있을 때만 적습니다. */
+  /** 공개 메인 '걸어온 길'에서 그 일을 더 볼 수 있는 사이트 안 페이지가 있을 때만 적습니다. */
   link?: { href: string; label: string };
-  /** 무대 페이지에서 크게 다룰 행사에만 적습니다. 없으면 연도 안의 한 줄로 보입니다. */
-  stage?: StageDetail;
+  /** 무대 페이지에서 골라 볼 세부 내용. 적으면 고를 수 있는 행사가 되고, 없으면 연도 안의 한 줄로 보입니다. */
+  detail?: StageDetail;
 };
 
+/** 칸은 모두 선택입니다. 없는 칸은 화면에 자리도 생기지 않습니다. */
 export type StageDetail = {
-  /** 큰 항목 이름. 예: "제2회 정기연주회" */
-  name: string;
-  photo: { src: string; width: number; height: number; alt: string };
+  photo?: { src: string; width: number; height: number; alt: string };
+  /** 공연 이름. 행사 이름 바로 아래에 붙습니다. 예: "희망 L'espoir" */
+  subtitle?: string;
   /** 합창단이 직접 쓴 소개 글. 글을 받기 전에는 비워 둡니다. */
   lead?: string;
-  facts: { label: string; value: string }[];
-  /** 첫 링크가 주요 버튼입니다. */
-  links: { href: string; label: string }[];
+  facts?: { label: string; value: string }[];
+  /** 그 행사의 전용 페이지. 첫 링크가 주요 버튼입니다. */
+  links?: { href: string; label: string }[];
+  /** 부마다 곡 목록. note는 곡 아래 작게 붙는 설명(뮤지컬 이름, 독창 등)입니다. */
+  program?: { part: string; pieces: { title: string; note?: string }[] }[];
 };
 
-export type StageItem = PublicNewsItem & { stage: StageDetail };
+export type DetailedItem = PublicNewsItem & { detail: StageDetail };
 
 // 공개 연혁은 합창단이 확인한 사실만 정적으로 관리하며 회원 공지와 분리합니다.
 export const publicNews: PublicNewsItem[] = [
   {
     id: "concert-2026",
     date: "2026-11-20",
-    title: "제2회 정기연주회 개최",
+    title: "제2회 정기연주회",
     description: "전남대학교 민주마루",
     link: { href: "/gallery", label: "공연 사진 보기" },
-    stage: {
-      name: "제2회 정기연주회",
+    detail: {
       photo: hallPhoto,
+      subtitle: "_____에게 보내는 편지",
       // concert.ts는 다음 연주회가 정해지면 바뀌므로 값을 옮겨 적습니다.
       facts: [
         { label: "일시", value: "2026. 11. 20. (금) 19:00" },
@@ -62,8 +66,40 @@ export const publicNews: PublicNewsItem[] = [
   {
     id: "concert-2025",
     date: "2025-09-12",
-    title: "정기연주회 개최",
+    title: "제1회 정기연주회",
     description: "전남대학교 예술대학 3호관 예향홀",
+    // 창단연주회를 겸한 첫 정기연주회입니다. 곡 설명의 "|"는 화면에서 쉼표로 바꿔 적었습니다. 사진은 받으면 채웁니다.
+    detail: {
+      subtitle: "희망 L'espoir",
+      facts: [
+        { label: "일시", value: "2025. 9. 12. (금) 19:00" },
+        { label: "장소", value: "전남대학교 예술대학 3호관 예향홀" },
+        { label: "지휘", value: "박찬영" },
+      ],
+      program: [
+        {
+          part: "1부",
+          pieces: [
+            { title: "남촌" },
+            { title: "삶이 그대를 속일지라도" },
+            { title: "Liebesträume No. 3 in A-flat major, S. 541", note: "피아노 독주" },
+            { title: "내 고향", note: "뮤지컬 '팬텀' 中, 듀엣" },
+            { title: "Seasons of Love", note: "뮤지컬 '렌트' 中" },
+            { title: "우리의 사랑이 필요한 거죠" },
+          ],
+        },
+        {
+          part: "2부",
+          pieces: [
+            { title: "모두의 세상", note: "뮤지컬 '웃는 남자' 中, 독창" },
+            { title: "A Whole New World", note: "애니메이션 '알라딘' 中" },
+            { title: "Butterfly", note: "영화 '국가대표' 삽입곡" },
+            { title: "어느 봄날", note: "독창" },
+            { title: "나 하나 꽃 피어" },
+          ],
+        },
+      ],
+    },
   },
   {
     id: "founding-2024",
@@ -95,11 +131,10 @@ export function stageYears(items: PublicNewsItem[]): HistoryYear[] {
   return historyByYear(items).reverse().map((year) => ({ ...year, items: year.items.reverse() }));
 }
 
-const hasStage = (item: PublicNewsItem): item is StageItem => item.stage !== undefined;
+export const isDetailed = <T extends PublicNewsItem>(item: T): item is T & DetailedItem => item.detail !== undefined;
 
-/** 주소의 ?event=로 고른 큰 항목. 없거나 틀리면(배열 주소 포함) 가장 최근 큰 항목을 고릅니다. */
-export function pickStage(items: PublicNewsItem[], event: string | string[] | undefined): StageItem | undefined {
-  const stages = items.filter(hasStage);
-  return stages.find((item) => typeof event === "string" && item.id === event)
-    ?? stages.reduce<StageItem | undefined>((latest, item) => (!latest || item.date > latest.date ? item : latest), undefined);
+/** 무대 페이지를 처음 열 때 고를 행사. 세부 내용이 있는 가장 최근 행사입니다. */
+export function newestDetailed(items: PublicNewsItem[]): DetailedItem | undefined {
+  return items.filter(isDetailed)
+    .reduce<DetailedItem | undefined>((latest, item) => (!latest || item.date > latest.date ? item : latest), undefined);
 }
